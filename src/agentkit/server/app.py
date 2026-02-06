@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from agentkit.core.config import ProjectConfig
 from agentkit.core.discovery import discover_project
 from agentkit.core.registry import AgentRegistry, ProjectSnapshot
+from agentkit.server.chat import handle_websocket_chat
 from agentkit.server.file_editor import (
     update_agent_in_source,
     update_tool_in_source,
@@ -205,143 +206,8 @@ def _build_api_router():
     return router
 
 
-def _is_litellm_model(model_str: str | None) -> bool:
-    """Check if a model string refers to a LiteLLM model (non-OpenAI provider)."""
-    if not model_str:
-        return False
-    return "/" in model_str and not model_str.startswith("openai/")
-
-
 async def _handle_chat(websocket: WebSocket) -> None:
-    await websocket.accept()
-    previous_response_id: str | None = None
-    # For LiteLLM models: maintain conversation history manually since
-    # previous_response_id (OpenAI Responses API) is not supported.
-    conversation_history: list | None = None
-
-    try:
-        while True:
-            data = await websocket.receive_text()
-            msg = json.loads(data)
-            user_message = msg.get("message", "")
-
-            # Client can request a conversation reset
-            if msg.get("type") == "clear":
-                previous_response_id = None
-                conversation_history = None
-                continue
-
-            # Client can restore a previous conversation context
-            if msg.get("previous_response_id"):
-                previous_response_id = msg["previous_response_id"]
-
-            if not _snapshot or not _snapshot.agents:
-                await websocket.send_json({"type": "error", "data": "No agents loaded"})
-                continue
-
-            first_agent_name = next(iter(_snapshot.agents))
-            agent_entry = _snapshot.agents[first_agent_name]
-            sdk_agent = agent_entry.sdk_agent
-
-            if sdk_agent is None:
-                await websocket.send_json({"type": "error", "data": "Agent SDK object not available"})
-                continue
-
-            use_litellm = _is_litellm_model(agent_entry.model)
-
-            try:
-                from agents import Runner
-
-                if use_litellm and conversation_history is not None:
-                    # Append new user message to existing history
-                    run_input = conversation_history + [{"role": "user", "content": user_message}]
-                else:
-                    run_input = user_message
-
-                result = Runner.run_streamed(
-                    sdk_agent,
-                    run_input,
-                    previous_response_id=previous_response_id if not use_litellm else None,
-                )
-
-                async for event in result.stream_events():
-                    event_type = type(event).__name__
-
-                    if event_type == "RawResponsesStreamEvent":
-                        raw = event.data
-                        raw_type = type(raw).__name__
-                        if raw_type == "ResponseTextDeltaEvent":
-                            if raw.delta:
-                                await websocket.send_json({
-                                    "type": "token",
-                                    "data": raw.delta,
-                                })
-                        elif raw_type in (
-                            "ResponseReasoningSummaryTextDeltaEvent",
-                            "ResponseReasoningDeltaEvent",
-                        ):
-                            delta = getattr(raw, "delta", getattr(raw, "text", ""))
-                            if delta:
-                                await websocket.send_json({
-                                    "type": "thinking",
-                                    "data": delta,
-                                })
-                    elif event_type == "RunItemStreamEvent":
-                        item = event.item
-                        item_type = type(item).__name__
-                        if item_type == "ToolCallItem":
-                            raw_item = getattr(item, "raw_item", None)
-                            # Extract tool name from raw_item
-                            tool_name = "tool"
-                            if raw_item:
-                                if isinstance(raw_item, dict):
-                                    tool_name = raw_item.get("name", "tool")
-                                elif hasattr(raw_item, "name"):
-                                    tool_name = raw_item.name
-                            # Extract arguments from raw_item
-                            args_str = ""
-                            if raw_item:
-                                if isinstance(raw_item, dict):
-                                    args_str = raw_item.get("arguments", "")
-                                else:
-                                    args_str = getattr(raw_item, "arguments", "")
-                            await websocket.send_json({
-                                "type": "tool_call",
-                                "data": {
-                                    "tool": tool_name,
-                                    "arguments": args_str,
-                                    "status": "running",
-                                },
-                            })
-                        elif item_type == "ToolCallOutputItem":
-                            await websocket.send_json({
-                                "type": "tool_result",
-                                "data": {
-                                    "output": str(getattr(item, "output", "")),
-                                },
-                            })
-
-                # Save conversation state for continuity
-                if use_litellm:
-                    conversation_history = result.to_input_list()
-                else:
-                    previous_response_id = result.last_response_id
-
-                final_output = result.final_output
-                await websocket.send_json({
-                    "type": "done",
-                    "data": str(final_output) if final_output else "",
-                    "response_id": previous_response_id,
-                })
-
-            except Exception as e:
-                await websocket.send_json({
-                    "type": "error",
-                    "data": str(e),
-                })
-
-    except WebSocketDisconnect:
-        pass
+    await handle_websocket_chat(websocket, _snapshot)
 
 
 async def _handle_reload(websocket: WebSocket) -> None:
