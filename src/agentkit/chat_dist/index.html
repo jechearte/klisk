@@ -105,7 +105,7 @@
     border: none;
     box-shadow: none;
   }
-  body.embed .header { display: none; }
+  body.embed .header .theme-btn { display: none; }
 
   .header {
     padding: 12px 16px;
@@ -404,7 +404,7 @@
       <h1 id="agent-name">AgentKit Chat</h1>
       <div class="header-actions">
         <!-- Theme toggle -->
-        <button class="header-btn" id="theme-btn" title="Toggle dark mode">
+        <button class="header-btn theme-btn" id="theme-btn" title="Toggle dark mode">
           <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="display:none">
             <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0Zm11.394-5.834a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59Zm-12.728.53a.75.75 0 1 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59Zm9.544-1.06a.75.75 0 0 0-1.06 1.06l1.59 1.591a.75.75 0 1 0 1.061-1.06l-1.59-1.591ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM5.25 12a.75.75 0 0 1-.75.75H2.25a.75.75 0 0 1 0-1.5H4.5a.75.75 0 0 1 .75.75Z"/>
           </svg>
@@ -696,7 +696,7 @@
   }
 
   function renderInlineMarkdown(text) {
-    // Split by double newline into paragraphs
+    // Split by double newline into blocks
     var blocks = text.split(/\n\n+/);
     var html = '';
 
@@ -704,25 +704,16 @@
       var block = blocks[i].trim();
       if (!block) continue;
 
-      // Check if entire block is a list
       var lines = block.split('\n');
+
+      // Check if entire block is a pure list
       var isUL = lines.every(function(l) { return /^\s*[-*]\s/.test(l) || !l.trim(); });
       var isOL = lines.every(function(l) { return /^\s*\d+\.\s/.test(l) || !l.trim(); });
 
       if (isUL) {
-        html += '<ul>';
-        for (var j = 0; j < lines.length; j++) {
-          var li = lines[j].replace(/^\s*[-*]\s+/, '');
-          if (li.trim()) html += '<li>' + inlineFormat(escapeHtml(li)) + '</li>';
-        }
-        html += '</ul>';
+        html += renderList('ul', lines);
       } else if (isOL) {
-        html += '<ol>';
-        for (var j = 0; j < lines.length; j++) {
-          var li = lines[j].replace(/^\s*\d+\.\s+/, '');
-          if (li.trim()) html += '<li>' + inlineFormat(escapeHtml(li)) + '</li>';
-        }
-        html += '</ol>';
+        html += renderList('ol', lines);
       } else if (/^#{1,3}\s/.test(block)) {
         var level = block.match(/^(#{1,3})\s/)[1].length;
         var heading = block.replace(/^#{1,3}\s+/, '');
@@ -733,11 +724,67 @@
       } else if (block === '---' || block === '***') {
         html += '<hr>';
       } else {
-        // Regular paragraph — join lines with <br> for single newlines within the block
-        var joined = lines.map(function(l) { return inlineFormat(escapeHtml(l)); }).join('<br>');
-        html += '<p>' + joined + '</p>';
+        // Mixed block: split into runs of text vs list items
+        html += renderMixedBlock(lines);
       }
     }
+    return html;
+  }
+
+  function renderMixedBlock(lines) {
+    var html = '';
+    var textBuf = [];
+    var listBuf = [];
+    var listType = null; // 'ul' or 'ol'
+
+    function flushText() {
+      if (textBuf.length) {
+        var joined = textBuf.map(function(l) { return inlineFormat(escapeHtml(l)); }).join('<br>');
+        html += '<p>' + joined + '</p>';
+        textBuf = [];
+      }
+    }
+    function flushList() {
+      if (listBuf.length && listType) {
+        html += renderList(listType, listBuf);
+        listBuf = [];
+        listType = null;
+      }
+    }
+
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      var isULLine = /^\s*[-*]\s/.test(line);
+      var isOLLine = /^\s*\d+\.\s/.test(line);
+
+      if (isULLine) {
+        if (listType && listType !== 'ul') flushList();
+        flushText();
+        listType = 'ul';
+        listBuf.push(line);
+      } else if (isOLLine) {
+        if (listType && listType !== 'ol') flushList();
+        flushText();
+        listType = 'ol';
+        listBuf.push(line);
+      } else {
+        flushList();
+        textBuf.push(line);
+      }
+    }
+    flushText();
+    flushList();
+    return html;
+  }
+
+  function renderList(tag, lines) {
+    var html = '<' + tag + '>';
+    var re = tag === 'ul' ? /^\s*[-*]\s+/ : /^\s*\d+\.\s+/;
+    for (var j = 0; j < lines.length; j++) {
+      var li = lines[j].replace(re, '');
+      if (li.trim()) html += '<li>' + inlineFormat(escapeHtml(li)) + '</li>';
+    }
+    html += '</' + tag + '>';
     return html;
   }
 
