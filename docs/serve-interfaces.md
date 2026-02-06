@@ -9,6 +9,43 @@ agentkit serve my-agent -p 3000  # Puerto personalizado
 
 ---
 
+## Autenticación (API Keys)
+
+Por defecto no se requiere autenticación (backward compatible). Para proteger un agente desplegado, configura una o más API keys via variables de entorno:
+
+```bash
+# Caso simple: una key para todo
+AGENTKIT_API_KEY=mi-clave-secreta
+
+# Caso avanzado: keys separadas por interfaz
+AGENTKIT_API_KEY=api-key-para-rest       # API HTTP (header Authorization)
+AGENTKIT_CHAT_KEY=chat-key-para-users    # Chat web (prompt al usuario)
+AGENTKIT_WIDGET_KEY=widget-key-embed     # Widget (atributo data-key)
+```
+
+Todas las keys configuradas se combinan en un pool único — cualquier key válida da acceso a cualquier endpoint. La separación por variable es organizacional, para poder rotar una sin afectar las otras.
+
+Cada variable soporta múltiples keys separadas por coma: `AGENTKIT_API_KEY=key1,key2,key3`.
+
+### Cómo se envía la key por interfaz
+
+| Interfaz | Mecanismo | Origen de la key |
+|---|---|---|
+| Chat web | WebSocket: `?key=<key>` | El usuario la ingresa en un prompt → se guarda en `localStorage` |
+| Widget | WebSocket: `?key=<key>` | Atributo `data-key` en el tag `<script>` → se pasa a la URL del iframe |
+| API HTTP | Header `Authorization: Bearer <key>` | Código del desarrollador |
+
+### Escenario de rotación
+
+Si se filtra la key del widget:
+
+1. Cambia `AGENTKIT_WIDGET_KEY` en tu `.env`
+2. Redespliega (`agentkit deploy`)
+3. Actualiza `data-key` en los sitios que embeben el widget
+4. Los usuarios del chat y consumidores de la API no se ven afectados
+
+---
+
 ## 1. Chat Web
 
 **URL:** `http://localhost:8080/`
@@ -23,6 +60,7 @@ Página completa con una interfaz de chat centrada en la pantalla. Incluye:
 - Toggle de tema claro/oscuro (persiste en `localStorage`)
 - Botón de reset de conversación
 - Persistencia: la conversación sobrevive a refrescos de página. Solo se reinicia con el botón de reset.
+- **Auth overlay:** si el servidor tiene API keys configuradas, al abrir el chat se muestra un prompt para ingresar la key. La key se guarda en `localStorage` (`agentkit-chat-key`) y se recuerda entre sesiones. Si la key es inválida, se muestra un mensaje de error y se vuelve a pedir.
 
 La comunicación con el servidor se realiza via **WebSocket** en `/ws/chat`.
 
@@ -46,6 +84,9 @@ Crea un botón flotante (bottom-right por defecto) que al hacer clic abre un pan
 | `data-color` | Cualquier color CSS | `"#2563eb"` |
 | `data-width` | Ancho del panel | `"380px"` |
 | `data-height` | Alto del panel | `"560px"` |
+| `data-key` | API key para autenticación | (ninguno) |
+
+Si `data-key` está presente, se pasa como query param a la URL del iframe y la autenticación es transparente para el visitante. Si no se proporciona y el servidor requiere auth, el usuario verá el prompt de key dentro del widget.
 
 ### Ejemplo con personalización
 
@@ -56,6 +97,7 @@ Crea un botón flotante (bottom-right por defecto) que al hacer clic abre un pan
   data-color="#10b981"
   data-width="400px"
   data-height="600px"
+  data-key="widget-key-123"
 ></script>
 ```
 
@@ -72,15 +114,22 @@ Al cargar la URL con `?embed=1`, la página de chat se adapta al modo embebido:
 
 ### `GET /api/info`
 
-Información básica del agente.
+Información básica del agente. No requiere autenticación.
 
 **Response:**
 ```json
 {
   "name": "MyAgent",
-  "agent": "search_agent"
+  "agent": "search_agent",
+  "auth_required": true
 }
 ```
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `name` | `string` | Nombre del proyecto |
+| `agent` | `string \| null` | Nombre del agente principal |
+| `auth_required` | `boolean` | `true` si el servidor tiene API keys configuradas |
 
 ### `GET /health`
 
@@ -96,6 +145,8 @@ Health check para Cloud Run / load balancers.
 ### `POST /api/chat`
 
 Endpoint principal para chatear con el agente programáticamente. Soporta dos modos: **streaming (SSE)** y **no-streaming**.
+
+**Autenticación:** si el servidor tiene API keys configuradas, se requiere el header `Authorization: Bearer <key>`. Sin el header o con key inválida, devuelve `401 {"error": "Invalid API key"}`.
 
 #### Request
 
@@ -135,8 +186,11 @@ El stream termina con `data: [DONE]\n\n`.
 ```bash
 curl -N -X POST http://localhost:8080/api/chat \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer tu-api-key" \
   -d '{"message": "Hola", "stream": true}'
 ```
+
+> El header `Authorization` solo es necesario si el servidor tiene API keys configuradas.
 
 **Output:**
 ```
@@ -156,7 +210,10 @@ data: [DONE]
 ```javascript
 const response = await fetch('/api/chat', {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer tu-api-key',  // solo si auth está habilitado
+  },
   body: JSON.stringify({ message: 'Hola', state: {} }),
 });
 
@@ -185,6 +242,7 @@ Espera a que el agente termine y devuelve la respuesta completa en un solo JSON.
 ```bash
 curl -X POST http://localhost:8080/api/chat \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer tu-api-key" \
   -d '{"message": "Hola", "stream": false}'
 ```
 
@@ -260,23 +318,26 @@ Como la Responses API no está disponible, el historial se mantiene como una lis
 import requests
 
 url = "http://localhost:8080/api/chat"
+headers = {
+    "Authorization": "Bearer tu-api-key",  # solo si auth está habilitado
+}
 state = {}
 
 # Turno 1
-r = requests.post(url, json={"message": "Hola", "stream": False, "state": state})
+r = requests.post(url, json={"message": "Hola", "stream": False, "state": state}, headers=headers)
 data = r.json()
 print(data["response"])
 state = data["state"]  # Guardar el state actualizado
 
 # Turno 2 — el agente recuerda el contexto anterior
-r = requests.post(url, json={"message": "Busca circuitos en Madrid", "stream": False, "state": state})
+r = requests.post(url, json={"message": "Busca circuitos en Madrid", "stream": False, "state": state}, headers=headers)
 data = r.json()
 print(data["response"])
 state = data["state"]
 
 # Nueva conversación — enviar state vacío
 state = {}
-r = requests.post(url, json={"message": "Hola de nuevo", "stream": False, "state": state})
+r = requests.post(url, json={"message": "Hola de nuevo", "stream": False, "state": state}, headers=headers)
 ```
 
 ### Cómo persiste el Chat Web / Widget
@@ -289,12 +350,15 @@ Para persistir entre refrescos de página, el cliente guarda en `localStorage`:
 |---|---|
 | `agentkit-chat-messages` | Array JSON con todos los mensajes renderizados |
 | `agentkit-chat-response-id` | ID de la última respuesta (para reanudar contexto) |
+| `agentkit-chat-key` | API key ingresada por el usuario (si auth está habilitado) |
 
 Al reconectar el WebSocket, el cliente envía el `previous_response_id` guardado para que el servidor retome la conversación donde se dejó.
 
 ### `WS /ws/chat`
 
 WebSocket usado por el Chat Web y el Widget. Protocolo de mensajes JSON.
+
+**Autenticación:** si el servidor tiene API keys configuradas, la key se envía como query param: `ws://host/ws/chat?key=<key>`. Si la key es inválida, el servidor envía `{"type": "auth_error", "data": "Invalid API key"}` y cierra la conexión con código 4001.
 
 **Mensajes del cliente al servidor:**
 
@@ -306,4 +370,8 @@ WebSocket usado por el Chat Web y el Widget. Protocolo de mensajes JSON.
 
 **Mensajes del servidor al cliente:**
 
-Los mismos tipos de evento que en SSE: `token`, `thinking`, `tool_call`, `tool_result`, `done`, `error`.
+Los mismos tipos de evento que en SSE: `token`, `thinking`, `tool_call`, `tool_result`, `done`, `error`. Además:
+
+| Tipo | Descripción |
+|---|---|
+| `auth_error` | Key inválida o ausente. La conexión se cierra con código 4001. |

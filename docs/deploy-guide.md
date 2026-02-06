@@ -116,10 +116,35 @@ OPENAI_API_KEY=sk-proj-abc123...
 
 > Si el `.env` tiene placeholders como `sk-your-key-here`, se ignoraran automaticamente.
 
+### Paso 3b: Configurar autenticación (recomendado)
+
+Por defecto, cualquier persona con la URL puede usar tu agente. Para protegerlo, añade API keys al `.env`:
+
+```bash
+# .env
+OPENAI_API_KEY=sk-proj-abc123...
+
+# Autenticación — al menos una de estas variables activa la protección
+AGENTKIT_API_KEY=mi-clave-para-api          # Para consumidores de la API REST
+AGENTKIT_CHAT_KEY=mi-clave-para-chat        # Para usuarios del chat web
+AGENTKIT_WIDGET_KEY=mi-clave-para-widget    # Para el widget embebido
+```
+
+**Comportamiento:**
+- Sin ninguna variable → sin autenticación (backward compatible)
+- Con al menos una variable → se requiere key en todos los endpoints (excepto `/health` y `/api/info`)
+- Todas las keys configuradas se combinan en un pool único — cualquier key válida da acceso a cualquier endpoint
+
+Ver [Autenticación en Serve Interfaces](./serve-interfaces.md#autenticación-api-keys) para detalles sobre cómo cada interfaz envía la key.
+
 ### Paso 4: Desplegar
 
 ```bash
-agentkit deploy mi-agente --region europe-southwest1
+# Desde el directorio del proyecto:
+agentkit deploy --region europe-southwest1
+
+# O especificando la ruta:
+agentkit deploy --path mi-agente --region europe-southwest1
 ```
 
 **Regiones recomendadas:**
@@ -135,6 +160,7 @@ agentkit deploy mi-agente --region europe-southwest1
 
 | Opcion | Descripcion |
 |---|---|
+| `--path` / `-p` | Ruta al proyecto AgentKit (default: directorio actual) |
 | `--region` / `-r` | Region de GCP |
 | `--service` / `-s` | Nombre del servicio (default: nombre del proyecto) |
 | `--project` | Project ID de GCP (si no quieres usar el default) |
@@ -164,16 +190,27 @@ El comando imprime las URLs al terminar:
   <script src="https://mi-agente-xxxx-ew.a.run.app/widget.js"></script>
 ```
 
+> Si tienes API keys configuradas, los usuarios del chat verán un prompt para ingresar la key. Para el widget, usa `data-key` para autenticación transparente:
+> ```html
+> <script src="https://mi-agente-xxxx-ew.a.run.app/widget.js" data-key="tu-widget-key"></script>
+> ```
+
 Verifica que funciona:
 ```bash
-# Health check
+# Health check (no requiere auth)
 curl https://mi-agente-xxxx-ew.a.run.app/health
 
-# Chat via API
+# Info del agente (no requiere auth, indica si auth está activo)
+curl https://mi-agente-xxxx-ew.a.run.app/api/info
+
+# Chat via API (incluir Authorization si configuraste API keys)
 curl -X POST https://mi-agente-xxxx-ew.a.run.app/api/chat \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer tu-api-key" \
   -d '{"message": "Hola", "stream": false}'
 ```
+
+> Si no configuraste API keys, omite el header `Authorization`.
 
 ---
 
@@ -211,7 +248,7 @@ gcloud services enable run.googleapis.com
 
 ### El deploy falla con errores de APIs
 
-Habilita todas las APIs necesarias de una vez:
+`agentkit deploy` detecta automaticamente las APIs que faltan y ofrece activarlas. Si falla, activalas manualmente:
 
 ```bash
 gcloud services enable \
@@ -219,6 +256,20 @@ gcloud services enable \
   artifactregistry.googleapis.com \
   cloudbuild.googleapis.com
 ```
+
+### El deploy falla con "storage.objects.get access denied"
+
+`agentkit deploy` concede automaticamente los permisos de Storage al service account de Cloud Build. Si falla, concedelo manualmente:
+
+```bash
+PROJECT_NUMBER=$(gcloud projects describe TU_PROJECT_ID --format='value(projectNumber)')
+
+gcloud projects add-iam-policy-binding TU_PROJECT_ID \
+  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role="roles/storage.objectAdmin"
+```
+
+> A veces los permisos tardan unos segundos en propagarse. Si el primer deploy falla con este error, simplemente ejecuta el mismo comando de nuevo.
 
 ### El deploy falla con errores de permisos
 
@@ -238,10 +289,10 @@ Si eres el owner del proyecto ya tienes todos los permisos.
 
 ### Redesplegar despues de cambios
 
-Simplemente ejecuta el mismo comando:
+Simplemente ejecuta el mismo comando desde el directorio del proyecto:
 
 ```bash
-agentkit deploy mi-agente --region europe-southwest1
+agentkit deploy --region europe-southwest1
 ```
 
 Cloud Run mantiene el mismo URL entre despliegues.
