@@ -12,12 +12,57 @@ from agentkit.core.registry import ProjectSnapshot
 
 logger = logging.getLogger(__name__)
 
+ALLOWED_IMAGE_MIMES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+ALLOWED_FILE_MIMES = {"application/pdf"}
+MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024  # 20MB
+
 
 def is_litellm_model(model_str: str | None) -> bool:
     """Check if a model string refers to a LiteLLM model (non-OpenAI provider)."""
     if not model_str:
         return False
     return "/" in model_str and not model_str.startswith("openai/")
+
+
+def _build_content_parts(
+    text: str, attachments: list[dict] | None
+) -> str | list[dict]:
+    """Build content parts for the Responses API from text + attachments.
+
+    Without attachments, returns the plain string (preserving current behaviour).
+    With attachments, returns a list of content part dicts.
+    """
+    if not attachments:
+        return text
+
+    parts: list[dict] = []
+    if text:
+        parts.append({"type": "input_text", "text": text})
+
+    for att in attachments:
+        mime = att.get("mime_type", "")
+        data = att.get("data", "")
+        name = att.get("name", "file")
+
+        # Validate size (base64 string length ≈ 4/3 × raw bytes)
+        if len(data) > MAX_ATTACHMENT_SIZE * 4 // 3:
+            continue
+
+        if mime in ALLOWED_IMAGE_MIMES:
+            parts.append({
+                "type": "input_image",
+                "image_url": f"data:{mime};base64,{data}",
+                "detail": "auto",
+            })
+        elif mime in ALLOWED_FILE_MIMES:
+            parts.append({
+                "type": "input_file",
+                "file_data": f"data:{mime};base64,{data}",
+                "filename": name,
+            })
+        # Silently skip unsupported MIME types
+
+    return parts if parts else text
 
 
 async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot) -> None:
@@ -57,10 +102,16 @@ async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot)
             try:
                 from agents import Runner
 
+                attachments = msg.get("attachments")
+                content = _build_content_parts(user_message, attachments)
+
                 if use_litellm and conversation_history is not None:
-                    run_input = conversation_history + [{"role": "user", "content": user_message}]
+                    run_input = conversation_history + [{"role": "user", "content": content}]
+                elif isinstance(content, list):
+                    # Native OpenAI path with attachments — wrap in Responses API message
+                    run_input = [{"role": "user", "content": content}]
                 else:
-                    run_input = user_message
+                    run_input = content
 
                 result = Runner.run_streamed(
                     sdk_agent,
@@ -149,6 +200,7 @@ async def handle_streaming_chat(
     message: str,
     snapshot: ProjectSnapshot,
     state: dict | None = None,
+    attachments: list[dict] | None = None,
 ) -> AsyncGenerator[dict, None]:
     """Stream chat events as dicts for SSE/REST usage.
 
@@ -178,10 +230,14 @@ async def handle_streaming_chat(
     try:
         from agents import Runner
 
+        content = _build_content_parts(message, attachments)
+
         if use_litellm and conversation_history is not None:
-            run_input = conversation_history + [{"role": "user", "content": message}]
+            run_input = conversation_history + [{"role": "user", "content": content}]
+        elif isinstance(content, list):
+            run_input = [{"role": "user", "content": content}]
         else:
-            run_input = message
+            run_input = content
 
         result = Runner.run_streamed(
             sdk_agent,
