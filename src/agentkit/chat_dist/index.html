@@ -491,6 +491,131 @@
   var agentNameEl = document.getElementById('agent-name');
   var clearBtn = document.getElementById('clear-btn');
 
+  // ---- Persistence ----
+  var MESSAGES_KEY = 'agentkit-chat-messages';
+  var RESPONSE_ID_KEY = 'agentkit-chat-response-id';
+  var messages = []; // Array of {role, content, tool?, arguments?, output?, status?}
+  var responseId = null;
+
+  function saveState() {
+    try {
+      localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+      if (responseId) {
+        localStorage.setItem(RESPONSE_ID_KEY, responseId);
+      } else {
+        localStorage.removeItem(RESPONSE_ID_KEY);
+      }
+    } catch(e) {}
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(MESSAGES_KEY);
+      messages = raw ? JSON.parse(raw) : [];
+      responseId = localStorage.getItem(RESPONSE_ID_KEY) || null;
+    } catch(e) {
+      messages = [];
+      responseId = null;
+    }
+  }
+
+  function clearState() {
+    messages = [];
+    responseId = null;
+    localStorage.removeItem(MESSAGES_KEY);
+    localStorage.removeItem(RESPONSE_ID_KEY);
+  }
+
+  // Render all messages from the stored array
+  function renderAllMessages() {
+    // Remove everything except the empty state
+    messagesEl.innerHTML = '';
+    messagesEl.appendChild(emptyState);
+
+    if (messages.length === 0) {
+      emptyState.style.display = '';
+      return;
+    }
+    emptyState.style.display = 'none';
+
+    for (var i = 0; i < messages.length; i++) {
+      var m = messages[i];
+      if (m.role === 'user' || m.role === 'error') {
+        renderBubble(m.role, m.content);
+      } else if (m.role === 'assistant') {
+        renderBubble('assistant', m.content);
+      } else if (m.role === 'thinking') {
+        renderCollapsibleEl('thinking', 'Thinking', m.content);
+      } else if (m.role === 'tool_call') {
+        renderToolCallEl({
+          tool: m.tool,
+          arguments: m.arguments,
+          output: m.output,
+          status: m.status || 'done',
+        });
+      }
+    }
+    scrollToBottom();
+  }
+
+  function renderBubble(role, content) {
+    var wrapper = document.createElement('div');
+    wrapper.className = 'msg ' + role;
+    var bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    if (role === 'user' || role === 'error') {
+      bubble.textContent = content;
+    } else {
+      var md = document.createElement('div');
+      md.className = 'md';
+      md.innerHTML = renderMarkdown(content);
+      bubble.appendChild(md);
+    }
+    wrapper.appendChild(bubble);
+    messagesEl.appendChild(wrapper);
+    return wrapper;
+  }
+
+  function renderCollapsibleEl(type, label, content) {
+    var el = document.createElement('div');
+    el.className = 'collapsible ' + type;
+    var iconSvg = type === 'thinking'
+      ? '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'
+      : '';
+    el.innerHTML =
+      '<div class="collapsible-header" onclick="this.parentElement.classList.toggle(\'open\')">' +
+        iconSvg +
+        '<span class="label">' + escapeHtml(label) + '</span>' +
+        '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>' +
+      '</div>' +
+      '<div class="collapsible-body"><pre class="thinking-content">' + escapeHtml(content) + '</pre></div>';
+    messagesEl.appendChild(el);
+    return el;
+  }
+
+  function renderToolCallEl(data) {
+    var el = document.createElement('div');
+    el.className = 'collapsible tool-call';
+    var isDone = data.status !== 'running';
+    el.innerHTML =
+      '<div class="collapsible-header" onclick="this.parentElement.classList.toggle(\'open\')">' +
+        '<svg class="icon' + (isDone ? '' : ' spinning') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+          (isDone
+            ? '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>'
+            : '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>') +
+        '</svg>' +
+        '<span class="label">' + escapeHtml(data.tool || 'tool') + '</span>' +
+        '<span class="badge-sm' + (isDone ? '' : ' running') + '">' + (isDone ? 'done' : 'running') + '</span>' +
+        '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>' +
+      '</div>' +
+      '<div class="collapsible-body">' +
+        (data.arguments ? '<div><div class="section-label">Arguments</div><pre>' + escapeHtml(data.arguments) + '</pre></div>' : '') +
+        (data.output ? '<div><div class="section-label">Output</div><pre>' + escapeHtml(data.output) + '</pre></div>' : '') +
+      '</div>';
+    messagesEl.appendChild(el);
+    return el;
+  }
+
   // Fetch agent info
   fetch('/api/info')
     .then(function(r) { return r.json(); })
@@ -502,17 +627,24 @@
     })
     .catch(function() {});
 
+  // ---- Load persisted conversation ----
+  loadState();
+  renderAllMessages();
+
   // ---- WebSocket ----
   var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   var ws = null;
-  var currentAssistantEl = null;
-  var currentAssistantText = '';
-  var currentThinkingEl = null;
-  var currentThinkingText = '';
+  var currentAssistantIdx = -1;
+  var currentThinkingIdx = -1;
 
   function connect() {
     ws = new WebSocket(proto + '//' + location.host + '/ws/chat');
-    ws.onopen = function() {};
+    ws.onopen = function() {
+      // Restore conversation context on the server
+      if (responseId) {
+        ws.send(JSON.stringify({ type: 'restore', previous_response_id: responseId }));
+      }
+    };
     ws.onclose = function() { setTimeout(connect, 2000); };
     ws.onerror = function() {};
     ws.onmessage = function(e) {
@@ -523,13 +655,10 @@
 
   // ---- Clear / reset ----
   clearBtn.addEventListener('click', function() {
-    messagesEl.innerHTML = '';
-    emptyState.style.display = '';
-    messagesEl.appendChild(emptyState);
-    currentAssistantEl = null;
-    currentAssistantText = '';
-    currentThinkingEl = null;
-    currentThinkingText = '';
+    clearState();
+    currentAssistantIdx = -1;
+    currentThinkingIdx = -1;
+    renderAllMessages();
     setSending(false);
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'clear' }));
@@ -540,33 +669,58 @@
   function handleEvent(msg) {
     switch (msg.type) {
       case 'token':
-        if (!currentAssistantEl) {
-          currentAssistantEl = addMessage('assistant', '');
-          currentAssistantText = '';
+        if (currentAssistantIdx < 0) {
+          messages.push({ role: 'assistant', content: '' });
+          currentAssistantIdx = messages.length - 1;
+          emptyState.style.display = 'none';
+          renderBubble('assistant', '');
         }
-        currentAssistantText += msg.data;
-        currentAssistantEl.querySelector('.md').innerHTML = renderMarkdown(currentAssistantText);
+        messages[currentAssistantIdx].content += msg.data;
+        // Update the last assistant bubble in DOM
+        var assistantEls = messagesEl.querySelectorAll('.msg.assistant');
+        var lastA = assistantEls[assistantEls.length - 1];
+        if (lastA) lastA.querySelector('.md').innerHTML = renderMarkdown(messages[currentAssistantIdx].content);
         scrollToBottom();
         break;
 
       case 'thinking':
-        if (!currentThinkingEl) {
-          currentThinkingEl = addCollapsible('thinking', 'Thinking', '');
-          currentThinkingText = '';
+        if (currentThinkingIdx < 0) {
+          messages.push({ role: 'thinking', content: '' });
+          currentThinkingIdx = messages.length - 1;
+          emptyState.style.display = 'none';
+          renderCollapsibleEl('thinking', 'Thinking', '');
         }
-        currentThinkingText += msg.data;
-        currentThinkingEl.querySelector('.thinking-content').textContent = currentThinkingText;
+        messages[currentThinkingIdx].content += msg.data;
+        var thinkEls = messagesEl.querySelectorAll('.collapsible.thinking');
+        var lastT = thinkEls[thinkEls.length - 1];
+        if (lastT) lastT.querySelector('.thinking-content').textContent = messages[currentThinkingIdx].content;
         scrollToBottom();
         break;
 
       case 'tool_call':
-        currentThinkingEl = null;
-        currentThinkingText = '';
-        addToolCall(msg.data);
+        currentThinkingIdx = -1;
+        messages.push({
+          role: 'tool_call',
+          tool: msg.data.tool,
+          arguments: msg.data.arguments,
+          output: '',
+          status: 'running',
+        });
+        emptyState.style.display = 'none';
+        renderToolCallEl(msg.data);
         scrollToBottom();
         break;
 
       case 'tool_result': {
+        // Find last tool_call in messages array and update it
+        for (var ti = messages.length - 1; ti >= 0; ti--) {
+          if (messages[ti].role === 'tool_call' && messages[ti].status === 'running') {
+            messages[ti].status = 'done';
+            messages[ti].output = msg.data.output || '';
+            break;
+          }
+        }
+        // Update DOM
         var toolEls = messagesEl.querySelectorAll('.collapsible.tool-call');
         if (toolEls.length > 0) {
           var last = toolEls[toolEls.length - 1];
@@ -589,86 +743,25 @@
       }
 
       case 'done':
-        currentAssistantEl = null;
-        currentAssistantText = '';
-        currentThinkingEl = null;
-        currentThinkingText = '';
+        if (msg.response_id) {
+          responseId = msg.response_id;
+        }
+        currentAssistantIdx = -1;
+        currentThinkingIdx = -1;
+        saveState();
         setSending(false);
         break;
 
       case 'error':
-        addMessage('error', msg.data);
-        currentAssistantEl = null;
-        currentAssistantText = '';
-        currentThinkingEl = null;
-        currentThinkingText = '';
+        messages.push({ role: 'error', content: msg.data });
+        renderBubble('error', msg.data);
+        currentAssistantIdx = -1;
+        currentThinkingIdx = -1;
+        saveState();
         setSending(false);
         scrollToBottom();
         break;
     }
-  }
-
-  function addMessage(role, content) {
-    emptyState.style.display = 'none';
-    var wrapper = document.createElement('div');
-    wrapper.className = 'msg ' + role;
-    var bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    if (role === 'user') {
-      bubble.textContent = content;
-    } else if (role === 'error') {
-      bubble.textContent = content;
-    } else {
-      var md = document.createElement('div');
-      md.className = 'md';
-      md.innerHTML = renderMarkdown(content);
-      bubble.appendChild(md);
-    }
-    wrapper.appendChild(bubble);
-    messagesEl.appendChild(wrapper);
-    scrollToBottom();
-    return wrapper;
-  }
-
-  function addCollapsible(type, label, content) {
-    emptyState.style.display = 'none';
-    var el = document.createElement('div');
-    el.className = 'collapsible ' + type;
-    var iconSvg = type === 'thinking'
-      ? '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'
-      : '';
-    el.innerHTML =
-      '<div class="collapsible-header" onclick="this.parentElement.classList.toggle(\'open\')">' +
-        iconSvg +
-        '<span class="label">' + escapeHtml(label) + '</span>' +
-        '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>' +
-      '</div>' +
-      '<div class="collapsible-body"><pre class="thinking-content">' + escapeHtml(content) + '</pre></div>';
-    messagesEl.appendChild(el);
-    return el;
-  }
-
-  function addToolCall(data) {
-    emptyState.style.display = 'none';
-    var el = document.createElement('div');
-    el.className = 'collapsible tool-call';
-    var isRunning = data.status === 'running';
-    el.innerHTML =
-      '<div class="collapsible-header" onclick="this.parentElement.classList.toggle(\'open\')">' +
-        '<svg class="icon' + (isRunning ? ' spinning' : '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-          (isRunning
-            ? '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>'
-            : '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>') +
-        '</svg>' +
-        '<span class="label">' + escapeHtml(data.tool || 'tool') + '</span>' +
-        '<span class="badge-sm' + (isRunning ? ' running' : '') + '">' + (isRunning ? 'running' : 'done') + '</span>' +
-        '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>' +
-      '</div>' +
-      '<div class="collapsible-body">' +
-        (data.arguments ? '<div><div class="section-label">Arguments</div><pre>' + escapeHtml(data.arguments) + '</pre></div>' : '') +
-      '</div>';
-    messagesEl.appendChild(el);
-    return el;
   }
 
   // ---- Markdown renderer ----
@@ -844,7 +937,11 @@
   function submitMessage() {
     var text = inputEl.value.trim();
     if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
-    addMessage('user', text);
+    messages.push({ role: 'user', content: text });
+    saveState();
+    emptyState.style.display = 'none';
+    renderBubble('user', text);
+    scrollToBottom();
     ws.send(JSON.stringify({ message: text }));
     inputEl.value = '';
     autoResize();
