@@ -205,9 +205,19 @@ def _build_api_router():
     return router
 
 
+def _is_litellm_model(model_str: str | None) -> bool:
+    """Check if a model string refers to a LiteLLM model (non-OpenAI provider)."""
+    if not model_str:
+        return False
+    return "/" in model_str and not model_str.startswith("openai/")
+
+
 async def _handle_chat(websocket: WebSocket) -> None:
     await websocket.accept()
     previous_response_id: str | None = None
+    # For LiteLLM models: maintain conversation history manually since
+    # previous_response_id (OpenAI Responses API) is not supported.
+    conversation_history: list | None = None
 
     try:
         while True:
@@ -218,6 +228,7 @@ async def _handle_chat(websocket: WebSocket) -> None:
             # Client can request a conversation reset
             if msg.get("type") == "clear":
                 previous_response_id = None
+                conversation_history = None
                 continue
 
             # Client can restore a previous conversation context
@@ -236,13 +247,21 @@ async def _handle_chat(websocket: WebSocket) -> None:
                 await websocket.send_json({"type": "error", "data": "Agent SDK object not available"})
                 continue
 
+            use_litellm = _is_litellm_model(agent_entry.model)
+
             try:
                 from agents import Runner
 
+                if use_litellm and conversation_history is not None:
+                    # Append new user message to existing history
+                    run_input = conversation_history + [{"role": "user", "content": user_message}]
+                else:
+                    run_input = user_message
+
                 result = Runner.run_streamed(
                     sdk_agent,
-                    user_message,
-                    previous_response_id=previous_response_id,
+                    run_input,
+                    previous_response_id=previous_response_id if not use_litellm else None,
                 )
 
                 async for event in result.stream_events():
@@ -301,8 +320,11 @@ async def _handle_chat(websocket: WebSocket) -> None:
                                 },
                             })
 
-                # Save the response ID for conversation continuity
-                previous_response_id = result.last_response_id
+                # Save conversation state for continuity
+                if use_litellm:
+                    conversation_history = result.to_input_list()
+                else:
+                    previous_response_id = result.last_response_id
 
                 final_output = result.final_output
                 await websocket.send_json({
