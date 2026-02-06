@@ -393,6 +393,71 @@
   }
   .send-btn svg { width: 16px; height: 16px; }
 
+  /* Auth overlay */
+  .auth-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .auth-card {
+    background: var(--bg);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+    padding: 32px;
+    width: 100%;
+    max-width: 360px;
+    margin: 16px;
+  }
+  .auth-card h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .auth-card p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+  .auth-input {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: var(--input-bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .auth-input:focus { border-color: var(--blue); }
+  .auth-submit {
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: inherit;
+    border: none;
+    border-radius: 10px;
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .auth-submit:hover { opacity: 0.85; }
+  .auth-error-msg {
+    font-size: 13px;
+    color: var(--red-text);
+    margin-top: 8px;
+    display: none;
+  }
+
   /* Mobile responsive */
   @media (max-width: 600px) {
     body { padding: 0; }
@@ -406,6 +471,18 @@
 </style>
 </head>
 <body>
+  <div class="auth-overlay" id="auth-overlay" style="display:none">
+    <div class="auth-card">
+      <h2>Access Key</h2>
+      <p>Enter the access key to start chatting.</p>
+      <form id="auth-form">
+        <input type="password" class="auth-input" id="auth-input" placeholder="Enter access key" autocomplete="off" />
+        <button type="submit" class="auth-submit">Continue</button>
+        <div class="auth-error-msg" id="auth-error-msg">Invalid access key. Please try again.</div>
+      </form>
+    </div>
+  </div>
+
   <div class="chat-card">
     <div class="header" id="header">
       <h1 id="agent-name">AgentKit Chat</h1>
@@ -476,11 +553,47 @@
     applyTheme(!isDark());
   });
 
-  // ---- Embed mode ----
+  // ---- Embed mode & URL params ----
   var params = new URLSearchParams(window.location.search);
   if (params.get('embed') === '1') {
     document.body.classList.add('embed');
   }
+
+  // ---- Auth state ----
+  var AUTH_KEY_STORAGE = 'agentkit-chat-key';
+  var authRequired = false;
+  var authKey = params.get('key') || localStorage.getItem(AUTH_KEY_STORAGE) || '';
+  // If key came from URL param (widget embed), persist it
+  if (params.get('key')) {
+    localStorage.setItem(AUTH_KEY_STORAGE, authKey);
+  }
+
+  var authOverlay = document.getElementById('auth-overlay');
+  var authForm = document.getElementById('auth-form');
+  var authInput = document.getElementById('auth-input');
+  var authErrorMsg = document.getElementById('auth-error-msg');
+
+  function showAuthOverlay(errorText) {
+    authOverlay.style.display = 'flex';
+    authErrorMsg.style.display = errorText ? 'block' : 'none';
+    if (errorText) authErrorMsg.textContent = errorText;
+    authInput.value = '';
+    authInput.focus();
+  }
+
+  function hideAuthOverlay() {
+    authOverlay.style.display = 'none';
+  }
+
+  authForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var val = authInput.value.trim();
+    if (!val) return;
+    authKey = val;
+    localStorage.setItem(AUTH_KEY_STORAGE, authKey);
+    hideAuthOverlay();
+    connect();
+  });
 
   // ---- DOM refs ----
   var messagesEl = document.getElementById('messages');
@@ -616,7 +729,7 @@
     return el;
   }
 
-  // Fetch agent info
+  // Fetch agent info and check auth
   fetch('/api/info')
     .then(function(r) { return r.json(); })
     .then(function(info) {
@@ -624,8 +737,17 @@
         agentNameEl.textContent = info.name;
         document.title = info.name + ' — Chat';
       }
+      authRequired = !!info.auth_required;
+      if (authRequired && !authKey) {
+        showAuthOverlay();
+      } else {
+        connect();
+      }
     })
-    .catch(function() {});
+    .catch(function() {
+      // If info fetch fails, try connecting anyway
+      connect();
+    });
 
   // ---- Load persisted conversation ----
   loadState();
@@ -634,24 +756,29 @@
   // ---- WebSocket ----
   var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   var ws = null;
+  var reconnectTimer = null;
   var currentAssistantIdx = -1;
   var currentThinkingIdx = -1;
 
   function connect() {
-    ws = new WebSocket(proto + '//' + location.host + '/ws/chat');
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    var wsUrl = proto + '//' + location.host + '/ws/chat';
+    if (authRequired && authKey) {
+      wsUrl += '?key=' + encodeURIComponent(authKey);
+    }
+    ws = new WebSocket(wsUrl);
     ws.onopen = function() {
       // Restore conversation context on the server
       if (responseId) {
         ws.send(JSON.stringify({ type: 'restore', previous_response_id: responseId }));
       }
     };
-    ws.onclose = function() { setTimeout(connect, 2000); };
+    ws.onclose = function() { reconnectTimer = setTimeout(connect, 2000); };
     ws.onerror = function() {};
     ws.onmessage = function(e) {
       handleEvent(JSON.parse(e.data));
     };
   }
-  connect();
 
   // ---- Clear / reset ----
   clearBtn.addEventListener('click', function() {
@@ -753,6 +880,16 @@
         currentThinkingIdx = -1;
         saveState();
         setSending(false);
+        break;
+
+      case 'auth_error':
+        // Clear invalid key and stop reconnect loop
+        authKey = '';
+        localStorage.removeItem(AUTH_KEY_STORAGE);
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+        // Override onclose to prevent auto-reconnect for this disconnect
+        if (ws) ws.onclose = function() {};
+        showAuthOverlay('Invalid access key. Please try again.');
         break;
 
       case 'error':

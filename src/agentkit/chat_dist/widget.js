@@ -23,6 +23,7 @@
   var color = script.getAttribute('data-color') || '#2563eb';
   var width = script.getAttribute('data-width') || '380px';
   var height = script.getAttribute('data-height') || '560px';
+  var key = script.getAttribute('data-key') || '';
 
   var isLeft = position === 'bottom-left';
   var isOpen = false;
@@ -40,7 +41,7 @@
     panel.style.cssText = 'display:none;width:' + width + ';height:' + height + ';margin-bottom:12px;border-radius:12px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.08);';
 
     var iframe = document.createElement('iframe');
-    iframe.src = baseUrl + '/?embed=1';
+    iframe.src = baseUrl + '/?embed=1' + (key ? '&key=' + encodeURIComponent(key) : '');
     iframe.style.cssText = 'width:100%;height:100%;border:none;';
     iframe.setAttribute('allow', 'clipboard-write');
     panel.appendChild(iframe);

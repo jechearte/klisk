@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import hmac
 import json
 import logging
+import os
 from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from agentkit.core.config import ProjectConfig
@@ -18,6 +20,21 @@ from agentkit.core.registry import ProjectSnapshot
 from agentkit.server.chat import handle_streaming_chat, handle_websocket_chat
 
 logger = logging.getLogger(__name__)
+
+
+def _get_valid_keys() -> set[str] | None:
+    """Read API keys from environment variables. Returns None if no keys configured."""
+    keys: set[str] = set()
+    for var in ("AGENTKIT_API_KEY", "AGENTKIT_CHAT_KEY", "AGENTKIT_WIDGET_KEY"):
+        raw = os.environ.get(var, "").strip()
+        if raw:
+            keys.update(k.strip() for k in raw.split(",") if k.strip())
+    return keys or None
+
+
+def _validate_api_key(provided: str, valid_keys: set[str]) -> bool:
+    """Validate an API key using constant-time comparison."""
+    return any(hmac.compare_digest(provided, k) for k in valid_keys)
 
 
 def create_production_app(project_dir: Path) -> FastAPI:
@@ -30,6 +47,8 @@ def create_production_app(project_dir: Path) -> FastAPI:
     except Exception as e:
         snapshot = ProjectSnapshot()
         snapshot.config = {"error": str(e)}
+
+    api_keys = _get_valid_keys()
 
     app = FastAPI(title="AgentKit")
 
@@ -48,7 +67,11 @@ def create_production_app(project_dir: Path) -> FastAPI:
         agent_name = None
         if snapshot and snapshot.agents:
             agent_name = next(iter(snapshot.agents))
-        return {"name": config.name, "agent": agent_name}
+        return {
+            "name": config.name,
+            "agent": agent_name,
+            "auth_required": api_keys is not None,
+        }
 
     @app.get("/health")
     async def health():
@@ -56,6 +79,12 @@ def create_production_app(project_dir: Path) -> FastAPI:
 
     @app.post("/api/chat")
     async def api_chat(request: Request):
+        if api_keys:
+            auth = request.headers.get("authorization", "")
+            key = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
+            if not _validate_api_key(key, api_keys):
+                return JSONResponse({"error": "Invalid API key"}, status_code=401)
+
         body = await request.json()
         message = body.get("message", "")
         stream = body.get("stream", True)
@@ -93,6 +122,13 @@ def create_production_app(project_dir: Path) -> FastAPI:
 
     @app.websocket("/ws/chat")
     async def ws_chat(websocket: WebSocket):
+        if api_keys:
+            key = websocket.query_params.get("key", "")
+            if not _validate_api_key(key, api_keys):
+                await websocket.accept()
+                await websocket.send_json({"type": "auth_error", "data": "Invalid API key"})
+                await websocket.close(code=4001)
+                return
         await handle_websocket_chat(websocket, snapshot)
 
     # Serve chat_dist as static files (must be last — catches all routes)
