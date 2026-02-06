@@ -106,6 +106,16 @@ agentkit run -p my-agent "Find flights from Madrid to Tokyo on March 15"
 agentkit run -p my-agent -i   # interactive conversation mode
 ```
 
+**Multimodal (images/PDFs):** Use `@path` to attach files:
+
+```bash
+agentkit run -p my-agent "@photo.jpg Describe this image"
+agentkit run -p my-agent "@report.pdf Summarize this document"
+agentkit run -p my-agent "@img1.png @img2.png Compare these images"
+```
+
+Supported: JPEG, PNG, GIF, WebP images and PDF files (max 20MB each).
+
 ### 7. Validate before deploying
 
 ```bash

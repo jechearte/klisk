@@ -41,6 +41,7 @@ Serves: chat UI, REST API, WebSocket, and embeddable widget.
 - `stream: true` → SSE (Server-Sent Events)
 - `stream: false` → JSON: `{"response": "...", "state": {...}, "done": true}`
 - `state`: Pass back between requests for conversation continuity
+- `attachments` (optional): Array of file attachments (see Multimodal below)
 
 **Auth header:** `Authorization: Bearer <key>`
 
@@ -51,6 +52,16 @@ Serves: chat UI, REST API, WebSocket, and embeddable widget.
 **Send message:**
 ```json
 {"message": "Hello", "previous_response_id": "resp_xxx"}
+```
+
+**Send message with attachments:**
+```json
+{
+  "message": "Describe this image",
+  "attachments": [
+    {"type": "image", "name": "photo.jpg", "mime_type": "image/jpeg", "data": "<base64>"}
+  ]
+}
 ```
 
 **Clear conversation:**
@@ -137,6 +148,49 @@ Add a chat widget to any website:
 
 ---
 
+## Multimodal Support (Images & PDFs)
+
+All interfaces (Studio, Chat UI, CLI, API) support sending images and PDFs to the agent.
+
+**Supported formats:** JPEG, PNG, GIF, WebP (images), PDF (files). Max 20MB per file.
+
+**Attachment wire format:**
+```json
+{
+  "type": "image",
+  "name": "photo.jpg",
+  "mime_type": "image/jpeg",
+  "data": "<base64 encoded, no data URL prefix>"
+}
+```
+
+- `type`: `"image"` or `"file"` (for PDFs)
+- `data`: Raw base64 string (not a `data:...` URL)
+
+**Provider support via LiteLLM:**
+- Images: OpenAI, Anthropic Claude 3+, Google Gemini, AWS Bedrock, Vertex AI, Ollama (LLaVA)
+- PDFs: Anthropic, Bedrock, Vertex AI (OpenAI does NOT support PDFs directly)
+
+**Chat UI & Studio:** Paperclip button to attach files, drag-and-drop onto messages area, preview strip before sending. Images show as thumbnails in message bubbles.
+
+**CLI:** Use `@path` syntax: `agentkit run -p my-agent "@photo.jpg Describe this"`
+
+**API example with attachment:**
+```bash
+curl -X POST https://your-url/api/chat \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_KEY" \
+  -d '{
+    "message": "What is in this image?",
+    "stream": false,
+    "attachments": [
+      {"type": "image", "name": "photo.jpg", "mime_type": "image/jpeg", "data": "<base64>"}
+    ]
+  }'
+```
+
+---
+
 ## Chat UI Features
 
 The built-in chat UI at `/` includes:
@@ -145,6 +199,7 @@ The built-in chat UI at `/` includes:
 - Tool call display (collapsible, spinner while running)
 - Thinking traces (collapsible)
 - Error messages (red)
+- File attachments (images & PDFs) with drag-and-drop
 - Dark/light theme toggle (persists in localStorage)
 - Reset button
 - Embed mode: `/?embed=1` (full viewport, no borders)
