@@ -1,0 +1,201 @@
+@import "@xyflow/react/dist/style.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+/* Transparent scrollbar — light mode */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+/* React Flow controls — light mode */
+.react-flow__controls button {
+  background-color: #fff !important;
+  border-color: #d1d5db !important;
+  color: #6b7280 !important;
+}
+
+.react-flow__controls button:hover {
+  background-color: #f3f4f6 !important;
+}
+
+.react-flow__controls button svg {
+  fill: #6b7280 !important;
+}
+
+/* React Flow controls — dark mode */
+.dark .react-flow__controls button {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #9ca3af !important;
+}
+
+.dark .react-flow__controls button:hover {
+  background-color: #374151 !important;
+}
+
+.dark .react-flow__controls button svg {
+  fill: #9ca3af !important;
+}
+
+/* Markdown prose — light mode */
+.prose.prose-sm {
+  font-size: 0.875rem;
+  line-height: 1.625;
+}
+
+.prose.prose-sm p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.prose.prose-sm p:first-child {
+  margin-top: 0;
+}
+
+.prose.prose-sm p:last-child {
+  margin-bottom: 0;
+}
+
+.prose.prose-sm ul,
+.prose.prose-sm ol {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  padding-left: 1.25em;
+}
+
+.prose.prose-sm li {
+  margin-top: 0.15em;
+  margin-bottom: 0.15em;
+}
+
+.prose.prose-sm code {
+  background-color: rgba(0, 0, 0, 0.06);
+  padding: 0.15em 0.35em;
+  border-radius: 0.25rem;
+  font-size: 0.8125rem;
+}
+
+.prose.prose-sm pre {
+  background-color: rgba(0, 0, 0, 0.04);
+  border-radius: 0.5rem;
+  padding: 0.75em 1em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  overflow-x: auto;
+}
+
+.prose.prose-sm pre code {
+  background: none;
+  padding: 0;
+}
+
+.prose.prose-sm a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose.prose-sm h1,
+.prose.prose-sm h2,
+.prose.prose-sm h3 {
+  margin-top: 0.75em;
+  margin-bottom: 0.25em;
+}
+
+.prose.prose-sm blockquote {
+  border-left-color: #d1d5db;
+  color: #6b7280;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.prose.prose-sm hr {
+  border-color: #e5e7eb;
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+}
+
+.prose.prose-sm table {
+  font-size: 0.8125rem;
+}
+
+.prose.prose-sm th,
+.prose.prose-sm td {
+  padding: 0.35em 0.65em;
+  border-bottom-color: #e5e7eb;
+}
+
+/* Markdown prose — dark mode overrides */
+.dark .prose.prose-invert {
+  --tw-prose-body: #e5e7eb;
+  --tw-prose-headings: #f3f4f6;
+  --tw-prose-bold: #f9fafb;
+  --tw-prose-links: #60a5fa;
+  --tw-prose-code: #e5e7eb;
+}
+
+.dark .prose.prose-invert code {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.dark .prose.prose-invert pre {
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.dark .prose.prose-invert blockquote {
+  border-left-color: #4b5563;
+  color: #9ca3af;
+}
+
+.dark .prose.prose-invert hr {
+  border-color: #374151;
+}
+
+.dark .prose.prose-invert th,
+.dark .prose.prose-invert td {
+  border-bottom-color: #374151;
+}

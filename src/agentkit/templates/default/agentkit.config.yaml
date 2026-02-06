@@ -1,0 +1,14 @@
+entry: agents/main.py
+name: "{{project_name}}"
+studio:
+  port: 3000
+api:
+  port: 8000
+defaults:
+  # Model can be an OpenAI model name or a LiteLLM provider/model string:
+  #   gpt-5.2, gpt-4.1, o3-mini
+  #   anthropic/claude-3-5-sonnet-20240620
+  #   gemini/gemini-2.5-flash
+  #   mistral/mistral-large-latest
+  model: gpt-5.2
+  temperature: 0.7
