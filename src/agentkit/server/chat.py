@@ -40,6 +40,55 @@ def _extract_hosted_args(raw_item: object, raw_type: str) -> str:
     return ""
 
 
+def _extract_hosted_output(raw_item: object, raw_type: str) -> str:
+    """Extract output/results from a completed hosted tool call."""
+    if raw_type == "web_search_call":
+        action = getattr(raw_item, "action", None)
+        if action:
+            sources = getattr(action, "sources", None)
+            if sources:
+                urls = []
+                for s in sources:
+                    url = getattr(s, "url", None)
+                    title = getattr(s, "title", None)
+                    if url:
+                        urls.append({"url": url, **({"title": title} if title else {})})
+                if urls:
+                    return json.dumps(urls, ensure_ascii=False)
+    elif raw_type == "file_search_call":
+        results = getattr(raw_item, "results", None)
+        if results:
+            items = []
+            for r in results:
+                entry: dict = {}
+                filename = getattr(r, "filename", None)
+                text = getattr(r, "text", None)
+                score = getattr(r, "score", None)
+                if filename:
+                    entry["file"] = filename
+                if text:
+                    entry["text"] = text[:200]
+                if score is not None:
+                    entry["score"] = score
+                if entry:
+                    items.append(entry)
+            if items:
+                return json.dumps(items, ensure_ascii=False)
+    elif raw_type == "code_interpreter_call":
+        outputs = getattr(raw_item, "outputs", None)
+        if outputs:
+            parts = []
+            for o in outputs:
+                otype = getattr(o, "type", None)
+                if otype == "logs":
+                    logs = getattr(o, "logs", "")
+                    if logs:
+                        parts.append(logs)
+            if parts:
+                return "\n".join(parts)
+    return ""
+
+
 def _extract_tool_info(raw_item: object | None) -> tuple[str, str, str | None, str | None]:
     """Extract tool name, arguments, ID, and hosted status from a ToolCallItem raw_item.
 
@@ -192,7 +241,7 @@ async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot)
             use_litellm = is_litellm_model(agent_entry.model)
 
             try:
-                from agents import RunConfig, Runner
+                from agents import ModelSettings, RunConfig, Runner
 
                 attachments = msg.get("attachments")
                 content = _build_content_parts(user_message, attachments, litellm=use_litellm)
@@ -205,9 +254,15 @@ async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot)
                 else:
                     run_input = content
 
-                # Disable tracing when attachments are present to avoid
-                # "payload too large" errors from base64 data in span input
-                run_config = RunConfig(tracing_disabled=True) if attachments else None
+                # Include hosted tool details (web search sources, etc.)
+                # and disable tracing when attachments are present
+                model_settings = ModelSettings(
+                    response_include=["web_search_call.action.sources"],
+                )
+                run_config = RunConfig(
+                    model_settings=model_settings,
+                    tracing_disabled=bool(attachments),
+                )
 
                 result = Runner.run_streamed(
                     sdk_agent,
@@ -252,13 +307,15 @@ async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot)
                                 # Hosted tool — deduplicate by ID, delay until args available
                                 emitted = seen_hosted_tools.get(item_id) if item_id else None
                                 is_done = hosted_status in ("completed", "failed")
+                                raw_type = getattr(raw_item, "type", "")
 
                                 if emitted is True:
                                     # Already sent tool_call — send result on completion
                                     if is_done:
+                                        output = _extract_hosted_output(raw_item, raw_type)
                                         await websocket.send_json({
                                             "type": "tool_result",
-                                            "data": {"output": args_str},
+                                            "data": {"output": output},
                                         })
                                     continue
 
@@ -275,9 +332,10 @@ async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot)
                                         },
                                     })
                                     if is_done:
+                                        output = _extract_hosted_output(raw_item, raw_type)
                                         await websocket.send_json({
                                             "type": "tool_result",
-                                            "data": {"output": ""},
+                                            "data": {"output": output},
                                         })
                                 else:
                                     # No args — skip entirely
@@ -367,7 +425,7 @@ async def handle_streaming_chat(
     use_litellm = is_litellm_model(agent_entry.model)
 
     try:
-        from agents import RunConfig, Runner
+        from agents import ModelSettings, RunConfig, Runner
 
         content = _build_content_parts(message, attachments, litellm=use_litellm)
 
@@ -378,7 +436,15 @@ async def handle_streaming_chat(
         else:
             run_input = content
 
-        run_config = RunConfig(tracing_disabled=True) if attachments else None
+        # Include hosted tool details (web search sources, etc.)
+        # and disable tracing when attachments are present
+        model_settings = ModelSettings(
+            response_include=["web_search_call.action.sources"],
+        )
+        run_config = RunConfig(
+            model_settings=model_settings,
+            tracing_disabled=bool(attachments),
+        )
 
         result = Runner.run_streamed(
             sdk_agent,
@@ -417,13 +483,15 @@ async def handle_streaming_chat(
                         # Hosted tool — deduplicate by ID, delay until args available
                         emitted = seen_hosted_tools.get(item_id) if item_id else None
                         is_done = hosted_status in ("completed", "failed")
+                        raw_type = getattr(raw_item, "type", "")
 
                         if emitted is True:
                             # Already sent tool_call — send result on completion
                             if is_done:
+                                output = _extract_hosted_output(raw_item, raw_type)
                                 yield {
                                     "type": "tool_result",
-                                    "data": {"output": args_str},
+                                    "data": {"output": output},
                                 }
                             continue
 
@@ -440,9 +508,10 @@ async def handle_streaming_chat(
                                 },
                             }
                             if is_done:
+                                output = _extract_hosted_output(raw_item, raw_type)
                                 yield {
                                     "type": "tool_result",
-                                    "data": {"output": ""},
+                                    "data": {"output": output},
                                 }
                         else:
                             # No args — skip entirely
