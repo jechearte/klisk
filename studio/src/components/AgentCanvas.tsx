@@ -86,8 +86,8 @@ export default function AgentCanvas({
           id: `${agent.name}-${toolName}`,
           source: `agent-${agent.name}`,
           target: `tool-${toolName}`,
-          animated: true,
-          style: { stroke: "#4b5563" },
+          type: "smoothstep",
+          style: { stroke: "#9ca3af", strokeWidth: 1.5 },
         });
       });
     });
