@@ -8,6 +8,11 @@ from typing import Any, Callable
 
 from agents import Agent, function_tool, FunctionTool
 
+from agentkit.core.builtin_tools import (
+    BuiltinTool,
+    resolve_builtin_tools,
+    builtin_tool_name,
+)
 from agentkit.core.registry import AgentRegistry, AgentEntry, ToolEntry
 
 
@@ -60,6 +65,7 @@ def define_agent(
     temperature: float | None = None,
     reasoning_effort: str = "medium",
     tools: list[Any] | None = None,
+    builtin_tools: list[str | BuiltinTool] | None = None,
     **kwargs: Any,
 ) -> Agent:
     """Create an agent and register it in the global AgentRegistry.
@@ -75,6 +81,11 @@ def define_agent(
     The *reasoning_effort* parameter controls how much reasoning the model uses.
     Supported values: ``"none"``, ``"low"``, ``"medium"`` (default), ``"high"``.
     LiteLLM translates this to each provider's equivalent parameter.
+
+    The *builtin_tools* parameter enables provider-hosted tools:
+    - String shortcuts: ``["web_search"]``, ``["code_interpreter"]``
+    - Configured objects: ``[WebSearch(search_context_size="high")]``
+    - ``web_search`` works cross-provider; others require OpenAI models.
     """
     sdk_tools = []
     tool_names = []
@@ -88,6 +99,15 @@ def define_agent(
                 tool_names.append(getattr(t, "name", str(t)))
 
     resolved_model = _resolve_model(model)
+    is_openai = model is None or "/" not in model or model.startswith("openai/")
+
+    # Resolve builtin tools (web_search, code_interpreter, etc.)
+    extra_body: dict[str, Any] = {}
+    if builtin_tools:
+        hosted_sdk_tools, extra_body = resolve_builtin_tools(builtin_tools, is_openai)
+        sdk_tools.extend(hosted_sdk_tools)
+        for bt in builtin_tools:
+            tool_names.append(builtin_tool_name(bt))
 
     if "model_settings" not in kwargs:
         from agents import ModelSettings
@@ -96,6 +116,11 @@ def define_agent(
             temperature=temperature,
             reasoning=Reasoning(effort=reasoning_effort),
         )
+
+    # Merge extra_body from builtin tools into model_settings
+    if extra_body:
+        model_settings = kwargs["model_settings"]
+        model_settings.extra_body = {**(model_settings.extra_body or {}), **extra_body}
 
     sdk_agent = Agent(
         name=name,

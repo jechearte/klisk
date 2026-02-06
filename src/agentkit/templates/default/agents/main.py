@@ -7,4 +7,5 @@ agent = define_agent(
     # Use "provider/model" for non-OpenAI models (e.g. "anthropic/claude-3-5-sonnet-20240620")
     model="gpt-5.2",
     tools=get_tools("greet"),
+    # builtin_tools=["web_search"],  # Enable web search (works with any provider)
 )

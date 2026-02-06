@@ -50,7 +50,16 @@ def check(
             ok.append(f"{agent_count} agent(s) registered")
             ok.append(f"{tool_count} tool(s) registered")
 
-            # 4. Validate tools have docstrings and type hints
+            # 4. Count builtin tools across agents
+            builtin_names = set()
+            for agent_entry in snapshot.agents.values():
+                for t in agent_entry.tools:
+                    if t.startswith("builtin:"):
+                        builtin_names.add(t)
+            if builtin_names:
+                ok.append(f"{len(builtin_names)} builtin tool(s): {', '.join(sorted(builtin_names))}")
+
+            # 5. Validate tools have docstrings and type hints
             for name, tool_entry in snapshot.tools.items():
                 if not tool_entry.description:
                     errors.append(f"Tool '{name}' missing docstring")
