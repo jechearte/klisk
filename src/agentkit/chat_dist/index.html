@@ -143,6 +143,13 @@
   }
   .header-btn svg { width: 14px; height: 14px; }
 
+  /* Transparent scrollbar */
+  .messages::-webkit-scrollbar { width: 6px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+  .messages::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+  .messages { scrollbar-color: var(--border-strong) transparent; scrollbar-width: thin; }
+
   .messages {
     flex: 1;
     overflow-y: auto;
