@@ -44,7 +44,12 @@ def _resolve_model(model_str: str | None) -> Any:
         from agents import set_tracing_disabled
         set_tracing_disabled(True)
 
-    return LitellmModel(model=model_str)
+    # Auto-detect API key from environment based on provider prefix
+    # e.g. "gemini/..." → GEMINI_API_KEY, "anthropic/..." → ANTHROPIC_API_KEY
+    provider = model_str.split("/", 1)[0]
+    api_key = os.environ.get(f"{provider.upper()}_API_KEY")
+
+    return LitellmModel(model=model_str, api_key=api_key)
 
 
 def define_agent(
