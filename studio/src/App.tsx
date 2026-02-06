@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import AgentCanvas from "./components/AgentCanvas";
+import AgentListing from "./components/AgentListing";
 import Chat from "./components/Chat";
 import AgentModal from "./components/AgentModal";
 import ToolModal from "./components/ToolModal";
@@ -12,22 +13,31 @@ import type {
   ToolInfo,
 } from "./types";
 
-const STORAGE_KEY_MESSAGES = "agentkit-chat-messages";
-const STORAGE_KEY_RESPONSE_ID = "agentkit-chat-response-id";
 const STORAGE_KEY_THEME = "agentkit-theme";
 const STORAGE_KEY_SPLIT = "agentkit-split-percent";
 
-function loadMessages(): ChatMessage[] {
+// Legacy keys (pre-agent-scoped) — used for one-time migration
+const LEGACY_STORAGE_KEY_MESSAGES = "agentkit-chat-messages";
+const LEGACY_STORAGE_KEY_RESPONSE_ID = "agentkit-chat-response-id";
+
+function messagesKey(agentName: string) {
+  return `agentkit-chat-messages-${agentName}`;
+}
+function responseIdKey(agentName: string) {
+  return `agentkit-chat-response-id-${agentName}`;
+}
+
+function loadMessagesFor(agentName: string): ChatMessage[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_MESSAGES);
+    const raw = localStorage.getItem(messagesKey(agentName));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-function loadResponseId(): string | null {
-  return localStorage.getItem(STORAGE_KEY_RESPONSE_ID);
+function loadResponseIdFor(agentName: string): string | null {
+  return localStorage.getItem(responseIdKey(agentName));
 }
 
 function loadDark(): boolean {
@@ -43,14 +53,33 @@ function loadSplit(): number {
   return 50;
 }
 
+// One-time migration: move legacy global keys to first agent
+function migrateLegacyStorage(firstAgentName: string) {
+  const legacyMessages = localStorage.getItem(LEGACY_STORAGE_KEY_MESSAGES);
+  const legacyResponseId = localStorage.getItem(LEGACY_STORAGE_KEY_RESPONSE_ID);
+  if (legacyMessages || legacyResponseId) {
+    if (legacyMessages && !localStorage.getItem(messagesKey(firstAgentName))) {
+      localStorage.setItem(messagesKey(firstAgentName), legacyMessages);
+    }
+    if (legacyResponseId && !localStorage.getItem(responseIdKey(firstAgentName))) {
+      localStorage.setItem(responseIdKey(firstAgentName), legacyResponseId);
+    }
+    localStorage.removeItem(LEGACY_STORAGE_KEY_MESSAGES);
+    localStorage.removeItem(LEGACY_STORAGE_KEY_RESPONSE_ID);
+  }
+}
+
+type ViewState = { page: "listing" } | { page: "detail"; agentName: string };
+
 export default function App() {
   const [snapshot, setSnapshot] = useState<ProjectSnapshot | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>(loadMessages);
+  const [currentView, setCurrentView] = useState<ViewState>({ page: "listing" });
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connected, setConnected] = useState(false);
   const chatWsRef = useRef<WebSocket | null>(null);
   const reloadWsRef = useRef<WebSocket | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const responseIdRef = useRef<string | null>(loadResponseId());
+  const responseIdRef = useRef<string | null>(null);
   const [dark, setDark] = useState(loadDark);
 
   // Resizable split
@@ -101,8 +130,27 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY_THEME, dark ? "dark" : "light");
   }, [dark]);
 
-  // Persist messages to localStorage (strip attachment data to save space)
+  // Run legacy migration once when snapshot loads
   useEffect(() => {
+    if (snapshot && Object.keys(snapshot.agents).length > 0) {
+      const firstAgent = Object.keys(snapshot.agents)[0];
+      migrateLegacyStorage(firstAgent);
+    }
+  }, [snapshot]);
+
+  // Load/save messages scoped to agent
+  useEffect(() => {
+    if (currentView.page === "detail") {
+      const agentName = currentView.agentName;
+      setMessages(loadMessagesFor(agentName));
+      responseIdRef.current = loadResponseIdFor(agentName);
+    }
+  }, [currentView]);
+
+  // Persist messages to localStorage scoped to agent (strip attachment data)
+  useEffect(() => {
+    if (currentView.page !== "detail") return;
+    const agentName = currentView.agentName;
     const toSave = messages.map((m) => {
       if (m.role === "user" && m.attachments) {
         return {
@@ -112,8 +160,8 @@ export default function App() {
       }
       return m;
     });
-    localStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(toSave));
-  }, [messages]);
+    localStorage.setItem(messagesKey(agentName), JSON.stringify(toSave));
+  }, [messages, currentView]);
 
   // Fetch initial project snapshot
   useEffect(() => {
@@ -154,8 +202,6 @@ export default function App() {
       switch (data.type) {
         case "thinking":
           setMessages((prev) => {
-            // Search backwards for the last thinking message,
-            // skipping over empty assistant messages (caused by empty text deltas)
             for (let i = prev.length - 1; i >= 0; i--) {
               const msg = prev[i];
               if (msg.role === "thinking") {
@@ -185,7 +231,6 @@ export default function App() {
             }
             return [...prev, { role: "assistant", content: data.data }];
           });
-
           break;
 
         case "tool_call":
@@ -199,12 +244,10 @@ export default function App() {
               status: "running" as const,
             },
           ]);
-
           break;
 
         case "tool_result":
           setMessages((prev) => {
-            // Find last tool_call that is still running and update it
             const idx = [...prev].reverse().findIndex(
               (m) => m.role === "tool_call" && m.status === "running"
             );
@@ -218,14 +261,18 @@ export default function App() {
               ...prev.slice(realIdx + 1),
             ];
           });
-
           break;
 
         case "done":
-
           if (data.response_id) {
             responseIdRef.current = data.response_id;
-            localStorage.setItem(STORAGE_KEY_RESPONSE_ID, data.response_id);
+            // Save scoped to current agent
+            setCurrentView((cv) => {
+              if (cv.page === "detail") {
+                localStorage.setItem(responseIdKey(cv.agentName), data.response_id);
+              }
+              return cv;
+            });
           }
           break;
 
@@ -234,13 +281,19 @@ export default function App() {
             ...prev,
             { role: "system", content: `Error: ${data.data}` },
           ]);
-
           break;
       }
     };
 
     return () => ws.close();
   }, []);
+
+  // Safety: navigate back to listing if selected agent is removed during hot reload
+  useEffect(() => {
+    if (currentView.page === "detail" && snapshot && !snapshot.agents[currentView.agentName]) {
+      setCurrentView({ page: "listing" });
+    }
+  }, [snapshot, currentView]);
 
   const sendMessage = useCallback(
     (text: string, attachments?: Attachment[]) => {
@@ -258,7 +311,14 @@ export default function App() {
       if (attachments && attachments.length > 0) {
         payload.attachments = attachments;
       }
-      chatWsRef.current.send(JSON.stringify(payload));
+      // Include agent_name so the backend uses the correct agent
+      setCurrentView((cv) => {
+        if (cv.page === "detail") {
+          payload.agent_name = cv.agentName;
+        }
+        chatWsRef.current!.send(JSON.stringify(payload));
+        return cv;
+      });
     },
     []
   );
@@ -266,12 +326,26 @@ export default function App() {
   const clearChat = useCallback(() => {
     setMessages([]);
     responseIdRef.current = null;
-    localStorage.removeItem(STORAGE_KEY_MESSAGES);
-    localStorage.removeItem(STORAGE_KEY_RESPONSE_ID);
+    // Clear scoped storage
+    setCurrentView((cv) => {
+      if (cv.page === "detail") {
+        localStorage.removeItem(messagesKey(cv.agentName));
+        localStorage.removeItem(responseIdKey(cv.agentName));
+      }
+      return cv;
+    });
     // Tell the server to reset conversation context
     if (chatWsRef.current && chatWsRef.current.readyState === WebSocket.OPEN) {
       chatWsRef.current.send(JSON.stringify({ type: "clear" }));
     }
+  }, []);
+
+  const navigateToAgent = useCallback((agentName: string) => {
+    setCurrentView({ page: "detail", agentName });
+  }, []);
+
+  const navigateToListing = useCallback(() => {
+    setCurrentView({ page: "listing" });
   }, []);
 
   // --- API calls for saving ---
@@ -279,7 +353,6 @@ export default function App() {
   const saveAgent = useCallback(
     async (originalName: string, updates: Record<string, unknown>) => {
       try {
-        console.log("[Studio] Saving agent", originalName, updates);
         const res = await fetch(
           `/api/agents/${encodeURIComponent(originalName)}`,
           {
@@ -288,16 +361,12 @@ export default function App() {
             body: JSON.stringify(updates),
           }
         );
-        console.log("[Studio] Response status:", res.status);
         if (!res.ok) {
-          const text = await res.text();
-          console.error("[Studio] Error response:", text);
           setToast(`Error: ${res.status} ${res.statusText}`);
           setTimeout(() => setToast(null), 3000);
           return;
         }
         const data = await res.json();
-        console.log("[Studio] Response data:", data);
         if (data.error) {
           setToast(`Error: ${data.error}`);
           setTimeout(() => setToast(null), 3000);
@@ -306,7 +375,6 @@ export default function App() {
           setTimeout(() => setToast(null), 2000);
         }
       } catch (err) {
-        console.error("[Studio] saveAgent failed:", err);
         setToast(`Error: ${String(err)}`);
         setTimeout(() => setToast(null), 3000);
       }
@@ -317,7 +385,6 @@ export default function App() {
   const saveTool = useCallback(
     async (originalName: string, updates: Record<string, unknown>) => {
       try {
-        console.log("[Studio] Saving tool", originalName, updates);
         const res = await fetch(
           `/api/tools/${encodeURIComponent(originalName)}`,
           {
@@ -326,16 +393,12 @@ export default function App() {
             body: JSON.stringify(updates),
           }
         );
-        console.log("[Studio] Response status:", res.status);
         if (!res.ok) {
-          const text = await res.text();
-          console.error("[Studio] Error response:", text);
           setToast(`Error: ${res.status} ${res.statusText}`);
           setTimeout(() => setToast(null), 3000);
           return;
         }
         const data = await res.json();
-        console.log("[Studio] Response data:", data);
         if (data.error) {
           setToast(`Error: ${data.error}`);
           setTimeout(() => setToast(null), 3000);
@@ -344,7 +407,6 @@ export default function App() {
           setTimeout(() => setToast(null), 2000);
         }
       } catch (err) {
-        console.error("[Studio] saveTool failed:", err);
         setToast(`Error: ${String(err)}`);
         setTimeout(() => setToast(null), 3000);
       }
@@ -353,13 +415,27 @@ export default function App() {
   );
 
   const config = snapshot?.config ?? {};
+  const isDetail = currentView.page === "detail";
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Shared Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <h1 className="text-sm font-semibold text-gray-900 dark:text-white">AgentKit Studio</h1>
+          {isDetail && (
+            <button
+              onClick={navigateToListing}
+              className="p-1.5 -ml-1 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title="Back to agents"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+              </svg>
+            </button>
+          )}
+          <h1 className="text-sm font-semibold text-gray-900 dark:text-white">
+            {isDetail ? currentView.agentName : "AgentKit Studio"}
+          </h1>
           <div className="flex items-center gap-2">
             <span
               className={`w-2 h-2 rounded-full ${
@@ -396,50 +472,57 @@ export default function App() {
               </svg>
             )}
           </button>
-          {/* Reset conversation */}
-          <button
-            onClick={clearChat}
-            className="p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            title="Reset conversation"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth="1.5"
-              stroke="currentColor"
-              className="w-4 h-4"
+          {/* Reset conversation — only show in detail view */}
+          {isDetail && (
+            <button
+              onClick={clearChat}
+              className="p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title="Reset conversation"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-            </svg>
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="w-4 h-4"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Main Content */}
-      <div ref={containerRef} className="flex flex-1 min-h-0">
-        {/* Left column — Agent Canvas */}
-        <div style={{ width: `${splitPercent}%` }} className="flex-shrink-0 min-w-0">
-          <ReactFlowProvider>
-            <AgentCanvas
-              snapshot={snapshot}
-              onSelectAgent={setSelectedAgent}
-              onSelectTool={setSelectedTool}
-            />
-          </ReactFlowProvider>
-        </div>
+      {currentView.page === "listing" ? (
+        <AgentListing snapshot={snapshot} onSelect={navigateToAgent} />
+      ) : (
+        <div ref={containerRef} className="flex flex-1 min-h-0">
+          {/* Left column — Agent Canvas */}
+          <div style={{ width: `${splitPercent}%` }} className="flex-shrink-0 min-w-0">
+            <ReactFlowProvider>
+              <AgentCanvas
+                snapshot={snapshot}
+                agentName={currentView.agentName}
+                onSelectAgent={setSelectedAgent}
+                onSelectTool={setSelectedTool}
+              />
+            </ReactFlowProvider>
+          </div>
 
-        {/* Draggable divider */}
-        <div
-          onMouseDown={onDividerMouseDown}
-          className="splitter-divider flex-shrink-0"
-        />
+          {/* Draggable divider */}
+          <div
+            onMouseDown={onDividerMouseDown}
+            className="splitter-divider flex-shrink-0"
+          />
 
-        {/* Right column — Chat */}
-        <div style={{ width: `${100 - splitPercent}%` }} className="flex flex-col min-h-0 min-w-0">
-          <Chat messages={messages} onSend={sendMessage} />
+          {/* Right column — Chat */}
+          <div style={{ width: `${100 - splitPercent}%` }} className="flex flex-col min-h-0 min-w-0">
+            <Chat messages={messages} onSend={sendMessage} />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Agent Modal */}
       {selectedAgent && (

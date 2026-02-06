@@ -90,12 +90,13 @@ def create_production_app(project_dir: Path) -> FastAPI:
         stream = body.get("stream", True)
         state = body.get("state") or {}
         attachments = body.get("attachments")
+        req_agent_name = body.get("agent_name")
 
         if not stream:
             # Collect full response
             full_text = ""
             final_event = None
-            async for event in handle_streaming_chat(message, snapshot, state, attachments=attachments):
+            async for event in handle_streaming_chat(message, snapshot, state, attachments=attachments, agent_name=req_agent_name):
                 if event["type"] == "token":
                     full_text += event["data"]
                 final_event = event
@@ -107,7 +108,7 @@ def create_production_app(project_dir: Path) -> FastAPI:
 
         # SSE streaming
         async def event_stream():
-            async for event in handle_streaming_chat(message, snapshot, state, attachments=attachments):
+            async for event in handle_streaming_chat(message, snapshot, state, attachments=attachments, agent_name=req_agent_name):
                 yield f"data: {json.dumps(event)}\n\n"
             yield "data: [DONE]\n\n"
 

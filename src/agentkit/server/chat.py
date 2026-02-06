@@ -70,6 +70,7 @@ async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot)
     await websocket.accept()
     previous_response_id: str | None = None
     conversation_history: list | None = None
+    current_agent_name: str | None = None
 
     try:
         while True:
@@ -89,8 +90,20 @@ async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot)
                 await websocket.send_json({"type": "error", "data": "No agents loaded"})
                 continue
 
-            first_agent_name = next(iter(snapshot.agents))
-            agent_entry = snapshot.agents[first_agent_name]
+            # Select agent: use agent_name from message, fall back to first agent
+            agent_name = msg.get("agent_name")
+            if agent_name and agent_name in snapshot.agents:
+                selected_name = agent_name
+            else:
+                selected_name = next(iter(snapshot.agents))
+
+            # Reset conversation state when switching agents
+            if current_agent_name is not None and selected_name != current_agent_name:
+                previous_response_id = None
+                conversation_history = None
+
+            current_agent_name = selected_name
+            agent_entry = snapshot.agents[selected_name]
             sdk_agent = agent_entry.sdk_agent
 
             if sdk_agent is None:
@@ -201,11 +214,12 @@ async def handle_streaming_chat(
     snapshot: ProjectSnapshot,
     state: dict | None = None,
     attachments: list[dict] | None = None,
+    agent_name: str | None = None,
 ) -> AsyncGenerator[dict, None]:
     """Stream chat events as dicts for SSE/REST usage.
 
     State dict is used to maintain conversation continuity between requests.
-    Keys: 'previous_response_id', 'conversation_history'.
+    Keys: 'previous_response_id', 'conversation_history', 'current_agent_name'.
     """
     if state is None:
         state = {}
@@ -217,8 +231,19 @@ async def handle_streaming_chat(
         yield {"type": "error", "data": "No agents loaded"}
         return
 
-    first_agent_name = next(iter(snapshot.agents))
-    agent_entry = snapshot.agents[first_agent_name]
+    # Select agent: use agent_name param, fall back to first agent
+    if agent_name and agent_name in snapshot.agents:
+        selected_name = agent_name
+    else:
+        selected_name = next(iter(snapshot.agents))
+
+    # Reset conversation state when switching agents
+    if state.get("current_agent_name") is not None and selected_name != state.get("current_agent_name"):
+        previous_response_id = None
+        conversation_history = None
+
+    state["current_agent_name"] = selected_name
+    agent_entry = snapshot.agents[selected_name]
     sdk_agent = agent_entry.sdk_agent
 
     if sdk_agent is None:

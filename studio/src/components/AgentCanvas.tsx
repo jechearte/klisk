@@ -14,6 +14,7 @@ import type { ProjectSnapshot, AgentInfo, ToolInfo } from "../types";
 
 interface AgentCanvasProps {
   snapshot: ProjectSnapshot | null;
+  agentName?: string;
   onSelectAgent: (agent: AgentInfo) => void;
   onSelectTool: (tool: ToolInfo) => void;
 }
@@ -25,13 +26,17 @@ const nodeTypes = {
 
 export default function AgentCanvas({
   snapshot,
+  agentName,
   onSelectAgent,
   onSelectTool,
 }: AgentCanvasProps) {
   const { nodes, edges } = useMemo(() => {
     if (!snapshot) return { nodes: [] as Node[], edges: [] as Edge[] };
 
-    const agents = Object.values(snapshot.agents);
+    // If agentName is provided, show only that agent; otherwise show all
+    const agents = agentName && snapshot.agents[agentName]
+      ? [snapshot.agents[agentName]]
+      : Object.values(snapshot.agents);
     const toolMap = snapshot.tools;
     const allNodes: Node[] = [];
     const allEdges: Edge[] = [];
@@ -93,7 +98,7 @@ export default function AgentCanvas({
     });
 
     return { nodes: allNodes, edges: allEdges };
-  }, [snapshot]);
+  }, [snapshot, agentName]);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
