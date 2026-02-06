@@ -144,18 +144,27 @@ export default function App() {
       switch (data.type) {
         case "thinking":
           setMessages((prev) => {
-            const last = prev[prev.length - 1];
-            if (last && last.role === "thinking") {
-              return [
-                ...prev.slice(0, -1),
-                { ...last, content: last.content + data.data },
-              ];
+            // Search backwards for the last thinking message,
+            // skipping over empty assistant messages (caused by empty text deltas)
+            for (let i = prev.length - 1; i >= 0; i--) {
+              const msg = prev[i];
+              if (msg.role === "thinking") {
+                return [
+                  ...prev.slice(0, i),
+                  { ...msg, content: msg.content + data.data },
+                  ...prev.slice(i + 1),
+                ];
+              }
+              if (msg.role !== "assistant" || msg.content.trim() !== "") {
+                break;
+              }
             }
             return [...prev, { role: "thinking" as const, content: data.data }];
           });
           break;
 
         case "token":
+          if (!data.data) break;
           setMessages((prev) => {
             const last = prev[prev.length - 1];
             if (last && last.role === "assistant") {

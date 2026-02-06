@@ -271,10 +271,11 @@ async def _handle_chat(websocket: WebSocket) -> None:
                         raw = event.data
                         raw_type = type(raw).__name__
                         if raw_type == "ResponseTextDeltaEvent":
-                            await websocket.send_json({
-                                "type": "token",
-                                "data": raw.delta,
-                            })
+                            if raw.delta:
+                                await websocket.send_json({
+                                    "type": "token",
+                                    "data": raw.delta,
+                                })
                         elif raw_type in (
                             "ResponseReasoningSummaryTextDeltaEvent",
                             "ResponseReasoningDeltaEvent",
