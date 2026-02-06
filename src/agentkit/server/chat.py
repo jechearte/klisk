@@ -25,19 +25,24 @@ def is_litellm_model(model_str: str | None) -> bool:
 
 
 def _build_content_parts(
-    text: str, attachments: list[dict] | None
+    text: str, attachments: list[dict] | None, *, litellm: bool = False
 ) -> str | list[dict]:
-    """Build content parts for the Responses API from text + attachments.
+    """Build content parts from text + attachments.
 
     Without attachments, returns the plain string (preserving current behaviour).
-    With attachments, returns a list of content part dicts.
+    With attachments, returns a list of content part dicts in the appropriate format:
+    - litellm=False: Responses API format (input_image, input_file) for native OpenAI
+    - litellm=True:  Chat Completions format (image_url, file) for LiteLLM providers
     """
     if not attachments:
         return text
 
     parts: list[dict] = []
     if text:
-        parts.append({"type": "input_text", "text": text})
+        if litellm:
+            parts.append({"type": "text", "text": text})
+        else:
+            parts.append({"type": "input_text", "text": text})
 
     for att in attachments:
         mime = att.get("mime_type", "")
@@ -48,18 +53,32 @@ def _build_content_parts(
         if len(data) > MAX_ATTACHMENT_SIZE * 4 // 3:
             continue
 
+        data_uri = f"data:{mime};base64,{data}"
+
         if mime in ALLOWED_IMAGE_MIMES:
-            parts.append({
-                "type": "input_image",
-                "image_url": f"data:{mime};base64,{data}",
-                "detail": "auto",
-            })
+            if litellm:
+                parts.append({
+                    "type": "image_url",
+                    "image_url": {"url": data_uri, "detail": "auto"},
+                })
+            else:
+                parts.append({
+                    "type": "input_image",
+                    "image_url": data_uri,
+                    "detail": "auto",
+                })
         elif mime in ALLOWED_FILE_MIMES:
-            parts.append({
-                "type": "input_file",
-                "file_data": f"data:{mime};base64,{data}",
-                "filename": name,
-            })
+            if litellm:
+                parts.append({
+                    "type": "file",
+                    "file": {"file_data": data_uri, "filename": name},
+                })
+            else:
+                parts.append({
+                    "type": "input_file",
+                    "file_data": data_uri,
+                    "filename": name,
+                })
         # Silently skip unsupported MIME types
 
     return parts if parts else text
@@ -116,7 +135,7 @@ async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot)
                 from agents import Runner
 
                 attachments = msg.get("attachments")
-                content = _build_content_parts(user_message, attachments)
+                content = _build_content_parts(user_message, attachments, litellm=use_litellm)
 
                 if use_litellm and conversation_history is not None:
                     run_input = conversation_history + [{"role": "user", "content": content}]
@@ -255,7 +274,7 @@ async def handle_streaming_chat(
     try:
         from agents import Runner
 
-        content = _build_content_parts(message, attachments)
+        content = _build_content_parts(message, attachments, litellm=use_litellm)
 
         if use_litellm and conversation_history is not None:
             run_input = conversation_history + [{"role": "user", "content": content}]

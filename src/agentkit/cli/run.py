@@ -16,12 +16,14 @@ ALLOWED_FILE_MIMES = {"application/pdf"}
 MAX_FILE_SIZE = 20 * 1024 * 1024  # 20MB
 
 
-def _parse_input(raw: str) -> tuple[str, list[dict]]:
+def _parse_input(raw: str, *, litellm: bool = False) -> tuple[str, list[dict]]:
     """Parse user input for @path tokens and return (text, content_parts).
 
     Tokens like @photo.jpg or @doc.pdf are extracted, the files are read and
-    base64-encoded, and the result is returned as Responses API content parts.
-    If no @tokens are found, content_parts will be empty.
+    base64-encoded, and the result is returned as content parts.
+    Format depends on litellm flag:
+    - False: Responses API format (input_image, input_file) for native OpenAI
+    - True:  Chat Completions format (image_url, file) for LiteLLM providers
     """
     tokens = raw.split()
     file_parts: list[dict] = []
@@ -36,20 +38,33 @@ def _parse_input(raw: str) -> tuple[str, list[dict]]:
                     text_tokens.append(token)
                     continue
                 mime, _ = mimetypes.guess_type(str(filepath))
+                data = base64.b64encode(filepath.read_bytes()).decode()
+                data_uri = f"data:{mime};base64,{data}"
+
                 if mime in ALLOWED_IMAGE_MIMES:
-                    data = base64.b64encode(filepath.read_bytes()).decode()
-                    file_parts.append({
-                        "type": "input_image",
-                        "image_url": f"data:{mime};base64,{data}",
-                        "detail": "auto",
-                    })
+                    if litellm:
+                        file_parts.append({
+                            "type": "image_url",
+                            "image_url": {"url": data_uri, "detail": "auto"},
+                        })
+                    else:
+                        file_parts.append({
+                            "type": "input_image",
+                            "image_url": data_uri,
+                            "detail": "auto",
+                        })
                 elif mime in ALLOWED_FILE_MIMES:
-                    data = base64.b64encode(filepath.read_bytes()).decode()
-                    file_parts.append({
-                        "type": "input_file",
-                        "file_data": f"data:{mime};base64,{data}",
-                        "filename": filepath.name,
-                    })
+                    if litellm:
+                        file_parts.append({
+                            "type": "file",
+                            "file": {"file_data": data_uri, "filename": filepath.name},
+                        })
+                    else:
+                        file_parts.append({
+                            "type": "input_file",
+                            "file_data": data_uri,
+                            "filename": filepath.name,
+                        })
                 else:
                     typer.echo(f"Warning: unsupported file type for {filepath.name}, skipping.", err=True)
                     text_tokens.append(token)
@@ -62,14 +77,15 @@ def _parse_input(raw: str) -> tuple[str, list[dict]]:
     return " ".join(text_tokens), file_parts
 
 
-def _build_run_input(text: str, file_parts: list[dict]) -> str | list[dict]:
+def _build_run_input(text: str, file_parts: list[dict], *, litellm: bool = False) -> str | list[dict]:
     """Build the input for Runner.run() from parsed text and file parts."""
     if not file_parts:
         return text
 
     parts: list[dict] = []
+    text_part_type = "text" if litellm else "input_text"
     if text:
-        parts.append({"type": "input_text", "text": text})
+        parts.append({"type": text_part_type, "text": text})
     parts.extend(file_parts)
     return [{"role": "user", "content": parts}]
 
@@ -97,21 +113,25 @@ def run(
     agent_entry = snapshot.agents[first_agent_name]
     sdk_agent = agent_entry.sdk_agent
 
+    from agentkit.server.chat import is_litellm_model
+
+    use_litellm = is_litellm_model(agent_entry.model)
+
     if interactive or message is None:
         typer.echo(f"Chat with '{first_agent_name}' (type 'exit' to quit)")
         typer.echo("Tip: use @path to attach images or PDFs (e.g. @photo.jpg)")
         typer.echo()
-        asyncio.run(_interactive_loop(sdk_agent))
+        asyncio.run(_interactive_loop(sdk_agent, use_litellm=use_litellm))
     else:
         typer.echo(f"Running agent '{first_agent_name}'...")
         typer.echo()
-        text, file_parts = _parse_input(message)
-        run_input = _build_run_input(text, file_parts)
+        text, file_parts = _parse_input(message, litellm=use_litellm)
+        run_input = _build_run_input(text, file_parts, litellm=use_litellm)
         result = asyncio.run(_run_agent(sdk_agent, run_input, previous_response_id=None))
         typer.echo(result.final_output)
 
 
-async def _interactive_loop(agent) -> None:
+async def _interactive_loop(agent, *, use_litellm: bool = False) -> None:
     from agents import Runner
 
     previous_response_id: str | None = None
@@ -129,8 +149,8 @@ async def _interactive_loop(agent) -> None:
         if not user_input.strip():
             continue
 
-        text, file_parts = _parse_input(user_input)
-        run_input = _build_run_input(text, file_parts)
+        text, file_parts = _parse_input(user_input, litellm=use_litellm)
+        run_input = _build_run_input(text, file_parts, litellm=use_litellm)
 
         result = await Runner.run(
             agent,
