@@ -46,7 +46,6 @@ export default function App() {
   const [snapshot, setSnapshot] = useState<ProjectSnapshot | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(loadMessages);
   const [connected, setConnected] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
   const chatWsRef = useRef<WebSocket | null>(null);
   const reloadWsRef = useRef<WebSocket | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -167,7 +166,7 @@ export default function App() {
             }
             return [...prev, { role: "assistant", content: data.data }];
           });
-          setStatus(null);
+
           break;
 
         case "tool_call":
@@ -181,7 +180,7 @@ export default function App() {
               status: "running" as const,
             },
           ]);
-          setStatus(null);
+
           break;
 
         case "tool_result":
@@ -200,11 +199,11 @@ export default function App() {
               ...prev.slice(realIdx + 1),
             ];
           });
-          setStatus(null);
+
           break;
 
         case "done":
-          setStatus(null);
+
           if (data.response_id) {
             responseIdRef.current = data.response_id;
             localStorage.setItem(STORAGE_KEY_RESPONSE_ID, data.response_id);
@@ -216,7 +215,7 @@ export default function App() {
             ...prev,
             { role: "system", content: `Error: ${data.data}` },
           ]);
-          setStatus(null);
+
           break;
       }
     };
@@ -230,7 +229,6 @@ export default function App() {
         return;
 
       setMessages((prev) => [...prev, { role: "user", content: text }]);
-      setStatus("Thinking...");
       const payload: Record<string, string> = { message: text };
       if (responseIdRef.current) {
         payload.previous_response_id = responseIdRef.current;
@@ -242,7 +240,6 @@ export default function App() {
 
   const clearChat = useCallback(() => {
     setMessages([]);
-    setStatus(null);
     responseIdRef.current = null;
     localStorage.removeItem(STORAGE_KEY_MESSAGES);
     localStorage.removeItem(STORAGE_KEY_RESPONSE_ID);
@@ -415,7 +412,7 @@ export default function App() {
 
         {/* Right column — Chat */}
         <div style={{ width: `${100 - splitPercent}%` }} className="flex flex-col min-h-0 min-w-0">
-          <Chat messages={messages} status={status} onSend={sendMessage} />
+          <Chat messages={messages} onSend={sendMessage} />
         </div>
       </div>
 
