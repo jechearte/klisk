@@ -8,6 +8,7 @@ from agentkit.cli.dev import dev
 from agentkit.cli.run import run
 from agentkit.cli.check import check
 from agentkit.cli.list_projects import list_cmd
+from agentkit.cli.serve import serve
 
 app = typer.Typer(
     name="agentkit",
@@ -21,3 +22,4 @@ app.command()(dev)
 app.command()(run)
 app.command()(check)
 app.command("list")(list_cmd)
+app.command()(serve)
