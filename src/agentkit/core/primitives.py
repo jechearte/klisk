@@ -167,8 +167,7 @@ def get_tools(*names: str) -> list[FunctionTool]:
 
 
 def _register_tool(fn: Callable, ft: FunctionTool) -> None:
-    caller_frame = inspect.stack()[2]
-    source_file = caller_frame.filename
+    source_file = inspect.getfile(fn)
 
     entry = ToolEntry(
         name=ft.name,
