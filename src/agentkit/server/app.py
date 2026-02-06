@@ -270,14 +270,21 @@ async def _handle_chat(websocket: WebSocket) -> None:
                         item = event.item
                         item_type = type(item).__name__
                         if item_type == "ToolCallItem":
-                            tool_name = getattr(item, "name", getattr(item, "tool_name", str(item)))
-                            # Try to extract arguments
                             raw_item = getattr(item, "raw_item", None)
+                            # Extract tool name from raw_item
+                            tool_name = "tool"
+                            if raw_item:
+                                if isinstance(raw_item, dict):
+                                    tool_name = raw_item.get("name", "tool")
+                                elif hasattr(raw_item, "name"):
+                                    tool_name = raw_item.name
+                            # Extract arguments from raw_item
                             args_str = ""
                             if raw_item:
-                                args_str = getattr(raw_item, "arguments", "")
-                                if not args_str and isinstance(raw_item, dict):
+                                if isinstance(raw_item, dict):
                                     args_str = raw_item.get("arguments", "")
+                                else:
+                                    args_str = getattr(raw_item, "arguments", "")
                             await websocket.send_json({
                                 "type": "tool_call",
                                 "data": {
