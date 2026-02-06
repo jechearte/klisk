@@ -198,14 +198,14 @@ export default function Chat({ messages, onSend }: ChatProps) {
   );
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div
+      className={`flex-1 flex flex-col min-h-0 ${dragging ? "ring-2 ring-blue-400 ring-inset bg-blue-50/30 dark:bg-blue-900/10" : ""}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {/* Messages */}
-      <div
-        className={`flex-1 overflow-y-auto p-4 space-y-3 ${dragging ? "ring-2 ring-blue-400 ring-inset bg-blue-50/30 dark:bg-blue-900/10" : ""}`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 && (
           <div className="text-center text-gray-400 dark:text-gray-500 mt-20">
             <p className="text-lg">Send a message to test your agent</p>
