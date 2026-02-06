@@ -85,7 +85,7 @@ def define_agent(
     The *builtin_tools* parameter enables provider-hosted tools:
     - String shortcuts: ``["web_search"]``, ``["code_interpreter"]``
     - Configured objects: ``[WebSearch(search_context_size="high")]``
-    - ``web_search`` works cross-provider; others require OpenAI models.
+    - All builtin tools require OpenAI models.
     """
     sdk_tools = []
     tool_names = []
@@ -102,9 +102,9 @@ def define_agent(
     is_openai = model is None or "/" not in model or model.startswith("openai/")
 
     # Resolve builtin tools (web_search, code_interpreter, etc.)
-    extra_body: dict[str, Any] = {}
+    # All builtin tools require OpenAI models — resolve_builtin_tools raises for non-OpenAI.
     if builtin_tools:
-        hosted_sdk_tools, extra_body = resolve_builtin_tools(builtin_tools, is_openai)
+        hosted_sdk_tools, _ = resolve_builtin_tools(builtin_tools, is_openai)
         sdk_tools.extend(hosted_sdk_tools)
         for bt in builtin_tools:
             tool_names.append(builtin_tool_name(bt))
@@ -116,11 +116,6 @@ def define_agent(
             temperature=temperature,
             reasoning=Reasoning(effort=reasoning_effort),
         )
-
-    # Merge extra_body from builtin tools into model_settings
-    if extra_body:
-        model_settings = kwargs["model_settings"]
-        model_settings.extra_body = {**(model_settings.extra_body or {}), **extra_body}
 
     sdk_agent = Agent(
         name=name,

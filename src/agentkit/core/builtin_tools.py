@@ -8,11 +8,7 @@ from typing import Any, Literal
 
 @dataclass
 class WebSearch:
-    """Web search builtin tool.
-
-    Works with OpenAI (via WebSearchTool) and LiteLLM providers
-    (via web_search_options in extra_body).
-    """
+    """Web search builtin tool. Only supported with OpenAI models."""
 
     search_context_size: Literal["low", "medium", "high"] = "medium"
 
@@ -72,11 +68,12 @@ def resolve_builtin_tools(
     builtin_tools: list[str | BuiltinTool],
     is_openai_model: bool,
 ) -> tuple[list[Any], dict[str, Any]]:
-    """Resolve builtin tool specs into SDK hosted tools and/or extra_body params.
+    """Resolve builtin tool specs into SDK hosted tools.
+
+    All builtin tools require OpenAI models — raises ValueError for non-OpenAI.
 
     Returns:
-        (sdk_tools, extra_body) — sdk_tools are appended to the Agent's tools list,
-        extra_body is merged into ModelSettings.extra_body for LiteLLM providers.
+        (sdk_tools, extra_body) — sdk_tools are appended to the Agent's tools list.
     """
     sdk_tools: list[Any] = []
     extra_body: dict[str, Any] = {}
@@ -86,16 +83,16 @@ def resolve_builtin_tools(
             bt = _shortcut_to_object(bt)
 
         if isinstance(bt, WebSearch):
-            if is_openai_model:
-                from agents import WebSearchTool
-
-                sdk_tools.append(
-                    WebSearchTool(search_context_size=bt.search_context_size)
+            if not is_openai_model:
+                raise ValueError(
+                    "web_search is only supported with OpenAI models. "
+                    "Remove it or switch to an OpenAI model."
                 )
-            else:
-                extra_body["web_search_options"] = {
-                    "search_context_size": bt.search_context_size,
-                }
+            from agents import WebSearchTool
+
+            sdk_tools.append(
+                WebSearchTool(search_context_size=bt.search_context_size)
+            )
 
         elif isinstance(bt, CodeInterpreter):
             if not is_openai_model:
