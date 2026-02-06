@@ -127,12 +127,12 @@ def run(
         typer.echo()
         text, file_parts = _parse_input(message, litellm=use_litellm)
         run_input = _build_run_input(text, file_parts, litellm=use_litellm)
-        result = asyncio.run(_run_agent(sdk_agent, run_input, previous_response_id=None))
+        result = asyncio.run(_run_agent(sdk_agent, run_input, previous_response_id=None, has_files=bool(file_parts)))
         typer.echo(result.final_output)
 
 
 async def _interactive_loop(agent, *, use_litellm: bool = False) -> None:
-    from agents import Runner
+    from agents import RunConfig, Runner
 
     previous_response_id: str | None = None
 
@@ -152,16 +152,22 @@ async def _interactive_loop(agent, *, use_litellm: bool = False) -> None:
         text, file_parts = _parse_input(user_input, litellm=use_litellm)
         run_input = _build_run_input(text, file_parts, litellm=use_litellm)
 
+        # Disable tracing when files are attached to avoid payload-too-large errors
+        run_config = RunConfig(tracing_disabled=True) if file_parts else None
+
         result = await Runner.run(
             agent,
             run_input,
             previous_response_id=previous_response_id,
+            run_config=run_config,
         )
         previous_response_id = result.last_response_id
         print(f"Agent: {result.final_output}")
         print()
 
 
-async def _run_agent(agent, message: str | list, previous_response_id: str | None = None):
-    from agents import Runner
-    return await Runner.run(agent, message, previous_response_id=previous_response_id)
+async def _run_agent(agent, message: str | list, previous_response_id: str | None = None, has_files: bool = False):
+    from agents import RunConfig, Runner
+
+    run_config = RunConfig(tracing_disabled=True) if has_files else None
+    return await Runner.run(agent, message, previous_response_id=previous_response_id, run_config=run_config)

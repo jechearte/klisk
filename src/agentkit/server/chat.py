@@ -132,7 +132,7 @@ async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot)
             use_litellm = is_litellm_model(agent_entry.model)
 
             try:
-                from agents import Runner
+                from agents import RunConfig, Runner
 
                 attachments = msg.get("attachments")
                 content = _build_content_parts(user_message, attachments, litellm=use_litellm)
@@ -145,10 +145,15 @@ async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot)
                 else:
                     run_input = content
 
+                # Disable tracing when attachments are present to avoid
+                # "payload too large" errors from base64 data in span input
+                run_config = RunConfig(tracing_disabled=True) if attachments else None
+
                 result = Runner.run_streamed(
                     sdk_agent,
                     run_input,
                     previous_response_id=previous_response_id if not use_litellm else None,
+                    run_config=run_config,
                 )
 
                 async for event in result.stream_events():
@@ -272,7 +277,7 @@ async def handle_streaming_chat(
     use_litellm = is_litellm_model(agent_entry.model)
 
     try:
-        from agents import Runner
+        from agents import RunConfig, Runner
 
         content = _build_content_parts(message, attachments, litellm=use_litellm)
 
@@ -283,10 +288,13 @@ async def handle_streaming_chat(
         else:
             run_input = content
 
+        run_config = RunConfig(tracing_disabled=True) if attachments else None
+
         result = Runner.run_streamed(
             sdk_agent,
             run_input,
             previous_response_id=previous_response_id if not use_litellm else None,
+            run_config=run_config,
         )
 
         async for event in result.stream_events():
