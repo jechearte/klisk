@@ -39,6 +39,7 @@ packages = ["src/agentkit"]
 [tool.hatch.build.targets.wheel.force-include]
 "src/agentkit/templates" = "agentkit/templates"
 "src/agentkit/studio_dist" = "agentkit/studio_dist"
+"src/agentkit/chat_dist" = "agentkit/chat_dist"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
