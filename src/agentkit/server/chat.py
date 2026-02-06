@@ -255,14 +255,13 @@ async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot)
                     run_input = content
 
                 # Include hosted tool details (web search sources, etc.)
-                # and disable tracing when attachments are present
-                model_settings = ModelSettings(
-                    response_include=["web_search_call.action.sources"],
-                )
-                run_config = RunConfig(
-                    model_settings=model_settings,
-                    tracing_disabled=bool(attachments),
-                )
+                # response_include is OpenAI Responses API only — skip for LiteLLM
+                run_config_kwargs: dict = {"tracing_disabled": bool(attachments)}
+                if not use_litellm:
+                    run_config_kwargs["model_settings"] = ModelSettings(
+                        response_include=["web_search_call.action.sources"],
+                    )
+                run_config = RunConfig(**run_config_kwargs)
 
                 result = Runner.run_streamed(
                     sdk_agent,
@@ -437,14 +436,13 @@ async def handle_streaming_chat(
             run_input = content
 
         # Include hosted tool details (web search sources, etc.)
-        # and disable tracing when attachments are present
-        model_settings = ModelSettings(
-            response_include=["web_search_call.action.sources"],
-        )
-        run_config = RunConfig(
-            model_settings=model_settings,
-            tracing_disabled=bool(attachments),
-        )
+        # response_include is OpenAI Responses API only — skip for LiteLLM
+        run_config_kwargs: dict = {"tracing_disabled": bool(attachments)}
+        if not use_litellm:
+            run_config_kwargs["model_settings"] = ModelSettings(
+                response_include=["web_search_call.action.sources"],
+            )
+        run_config = RunConfig(**run_config_kwargs)
 
         result = Runner.run_streamed(
             sdk_agent,
