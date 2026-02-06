@@ -41,7 +41,6 @@ def discover_project(project_dir: str | Path) -> ProjectSnapshot:
     snapshot.config = {
         "name": config.name,
         "entry": config.entry,
-        "defaults": config.defaults.model_dump(),
         "studio": config.studio.model_dump(),
         "api": config.api.model_dump(),
     }

@@ -38,7 +38,6 @@ def list_projects() -> list[dict[str, Any]]:
                 "name": config.name,
                 "path": str(entry),
                 "entry": config.entry,
-                "model": config.defaults.model,
             })
         except Exception:
             results.append({

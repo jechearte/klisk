@@ -16,17 +16,11 @@ class ApiConfig(BaseModel):
     port: int = 8000
 
 
-class DefaultsConfig(BaseModel):
-    model: str = "gpt-5.2"
-    temperature: float = 0.7
-
-
 class ProjectConfig(BaseModel):
     entry: str = "agents/main.py"
     name: str = "MyAgent"
     studio: StudioConfig = StudioConfig()
     api: ApiConfig = ApiConfig()
-    defaults: DefaultsConfig = DefaultsConfig()
 
     @classmethod
     def load(cls, project_dir: str | Path) -> ProjectConfig:
