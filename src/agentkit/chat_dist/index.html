@@ -32,6 +32,7 @@
     --bubble-user-text: #ffffff;
     --bubble-assistant: #f3f4f6;
     --bubble-assistant-text: #1f2937;
+    --dot-color: #d1d5db;
   }
 
   html.dark {
@@ -59,12 +60,15 @@
     --bubble-user-text: #ffffff;
     --bubble-assistant: #1f2937;
     --bubble-assistant-text: #e5e7eb;
+    --dot-color: #1e293b;
   }
 
   html, body {
     height: 100%;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: var(--bg-page);
+    background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+    background-size: 24px 24px;
     color: var(--text);
   }
 
@@ -79,7 +83,7 @@
   .chat-card {
     width: 100%;
     max-width: 720px;
-    height: min(700px, calc(100vh - 48px));
+    height: calc(100vh - 48px);
     background: var(--bg);
     border-radius: 16px;
     border: 1px solid var(--border);
@@ -155,6 +159,7 @@
     font-size: 15px;
   }
 
+  .msg, .collapsible { flex-shrink: 0; }
   .msg { display: flex; }
   .msg.user { justify-content: flex-end; }
   .msg.assistant, .msg.error { justify-content: flex-start; }
