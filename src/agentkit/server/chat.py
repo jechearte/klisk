@@ -12,6 +12,66 @@ from agentkit.core.registry import ProjectSnapshot
 
 logger = logging.getLogger(__name__)
 
+# Mapping from raw_item.type to a human-friendly tool name for hosted tools
+_HOSTED_TOOL_NAMES = {
+    "web_search_call": "web_search",
+    "file_search_call": "file_search",
+    "code_interpreter_call": "code_interpreter",
+    "image_generation_call": "image_generation",
+}
+
+
+def _extract_hosted_args(raw_item: object, raw_type: str) -> str:
+    """Extract meaningful argument details from hosted tool calls."""
+    if raw_type == "web_search_call":
+        action = getattr(raw_item, "action", None)
+        if action:
+            query = getattr(action, "query", None)
+            if query:
+                return json.dumps({"query": query})
+    elif raw_type == "file_search_call":
+        queries = getattr(raw_item, "queries", None)
+        if queries:
+            return json.dumps({"queries": queries})
+    elif raw_type == "code_interpreter_call":
+        code = getattr(raw_item, "code", None)
+        if code:
+            return json.dumps({"code": code})
+    return ""
+
+
+def _extract_tool_info(raw_item: object | None) -> tuple[str, str, str | None, str | None]:
+    """Extract tool name, arguments, ID, and hosted status from a ToolCallItem raw_item.
+
+    Returns (name, arguments, item_id, hosted_status).
+    hosted_status is None for regular function tools, or a string like
+    "in_progress"/"searching"/"completed" for hosted tools.
+    """
+    if raw_item is None:
+        return "tool", "", None, None
+
+    raw_type = getattr(raw_item, "type", None)
+    item_id = getattr(raw_item, "id", None)
+
+    # Regular function tools
+    if raw_type == "function_call":
+        name = getattr(raw_item, "name", "tool")
+        args = getattr(raw_item, "arguments", "")
+        return name, args, item_id, None
+
+    # Hosted tools (web_search_call, file_search_call, etc.)
+    hosted_name = _HOSTED_TOOL_NAMES.get(raw_type)
+    if hosted_name:
+        status = getattr(raw_item, "status", None)
+        args = _extract_hosted_args(raw_item, raw_type)
+        return hosted_name, args, item_id, status
+
+    # Fallback
+    if isinstance(raw_item, dict):
+        return raw_item.get("name", "tool"), raw_item.get("arguments", ""), item_id, None
+    return getattr(raw_item, "name", "tool"), getattr(raw_item, "arguments", ""), item_id, None
+
+
 ALLOWED_IMAGE_MIMES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 ALLOWED_FILE_MIMES = {"application/pdf"}
 MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024  # 20MB
@@ -156,6 +216,9 @@ async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot)
                     run_config=run_config,
                 )
 
+                # Track hosted tools: id → whether tool_call was emitted
+                seen_hosted_tools: dict[str, bool] = {}
+
                 async for event in result.stream_events():
                     event_type = type(event).__name__
 
@@ -183,26 +246,53 @@ async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot)
                         item_type = type(item).__name__
                         if item_type == "ToolCallItem":
                             raw_item = getattr(item, "raw_item", None)
-                            tool_name = "tool"
-                            if raw_item:
-                                if isinstance(raw_item, dict):
-                                    tool_name = raw_item.get("name", "tool")
-                                elif hasattr(raw_item, "name"):
-                                    tool_name = raw_item.name
-                            args_str = ""
-                            if raw_item:
-                                if isinstance(raw_item, dict):
-                                    args_str = raw_item.get("arguments", "")
+                            tool_name, args_str, item_id, hosted_status = _extract_tool_info(raw_item)
+
+                            if hosted_status is not None:
+                                # Hosted tool — deduplicate by ID, delay until args available
+                                emitted = seen_hosted_tools.get(item_id) if item_id else None
+                                is_done = hosted_status in ("completed", "failed")
+
+                                if emitted is True:
+                                    # Already sent tool_call — send result on completion
+                                    if is_done:
+                                        await websocket.send_json({
+                                            "type": "tool_result",
+                                            "data": {"output": args_str},
+                                        })
+                                    continue
+
+                                # Only emit tool_call when we have meaningful args
+                                if args_str:
+                                    if item_id:
+                                        seen_hosted_tools[item_id] = True
+                                    await websocket.send_json({
+                                        "type": "tool_call",
+                                        "data": {
+                                            "tool": tool_name,
+                                            "arguments": args_str,
+                                            "status": "running",
+                                        },
+                                    })
+                                    if is_done:
+                                        await websocket.send_json({
+                                            "type": "tool_result",
+                                            "data": {"output": ""},
+                                        })
                                 else:
-                                    args_str = getattr(raw_item, "arguments", "")
-                            await websocket.send_json({
-                                "type": "tool_call",
-                                "data": {
-                                    "tool": tool_name,
-                                    "arguments": args_str,
-                                    "status": "running",
-                                },
-                            })
+                                    # No args — skip entirely
+                                    if item_id:
+                                        seen_hosted_tools[item_id] = False
+                            else:
+                                # Regular function tool — existing behavior
+                                await websocket.send_json({
+                                    "type": "tool_call",
+                                    "data": {
+                                        "tool": tool_name,
+                                        "arguments": args_str,
+                                        "status": "running",
+                                    },
+                                })
                         elif item_type == "ToolCallOutputItem":
                             await websocket.send_json({
                                 "type": "tool_result",
@@ -297,6 +387,9 @@ async def handle_streaming_chat(
             run_config=run_config,
         )
 
+        # Track hosted tools: id → whether tool_call was emitted
+        seen_hosted_tools: dict[str, bool] = {}
+
         async for event in result.stream_events():
             event_type = type(event).__name__
 
@@ -318,26 +411,53 @@ async def handle_streaming_chat(
                 item_type = type(item).__name__
                 if item_type == "ToolCallItem":
                     raw_item = getattr(item, "raw_item", None)
-                    tool_name = "tool"
-                    if raw_item:
-                        if isinstance(raw_item, dict):
-                            tool_name = raw_item.get("name", "tool")
-                        elif hasattr(raw_item, "name"):
-                            tool_name = raw_item.name
-                    args_str = ""
-                    if raw_item:
-                        if isinstance(raw_item, dict):
-                            args_str = raw_item.get("arguments", "")
+                    tool_name, args_str, item_id, hosted_status = _extract_tool_info(raw_item)
+
+                    if hosted_status is not None:
+                        # Hosted tool — deduplicate by ID, delay until args available
+                        emitted = seen_hosted_tools.get(item_id) if item_id else None
+                        is_done = hosted_status in ("completed", "failed")
+
+                        if emitted is True:
+                            # Already sent tool_call — send result on completion
+                            if is_done:
+                                yield {
+                                    "type": "tool_result",
+                                    "data": {"output": args_str},
+                                }
+                            continue
+
+                        # Only emit tool_call when we have meaningful args
+                        if args_str:
+                            if item_id:
+                                seen_hosted_tools[item_id] = True
+                            yield {
+                                "type": "tool_call",
+                                "data": {
+                                    "tool": tool_name,
+                                    "arguments": args_str,
+                                    "status": "running",
+                                },
+                            }
+                            if is_done:
+                                yield {
+                                    "type": "tool_result",
+                                    "data": {"output": ""},
+                                }
                         else:
-                            args_str = getattr(raw_item, "arguments", "")
-                    yield {
-                        "type": "tool_call",
-                        "data": {
-                            "tool": tool_name,
-                            "arguments": args_str,
-                            "status": "running",
-                        },
-                    }
+                            # No args — skip entirely
+                            if item_id:
+                                seen_hosted_tools[item_id] = False
+                    else:
+                        # Regular function tool — existing behavior
+                        yield {
+                            "type": "tool_call",
+                            "data": {
+                                "tool": tool_name,
+                                "arguments": args_str,
+                                "status": "running",
+                            },
+                        }
                 elif item_type == "ToolCallOutputItem":
                     yield {
                         "type": "tool_result",

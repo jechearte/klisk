@@ -264,6 +264,14 @@ export default function App() {
           break;
 
         case "done":
+          // Auto-complete any remaining running tool calls (e.g. hosted tools)
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.role === "tool_call" && m.status === "running"
+                ? { ...m, status: "done" as const }
+                : m
+            )
+          );
           if (data.response_id) {
             responseIdRef.current = data.response_id;
             // Save scoped to current agent
