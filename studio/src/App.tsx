@@ -7,6 +7,7 @@ import ToolModal from "./components/ToolModal";
 import type {
   ProjectSnapshot,
   ChatMessage,
+  Attachment,
   AgentInfo,
   ToolInfo,
 } from "./types";
@@ -100,9 +101,18 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY_THEME, dark ? "dark" : "light");
   }, [dark]);
 
-  // Persist messages to localStorage
+  // Persist messages to localStorage (strip attachment data to save space)
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(messages));
+    const toSave = messages.map((m) => {
+      if (m.role === "user" && m.attachments) {
+        return {
+          ...m,
+          attachments: m.attachments.map(({ data: _, ...rest }) => rest),
+        };
+      }
+      return m;
+    });
+    localStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(toSave));
   }, [messages]);
 
   // Fetch initial project snapshot
@@ -233,14 +243,20 @@ export default function App() {
   }, []);
 
   const sendMessage = useCallback(
-    (text: string) => {
+    (text: string, attachments?: Attachment[]) => {
       if (!chatWsRef.current || chatWsRef.current.readyState !== WebSocket.OPEN)
         return;
 
-      setMessages((prev) => [...prev, { role: "user", content: text }]);
-      const payload: Record<string, string> = { message: text };
+      setMessages((prev) => [
+        ...prev,
+        { role: "user" as const, content: text, ...(attachments ? { attachments } : {}) },
+      ]);
+      const payload: Record<string, unknown> = { message: text };
       if (responseIdRef.current) {
         payload.previous_response_id = responseIdRef.current;
+      }
+      if (attachments && attachments.length > 0) {
+        payload.attachments = attachments;
       }
       chatWsRef.current.send(JSON.stringify(payload));
     },

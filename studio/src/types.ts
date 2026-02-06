@@ -20,8 +20,15 @@ export interface ProjectSnapshot {
   config: Record<string, unknown>;
 }
 
+export interface Attachment {
+  type: "image" | "file";
+  name: string;
+  mime_type: string;
+  data: string; // base64, no data URL prefix
+}
+
 export type ChatMessage =
-  | { role: "user"; content: string }
+  | { role: "user"; content: string; attachments?: Attachment[] }
   | { role: "assistant"; content: string }
   | { role: "system"; content: string }
   | { role: "tool_call"; tool: string; arguments: string; output: string; status: "running" | "done" }

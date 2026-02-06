@@ -1,11 +1,34 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { ChatMessage } from "../types";
+import type { ChatMessage, Attachment } from "../types";
+
+const ACCEPTED_TYPES = "image/jpeg,image/png,image/gif,image/webp,application/pdf";
+
+function fileToAttachment(file: File): Promise<Attachment> {
+  return new Promise((resolve, reject) => {
+    if (file.size > 20 * 1024 * 1024) {
+      reject(new Error(`File ${file.name} exceeds 20MB limit`));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      resolve({
+        type: file.type === "application/pdf" ? "file" : "image",
+        name: file.name,
+        mime_type: file.type,
+        data: base64,
+      });
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 interface ChatProps {
   messages: ChatMessage[];
-  onSend: (text: string) => void;
+  onSend: (text: string, attachments?: Attachment[]) => void;
 }
 
 function CollapsibleItem({
@@ -102,8 +125,11 @@ function ThinkingIcon() {
 
 export default function Chat({ messages, onSend }: ChatProps) {
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [dragging, setDragging] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -117,12 +143,25 @@ export default function Chat({ messages, onSend }: ChatProps) {
     }
   }, []);
 
+  const addFiles = useCallback(async (files: FileList | File[]) => {
+    const valid = Array.from(files).filter(
+      (f) => ACCEPTED_TYPES.split(",").includes(f.type) && f.size <= 20 * 1024 * 1024
+    );
+    const newAttachments = await Promise.all(valid.map(fileToAttachment));
+    setAttachments((prev) => [...prev, ...newAttachments]);
+  }, []);
+
+  const removeAttachment = useCallback((index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
-    if (!text) return;
+    if (!text && attachments.length === 0) return;
     setInput("");
-    onSend(text);
+    onSend(text, attachments.length > 0 ? attachments : undefined);
+    setAttachments([]);
     requestAnimationFrame(() => {
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
@@ -137,10 +176,36 @@ export default function Chat({ messages, onSend }: ChatProps) {
     }
   };
 
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragging(false);
+      if (e.dataTransfer.files.length > 0) {
+        addFiles(e.dataTransfer.files);
+      }
+    },
+    [addFiles]
+  );
+
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div
+        className={`flex-1 overflow-y-auto p-4 space-y-3 ${dragging ? "ring-2 ring-blue-400 ring-inset bg-blue-50/30 dark:bg-blue-900/10" : ""}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         {messages.length === 0 && (
           <div className="text-center text-gray-400 dark:text-gray-500 mt-20">
             <p className="text-lg">Send a message to test your agent</p>
@@ -208,7 +273,33 @@ export default function Chat({ messages, onSend }: ChatProps) {
                 }`}
               >
                 {msg.role === "user" ? (
-                  <span className="whitespace-pre-wrap">{msg.content}</span>
+                  <>
+                    {msg.attachments && msg.attachments.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {msg.attachments.map((att, ai) =>
+                          att.type === "image" && att.data ? (
+                            <img
+                              key={ai}
+                              src={`data:${att.mime_type};base64,${att.data}`}
+                              alt={att.name}
+                              className="max-w-[200px] max-h-[150px] rounded object-cover"
+                            />
+                          ) : (
+                            <span
+                              key={ai}
+                              className="inline-flex items-center gap-1 bg-blue-500/30 text-white text-xs px-2 py-1 rounded"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                                <path fillRule="evenodd" d="M4.5 2A1.5 1.5 0 0 0 3 3.5v13A1.5 1.5 0 0 0 4.5 18h11a1.5 1.5 0 0 0 1.5-1.5V7.621a1.5 1.5 0 0 0-.44-1.06l-4.12-4.122A1.5 1.5 0 0 0 11.378 2H4.5Z" clipRule="evenodd" />
+                              </svg>
+                              {att.name}
+                            </span>
+                          )
+                        )}
+                      </div>
+                    )}
+                    {msg.content && <span className="whitespace-pre-wrap">{msg.content}</span>}
+                  </>
                 ) : (
                   <div className="prose prose-sm dark:prose-invert max-w-none">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
@@ -224,10 +315,63 @@ export default function Chat({ messages, onSend }: ChatProps) {
 
       {/* Input */}
       <div className="p-4">
+        {/* Attachment previews */}
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2 px-2">
+            {attachments.map((att, i) => (
+              <div key={i} className="relative group">
+                {att.type === "image" ? (
+                  <img
+                    src={`data:${att.mime_type};base64,${att.data}`}
+                    alt={att.name}
+                    className="w-16 h-16 rounded-lg object-cover border border-gray-300 dark:border-gray-600"
+                  />
+                ) : (
+                  <div className="h-16 px-3 flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-red-500">
+                      <path fillRule="evenodd" d="M4.5 2A1.5 1.5 0 0 0 3 3.5v13A1.5 1.5 0 0 0 4.5 18h11a1.5 1.5 0 0 0 1.5-1.5V7.621a1.5 1.5 0 0 0-.44-1.06l-4.12-4.122A1.5 1.5 0 0 0 11.378 2H4.5Z" clipRule="evenodd" />
+                    </svg>
+                    <span className="max-w-[80px] truncate">{att.name}</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => removeAttachment(i)}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <form
           onSubmit={handleSubmit}
           className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-3xl px-4 py-2 focus-within:border-gray-400 dark:focus-within:border-gray-500 transition-colors"
         >
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPTED_TYPES}
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files) addFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          {/* Attach button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            title="Attach files"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+          </button>
           <textarea
             ref={textareaRef}
             value={input}
@@ -243,11 +387,11 @@ export default function Chat({ messages, onSend }: ChatProps) {
           <button
             type="submit"
             className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
-              input.trim()
+              input.trim() || attachments.length > 0
                 ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-200"
                 : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-default"
             }`}
-            disabled={!input.trim()}
+            disabled={!input.trim() && attachments.length === 0}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
