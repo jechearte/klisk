@@ -167,9 +167,9 @@ All interfaces (Studio, Chat UI, CLI, API) support sending images and PDFs to th
 - `type`: `"image"` or `"file"` (for PDFs)
 - `data`: Raw base64 string (not a `data:...` URL)
 
-**Provider support via LiteLLM:**
+**Provider support:**
 - Images: OpenAI, Anthropic Claude 3+, Google Gemini, AWS Bedrock, Vertex AI, Ollama (LLaVA)
-- PDFs: Anthropic, Bedrock, Vertex AI (OpenAI does NOT support PDFs directly)
+- PDFs: OpenAI (gpt-4o+), Anthropic, Google Gemini, Bedrock, Vertex AI
 
 **Chat UI & Studio:** Paperclip button to attach files, drag-and-drop onto messages area, preview strip before sending. Images show as thumbnails in message bubbles.
 
