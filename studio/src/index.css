@@ -52,6 +52,35 @@ body {
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
+/* Resizable column divider */
+.splitter-divider {
+  width: 1px;
+  background-color: #e5e7eb;
+  cursor: col-resize;
+  position: relative;
+}
+
+.splitter-divider::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  right: -3px;
+}
+
+.splitter-divider:hover {
+  background-color: #3b82f6;
+}
+
+.dark .splitter-divider {
+  background-color: #1f2937;
+}
+
+.dark .splitter-divider:hover {
+  background-color: #3b82f6;
+}
+
 /* React Flow controls — light mode */
 .react-flow__controls button {
   background-color: #fff !important;

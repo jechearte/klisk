@@ -14,6 +14,7 @@ import type {
 const STORAGE_KEY_MESSAGES = "agentkit-chat-messages";
 const STORAGE_KEY_RESPONSE_ID = "agentkit-chat-response-id";
 const STORAGE_KEY_THEME = "agentkit-theme";
+const STORAGE_KEY_SPLIT = "agentkit-split-percent";
 
 function loadMessages(): ChatMessage[] {
   try {
@@ -32,6 +33,15 @@ function loadDark(): boolean {
   return localStorage.getItem(STORAGE_KEY_THEME) !== "light";
 }
 
+function loadSplit(): number {
+  const v = localStorage.getItem(STORAGE_KEY_SPLIT);
+  if (v) {
+    const n = parseFloat(v);
+    if (n >= 20 && n <= 80) return n;
+  }
+  return 50;
+}
+
 export default function App() {
   const [snapshot, setSnapshot] = useState<ProjectSnapshot | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(loadMessages);
@@ -42,6 +52,44 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null);
   const responseIdRef = useRef<string | null>(loadResponseId());
   const [dark, setDark] = useState(loadDark);
+
+  // Resizable split
+  const [splitPercent, setSplitPercent] = useState(loadSplit);
+  const dragging = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_SPLIT, String(splitPercent));
+  }, [splitPercent]);
+
+  const onDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, []);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragging.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
+      setSplitPercent(Math.min(80, Math.max(20, pct)));
+    };
+    const onMouseUp = () => {
+      if (dragging.current) {
+        dragging.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      }
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
 
   // Modal state
   const [selectedAgent, setSelectedAgent] = useState<AgentInfo | null>(null);
@@ -347,9 +395,9 @@ export default function App() {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1 min-h-0">
+      <div ref={containerRef} className="flex flex-1 min-h-0">
         {/* Left column — Agent Canvas */}
-        <div className="w-1/2 border-r border-gray-200 dark:border-gray-800 flex-shrink-0">
+        <div style={{ width: `${splitPercent}%` }} className="flex-shrink-0 min-w-0">
           <ReactFlowProvider>
             <AgentCanvas
               snapshot={snapshot}
@@ -359,8 +407,14 @@ export default function App() {
           </ReactFlowProvider>
         </div>
 
+        {/* Draggable divider */}
+        <div
+          onMouseDown={onDividerMouseDown}
+          className="splitter-divider flex-shrink-0"
+        />
+
         {/* Right column — Chat */}
-        <div className="w-1/2 flex flex-col min-h-0">
+        <div style={{ width: `${100 - splitPercent}%` }} className="flex flex-col min-h-0 min-w-0">
           <Chat messages={messages} status={status} onSend={sendMessage} />
         </div>
       </div>
