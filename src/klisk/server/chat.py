@@ -266,7 +266,10 @@ async def handle_websocket_chat(
                 attachments = msg.get("attachments")
                 content = _build_content_parts(user_message, attachments, litellm=use_litellm)
 
-                if conversation_history is not None:
+                if conversation_history is not None and (use_litellm or not previous_response_id):
+                    # Use full history only when:
+                    # - LiteLLM (no server-side history), or
+                    # - OpenAI without a previous_response_id (e.g. after provider switch)
                     run_input = conversation_history + [{"role": "user", "content": content}]
                 elif isinstance(content, list):
                     # Native OpenAI path with attachments — wrap in Responses API message
@@ -457,7 +460,10 @@ async def handle_streaming_chat(
 
         content = _build_content_parts(message, attachments, litellm=use_litellm)
 
-        if conversation_history is not None:
+        if conversation_history is not None and (use_litellm or not previous_response_id):
+            # Use full history only when:
+            # - LiteLLM (no server-side history), or
+            # - OpenAI without a previous_response_id (e.g. after provider switch)
             run_input = conversation_history + [{"role": "user", "content": content}]
         elif isinstance(content, list):
             run_input = [{"role": "user", "content": content}]
