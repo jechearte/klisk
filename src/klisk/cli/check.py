@@ -16,6 +16,7 @@ def check(
     """Validate that the project is well-formed."""
     project_path = resolve_project(name_or_path)
     errors: list[str] = []
+    warnings: list[str] = []
     ok: list[str] = []
 
     # 1. Config
@@ -79,13 +80,23 @@ def check(
 
             # 6. Validate reasoning_effort values
             VALID_EFFORTS = {"none", "minimal", "low", "medium", "high", "xhigh"}
+            OPENAI_ONLY_EFFORTS = {"minimal", "xhigh"}
             for agent_name, agent_entry in snapshot.agents.items():
-                if agent_entry.reasoning_effort and agent_entry.reasoning_effort not in VALID_EFFORTS:
+                effort = agent_entry.reasoning_effort
+                if effort and effort not in VALID_EFFORTS:
                     errors.append(
                         f"Agent '{agent_name}': invalid reasoning_effort "
-                        f"'{agent_entry.reasoning_effort}'. "
+                        f"'{effort}'. "
                         f"Valid values: {', '.join(sorted(VALID_EFFORTS))}"
                     )
+                elif effort and effort in OPENAI_ONLY_EFFORTS:
+                    model = agent_entry.model
+                    is_openai = model is None or "/" not in model or model.startswith("openai/")
+                    if not is_openai:
+                        warnings.append(
+                            f"Agent '{agent_name}': reasoning_effort='{effort}' "
+                            f"is OpenAI-specific and may not be supported by '{model}'"
+                        )
 
             # 7. Validate tools have docstrings and type hints
             for name, tool_entry in snapshot.tools.items():
@@ -98,6 +109,8 @@ def check(
     # Print results
     for msg in ok:
         typer.echo(f"  \u2713 {msg}")
+    for msg in warnings:
+        typer.echo(f"  \u26a0 {msg}")
     for msg in errors:
         typer.echo(f"  \u2717 {msg}")
 
