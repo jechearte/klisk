@@ -4,6 +4,7 @@ export interface AgentInfo {
   model: string | null;
   tools: string[];
   temperature: number | null;
+  reasoning_effort: string | null;
   source_file: string | null;
 }
 

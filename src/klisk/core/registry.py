@@ -23,6 +23,7 @@ class AgentEntry:
     model: str | None
     tools: list[str] = field(default_factory=list)
     temperature: float | None = None
+    reasoning_effort: str | None = None
     source_file: str | None = None
     sdk_agent: Any = None  # The underlying Agent from the SDK
 
@@ -42,6 +43,7 @@ class ProjectSnapshot:
                     "model": entry.model,
                     "tools": entry.tools,
                     "temperature": entry.temperature,
+                    "reasoning_effort": entry.reasoning_effort,
                     "source_file": entry.source_file,
                 }
                 for name, entry in self.agents.items()

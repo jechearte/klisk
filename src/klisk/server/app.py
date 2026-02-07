@@ -101,6 +101,7 @@ def _build_api_router():
                 "model": e.model,
                 "tools": e.tools,
                 "temperature": e.temperature,
+                "reasoning_effort": e.reasoning_effort,
                 "source_file": e.source_file,
             }
             for e in _snapshot.agents.values()
@@ -116,6 +117,7 @@ def _build_api_router():
                 "model": e.model,
                 "tools": e.tools,
                 "temperature": e.temperature,
+                "reasoning_effort": e.reasoning_effort,
                 "source_file": e.source_file,
             }
         return {"error": "Agent not found"}
@@ -157,7 +159,7 @@ def _build_api_router():
         if not entry.source_file:
             return {"error": "Source file unknown"}
 
-        allowed = {"name", "instructions", "model", "temperature"}
+        allowed = {"name", "instructions", "model", "temperature", "reasoning_effort"}
         updates = {k: v for k, v in body.items() if k in allowed and v is not None}
         if not updates:
             return {"ok": True}

@@ -134,6 +134,7 @@ def define_agent(
         model=model,
         tools=tool_names,
         temperature=temperature,
+        reasoning_effort=reasoning_effort,
         source_file=source_file,
         sdk_agent=sdk_agent,
     )

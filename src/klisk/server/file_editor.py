@@ -16,7 +16,7 @@ def update_agent_in_source(
 ) -> None:
     """Modify a define_agent() call in a Python source file using AST positions.
 
-    Supported update keys: name, instructions, model, temperature.
+    Supported update keys: name, instructions, model, temperature, reasoning_effort.
     """
     path = Path(source_file)
     if not path.exists():
