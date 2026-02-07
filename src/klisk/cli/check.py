@@ -59,7 +59,25 @@ def check(
             if builtin_names:
                 ok.append(f"{len(builtin_names)} builtin tool(s): {', '.join(sorted(builtin_names))}")
 
-            # 5. Validate tools have docstrings and type hints
+            # 5. Check for model_settings misuse
+            for agent_name, agent_entry in snapshot.agents.items():
+                sdk_agent = agent_entry.sdk_agent
+                if sdk_agent and hasattr(sdk_agent, "model_settings") and sdk_agent.model_settings:
+                    ms = sdk_agent.model_settings
+                    # Check if temperature was set via model_settings instead of define_agent param
+                    if ms.temperature is not None and agent_entry.temperature is None:
+                        errors.append(
+                            f"Agent '{agent_name}': temperature should be a "
+                            f"define_agent() parameter, not inside model_settings"
+                        )
+                    # Check if reasoning effort was set via model_settings instead of define_agent param
+                    if ms.reasoning and ms.reasoning.effort is None:
+                        errors.append(
+                            f"Agent '{agent_name}': reasoning_effort should be a "
+                            f"define_agent() parameter, not inside model_settings"
+                        )
+
+            # 6. Validate tools have docstrings and type hints
             for name, tool_entry in snapshot.tools.items():
                 if not tool_entry.description:
                     errors.append(f"Tool '{name}' missing docstring")
