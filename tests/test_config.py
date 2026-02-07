@@ -3,7 +3,7 @@
 import tempfile
 from pathlib import Path
 
-from agentkit.core.config import ProjectConfig
+from klisk.core.config import ProjectConfig
 
 
 def test_defaults():
@@ -18,7 +18,7 @@ def test_defaults():
 
 def test_load_from_yaml():
     with tempfile.TemporaryDirectory() as tmpdir:
-        config_path = Path(tmpdir) / "agentkit.config.yaml"
+        config_path = Path(tmpdir) / "klisk.config.yaml"
         config_path.write_text(
             "entry: agents/bot.py\n"
             "name: TravelBot\n"

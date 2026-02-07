@@ -1,6 +1,6 @@
 """Tests for AgentRegistry."""
 
-from agentkit.core.registry import AgentRegistry, AgentEntry, ToolEntry
+from klisk.core.registry import AgentRegistry, AgentEntry, ToolEntry
 
 
 def setup_function():

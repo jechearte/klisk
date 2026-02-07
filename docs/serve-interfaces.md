@@ -1,10 +1,10 @@
-# AgentKit Serve — Interfaces
+# Klisk Serve — Interfaces
 
-`agentkit serve` inicia un servidor de producción que expone tres interfaces para interactuar con tu agente: una **web de chat**, un **widget embebible** y una **API HTTP**.
+`klisk serve` inicia un servidor de producción que expone tres interfaces para interactuar con tu agente: una **web de chat**, un **widget embebible** y una **API HTTP**.
 
 ```
-agentkit serve my-agent          # Puerto por defecto: 8080
-agentkit serve my-agent -p 3000  # Puerto personalizado
+klisk serve my-agent          # Puerto por defecto: 8080
+klisk serve my-agent -p 3000  # Puerto personalizado
 ```
 
 ---
@@ -15,17 +15,17 @@ Por defecto no se requiere autenticación (backward compatible). Para proteger u
 
 ```bash
 # Caso simple: una key para todo
-AGENTKIT_API_KEY=mi-clave-secreta
+KLISK_API_KEY=mi-clave-secreta
 
 # Caso avanzado: keys separadas por interfaz
-AGENTKIT_API_KEY=api-key-para-rest       # API HTTP (header Authorization)
-AGENTKIT_CHAT_KEY=chat-key-para-users    # Chat web (prompt al usuario)
-AGENTKIT_WIDGET_KEY=widget-key-embed     # Widget (atributo data-key)
+KLISK_API_KEY=api-key-para-rest       # API HTTP (header Authorization)
+KLISK_CHAT_KEY=chat-key-para-users    # Chat web (prompt al usuario)
+KLISK_WIDGET_KEY=widget-key-embed     # Widget (atributo data-key)
 ```
 
 Todas las keys configuradas se combinan en un pool único — cualquier key válida da acceso a cualquier endpoint. La separación por variable es organizacional, para poder rotar una sin afectar las otras.
 
-Cada variable soporta múltiples keys separadas por coma: `AGENTKIT_API_KEY=key1,key2,key3`.
+Cada variable soporta múltiples keys separadas por coma: `KLISK_API_KEY=key1,key2,key3`.
 
 ### Cómo se envía la key por interfaz
 
@@ -39,8 +39,8 @@ Cada variable soporta múltiples keys separadas por coma: `AGENTKIT_API_KEY=key1
 
 Si se filtra la key del widget:
 
-1. Cambia `AGENTKIT_WIDGET_KEY` en tu `.env`
-2. Redespliega (`agentkit deploy`)
+1. Cambia `KLISK_WIDGET_KEY` en tu `.env`
+2. Redespliega (`klisk deploy`)
 3. Actualiza `data-key` en los sitios que embeben el widget
 4. Los usuarios del chat y consumidores de la API no se ven afectados
 
@@ -60,7 +60,7 @@ Página completa con una interfaz de chat centrada en la pantalla. Incluye:
 - Toggle de tema claro/oscuro (persiste en `localStorage`)
 - Botón de reset de conversación
 - Persistencia: la conversación sobrevive a refrescos de página. Solo se reinicia con el botón de reset.
-- **Auth overlay:** si el servidor tiene API keys configuradas, al abrir el chat se muestra un prompt para ingresar la key. La key se guarda en `localStorage` (`agentkit-chat-key`) y se recuerda entre sesiones. Si la key es inválida, se muestra un mensaje de error y se vuelve a pedir.
+- **Auth overlay:** si el servidor tiene API keys configuradas, al abrir el chat se muestra un prompt para ingresar la key. La key se guarda en `localStorage` (`klisk-chat-key`) y se recuerda entre sesiones. Si la key es inválida, se muestra un mensaje de error y se vuelve a pedir.
 
 La comunicación con el servidor se realiza via **WebSocket** en `/ws/chat`.
 
@@ -348,9 +348,9 @@ Para persistir entre refrescos de página, el cliente guarda en `localStorage`:
 
 | Key | Contenido |
 |---|---|
-| `agentkit-chat-messages` | Array JSON con todos los mensajes renderizados |
-| `agentkit-chat-response-id` | ID de la última respuesta (para reanudar contexto) |
-| `agentkit-chat-key` | API key ingresada por el usuario (si auth está habilitado) |
+| `klisk-chat-messages` | Array JSON con todos los mensajes renderizados |
+| `klisk-chat-response-id` | ID de la última respuesta (para reanudar contexto) |
+| `klisk-chat-key` | API key ingresada por el usuario (si auth está habilitado) |
 
 Al reconectar el WebSocket, el cliente envía el `previous_response_id` guardado para que el servidor retome la conversación donde se dejó.
 

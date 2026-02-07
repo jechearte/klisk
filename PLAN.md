@@ -1,4 +1,4 @@
-# agentkit — Plan de Desarrollo
+# klisk — Plan de Desarrollo
 
 ## Alcance del MVP
 
@@ -14,10 +14,10 @@ Configurar el monorepo y las dependencias base.
 ### 0.1 Estructura del repositorio
 
 ```
-agentkit/
+klisk/
 ├── pyproject.toml              # Paquete Python principal (CLI + framework)
 ├── src/
-│   └── agentkit/
+│   └── klisk/
 │       ├── __init__.py          # Exports públicos: define_agent, tool
 │       ├── cli/                 # Comandos CLI (Typer)
 │       ├── core/                # Framework: registry, config, discovery
@@ -25,7 +25,7 @@ agentkit/
 ├── studio/                      # Frontend React + Vite
 │   ├── package.json
 │   └── src/
-├── templates/                   # Templates para scaffolding (agentkit create)
+├── templates/                   # Templates para scaffolding (klisk create)
 │   └── default/
 └── tests/
 ```
@@ -42,7 +42,7 @@ agentkit/
 
 ## Fase 1 — Framework Core (las primitivas)
 
-El corazón de agentkit: las funciones que el usuario (o su LLM) usa para definir agentes.
+El corazón de klisk: las funciones que el usuario (o su LLM) usa para definir agentes.
 
 ### 1.1 `define_agent()`
 
@@ -50,7 +50,7 @@ Wrapper sobre `Agent()` del OpenAI Agents SDK que además registra el agente en 
 
 ```python
 # Lo que escribe el usuario
-from agentkit import define_agent, tool
+from klisk import define_agent, tool
 
 agent = define_agent(
     name="MiAgente",
@@ -70,7 +70,7 @@ Por debajo:
 Wrapper sobre `@function_tool` del SDK que añade metadata para el Studio.
 
 ```python
-from agentkit import tool
+from klisk import tool
 
 @tool
 async def buscar_vuelos(origen: str, destino: str, fecha: str) -> str:
@@ -100,7 +100,7 @@ class AgentRegistry:
 
 ### 1.4 `ProjectConfig`
 
-Parser de `agentkit.config.yaml` con Pydantic.
+Parser de `klisk.config.yaml` con Pydantic.
 
 ```python
 class ProjectConfig(BaseModel):
@@ -114,7 +114,7 @@ class ProjectConfig(BaseModel):
 ### 1.5 `Discovery`
 
 Módulo que:
-1. Lee `agentkit.config.yaml`
+1. Lee `klisk.config.yaml`
 2. Importa dinámicamente el entry point (`agents/main.py`)
 3. Al importar, los decoradores `define_agent()` y `@tool` pueblan el `AgentRegistry`
 4. Devuelve el `ProjectSnapshot` con toda la info del proyecto
@@ -134,15 +134,15 @@ Módulo que:
 
 Comandos que el usuario ejecuta desde la terminal.
 
-### 2.1 `agentkit create <nombre>`
+### 2.1 `klisk create <nombre>`
 
 Genera un proyecto nuevo con la estructura convencional y un agente de ejemplo.
 
 ```bash
-$ agentkit create mi-agente
+$ klisk create mi-agente
 # Crea:
 #   mi-agente/
-#   ├── agentkit.config.yaml
+#   ├── klisk.config.yaml
 #   ├── agents/
 #   │   ├── main.py          # Agente de ejemplo funcional
 #   │   └── tools/
@@ -152,7 +152,7 @@ $ agentkit create mi-agente
 
 El template vive en `templates/default/` dentro del paquete.
 
-### 2.2 `agentkit dev`
+### 2.2 `klisk dev`
 
 El comando principal de desarrollo. Levanta todo:
 1. Ejecuta Discovery para cargar el proyecto
@@ -162,22 +162,22 @@ El comando principal de desarrollo. Levanta todo:
 5. Cuando detecta cambios: limpia el registry, re-ejecuta Discovery, notifica al Studio vía WebSocket
 
 ```bash
-$ agentkit dev
+$ klisk dev
   Studio:    http://localhost:3000
   Agent API: http://localhost:8000
   Watching for changes...
 ```
 
-### 2.3 `agentkit run "<mensaje>"`
+### 2.3 `klisk run "<mensaje>"`
 
 Ejecuta el agente en la terminal, sin Studio. Útil para testing rápido.
 
 ```bash
-$ agentkit run "Busca vuelos de Madrid a NYC"
+$ klisk run "Busca vuelos de Madrid a NYC"
 # Carga el proyecto, ejecuta Runner.run(), imprime la respuesta
 ```
 
-### 2.4 `agentkit check`
+### 2.4 `klisk check`
 
 Valida que el proyecto esté bien formado:
 - Entry point existe
@@ -187,7 +187,7 @@ Valida que el proyecto esté bien formado:
 - No hay errores de importación
 
 ```bash
-$ agentkit check
+$ klisk check
   ✓ Config válida
   ✓ Entry point: agents/main.py
   ✓ 1 agente registrado
@@ -198,10 +198,10 @@ $ agentkit check
 ### Tareas
 
 - [ ] Setup Typer app con estructura de comandos
-- [ ] Implementar `agentkit create` + templates en `templates/default/`
-- [ ] Implementar `agentkit dev` (orquestación de server + watcher + studio)
-- [ ] Implementar `agentkit run` (discovery + Runner.run + print)
-- [ ] Implementar `agentkit check` (validaciones)
+- [ ] Implementar `klisk create` + templates en `templates/default/`
+- [ ] Implementar `klisk dev` (orquestación de server + watcher + studio)
+- [ ] Implementar `klisk run` (discovery + Runner.run + print)
+- [ ] Implementar `klisk check` (validaciones)
 - [ ] Tests de integración de cada comando
 
 ---
@@ -312,7 +312,7 @@ Tres paneles:
 - [ ] Chat: indicadores de estado (pensando, ejecutando tool)
 - [ ] Tracing: timeline de spans
 - [ ] Hot reload: WebSocket `/ws/reload` + actualización automática
-- [ ] Servir el Studio desde el dev server de agentkit (build estático o proxy a Vite)
+- [ ] Servir el Studio desde el dev server de klisk (build estático o proxy a Vite)
 
 ---
 
@@ -322,11 +322,11 @@ Conectar todas las piezas y asegurar que el flujo end-to-end funciona.
 
 ### Tareas
 
-- [ ] Test end-to-end: `agentkit create` → `agentkit dev` → abrir Studio → chatear → ver tracing
+- [ ] Test end-to-end: `klisk create` → `klisk dev` → abrir Studio → chatear → ver tracing
 - [ ] Manejo de errores: qué pasa si el código del usuario tiene errores de sintaxis, imports faltantes, etc.
 - [ ] Mensajes de error claros en la CLI y en el Studio
 - [ ] El Studio muestra errores de carga del proyecto (no se queda en blanco)
-- [ ] `agentkit check` reporta todos los problemas encontrados
+- [ ] `klisk check` reporta todos los problemas encontrados
 - [ ] README con instrucciones de uso
 - [ ] Limpiar TODOs y código muerto
 
@@ -375,7 +375,7 @@ tailwindcss >= 3
 
 ## Decisiones técnicas pendientes (a resolver durante el desarrollo)
 
-1. **Nombre definitivo del proyecto** — usando "agentkit" provisionalmente
+1. **Nombre definitivo del proyecto** — usando "klisk" provisionalmente
 2. **Studio como build estático o Vite dev server** — en dev, proxy a Vite es más cómodo; en producción, build estático servido por FastAPI
 3. **Formato del tracing** — definir el schema exacto de los spans que el backend envía al frontend
 4. **Gestión de la API key** — leer de `.env`, variable de entorno, o config YAML

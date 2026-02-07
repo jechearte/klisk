@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from httpx import AsyncClient, ASGITransport
 
-from agentkit.core.registry import AgentRegistry
+from klisk.core.registry import AgentRegistry
 
 
 @pytest.fixture(autouse=True)
@@ -17,13 +17,13 @@ def reset_registry():
 
 
 def _create_test_project(tmpdir: Path) -> Path:
-    config = tmpdir / "agentkit.config.yaml"
+    config = tmpdir / "klisk.config.yaml"
     config.write_text("entry: agents/main.py\nname: TestBot\n")
     agents_dir = tmpdir / "agents"
     agents_dir.mkdir()
     main_py = agents_dir / "main.py"
     main_py.write_text(
-        "from agentkit import define_agent, tool\n"
+        "from klisk import define_agent, tool\n"
         "\n"
         "@tool\n"
         "async def hello(name: str) -> str:\n"
@@ -45,7 +45,7 @@ async def test_get_project():
     with tempfile.TemporaryDirectory() as tmpdir:
         project_dir = _create_test_project(Path(tmpdir))
 
-        from agentkit.server.app import create_app
+        from klisk.server.app import create_app
         app = create_app(project_dir)
 
         transport = ASGITransport(app=app)
@@ -63,7 +63,7 @@ async def test_get_agents():
     with tempfile.TemporaryDirectory() as tmpdir:
         project_dir = _create_test_project(Path(tmpdir))
 
-        from agentkit.server.app import create_app
+        from klisk.server.app import create_app
         app = create_app(project_dir)
 
         transport = ASGITransport(app=app)
@@ -80,7 +80,7 @@ async def test_get_agent_by_name():
     with tempfile.TemporaryDirectory() as tmpdir:
         project_dir = _create_test_project(Path(tmpdir))
 
-        from agentkit.server.app import create_app
+        from klisk.server.app import create_app
         app = create_app(project_dir)
 
         transport = ASGITransport(app=app)
@@ -101,7 +101,7 @@ async def test_get_tools():
     with tempfile.TemporaryDirectory() as tmpdir:
         project_dir = _create_test_project(Path(tmpdir))
 
-        from agentkit.server.app import create_app
+        from klisk.server.app import create_app
         app = create_app(project_dir)
 
         transport = ASGITransport(app=app)

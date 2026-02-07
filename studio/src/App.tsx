@@ -13,18 +13,18 @@ import type {
   ToolInfo,
 } from "./types";
 
-const STORAGE_KEY_THEME = "agentkit-theme";
-const STORAGE_KEY_SPLIT = "agentkit-split-percent";
+const STORAGE_KEY_THEME = "klisk-theme";
+const STORAGE_KEY_SPLIT = "klisk-split-percent";
 
 // Legacy keys (pre-agent-scoped) — used for one-time migration
-const LEGACY_STORAGE_KEY_MESSAGES = "agentkit-chat-messages";
-const LEGACY_STORAGE_KEY_RESPONSE_ID = "agentkit-chat-response-id";
+const LEGACY_STORAGE_KEY_MESSAGES = "klisk-chat-messages";
+const LEGACY_STORAGE_KEY_RESPONSE_ID = "klisk-chat-response-id";
 
 function messagesKey(agentName: string) {
-  return `agentkit-chat-messages-${agentName}`;
+  return `klisk-chat-messages-${agentName}`;
 }
 function responseIdKey(agentName: string) {
-  return `agentkit-chat-response-id-${agentName}`;
+  return `klisk-chat-response-id-${agentName}`;
 }
 
 function loadMessagesFor(agentName: string): ChatMessage[] {
@@ -442,7 +442,7 @@ export default function App() {
             </button>
           )}
           <h1 className="text-sm font-semibold text-gray-900 dark:text-white">
-            {isDetail ? currentView.agentName : "AgentKit Studio"}
+            {isDetail ? currentView.agentName : "Klisk Studio"}
           </h1>
           <div className="flex items-center gap-2">
             <span
@@ -549,6 +549,19 @@ export default function App() {
           onSave={saveTool}
         />
       )}
+
+      {/* Footer */}
+      <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 px-4 py-2 text-center text-xs text-gray-400 dark:text-gray-500">
+        Built by{" "}
+        <a
+          href="https://www.linkedin.com/in/echeverriajuan/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline"
+        >
+          Juan Echeverria
+        </a>
+      </div>
 
       {/* Toast */}
       {toast && (

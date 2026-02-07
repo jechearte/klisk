@@ -1,6 +1,6 @@
 # Guia de Despliegue a Google Cloud Run
 
-Esta guia cubre el proceso completo para desplegar un agente de AgentKit a Google Cloud Run, desde cero.
+Esta guia cubre el proceso completo para desplegar un agente de Klisk a Google Cloud Run, desde cero.
 
 ---
 
@@ -82,7 +82,7 @@ gcloud auth print-access-token    # Deberia mostrar un token (no un error)
 Antes de desplegar, asegurate de que el agente funciona en modo produccion:
 
 ```bash
-agentkit serve mi-agente
+klisk serve mi-agente
 ```
 
 Abre `http://localhost:8080` y verifica que el chat funciona correctamente.
@@ -90,16 +90,16 @@ Abre `http://localhost:8080` y verifica que el chat funciona correctamente.
 ### Paso 2: Generar archivos de deployment
 
 ```bash
-agentkit deploy init mi-agente
+klisk deploy init mi-agente
 ```
 
 Esto genera tres archivos en el directorio del proyecto:
 
 | Archivo | Proposito |
 |---|---|
-| `Dockerfile` | Imagen Docker con Python 3.12, instala dependencias y ejecuta `agentkit serve` |
+| `Dockerfile` | Imagen Docker con Python 3.12, instala dependencias y ejecuta `klisk serve` |
 | `.dockerignore` | Excluye `.venv/`, `.git/`, `.env`, etc. del build |
-| `requirements.txt` | `agentkit` (o `agentkit[litellm]` si usa modelos no-OpenAI) |
+| `requirements.txt` | `klisk` (o `klisk[litellm]` si usa modelos no-OpenAI) |
 
 > El comando detecta automaticamente si tu agente usa modelos LiteLLM (como `anthropic/claude-sonnet-4-20250514`) y ajusta `requirements.txt` en consecuencia.
 
@@ -112,7 +112,7 @@ El archivo `.env` contiene las API keys que tu agente necesita. Asegurate de que
 OPENAI_API_KEY=sk-proj-abc123...
 ```
 
-`agentkit deploy` lee el `.env` y envia las variables como env vars al servicio de Cloud Run. El archivo `.env` en si **no se sube** al container (esta en `.dockerignore`).
+`klisk deploy` lee el `.env` y envia las variables como env vars al servicio de Cloud Run. El archivo `.env` en si **no se sube** al container (esta en `.dockerignore`).
 
 > Si el `.env` tiene placeholders como `sk-your-key-here`, se ignoraran automaticamente.
 
@@ -125,9 +125,9 @@ Por defecto, cualquier persona con la URL puede usar tu agente. Para protegerlo,
 OPENAI_API_KEY=sk-proj-abc123...
 
 # Autenticación — al menos una de estas variables activa la protección
-AGENTKIT_API_KEY=mi-clave-para-api          # Para consumidores de la API REST
-AGENTKIT_CHAT_KEY=mi-clave-para-chat        # Para usuarios del chat web
-AGENTKIT_WIDGET_KEY=mi-clave-para-widget    # Para el widget embebido
+KLISK_API_KEY=mi-clave-para-api          # Para consumidores de la API REST
+KLISK_CHAT_KEY=mi-clave-para-chat        # Para usuarios del chat web
+KLISK_WIDGET_KEY=mi-clave-para-widget    # Para el widget embebido
 ```
 
 **Comportamiento:**
@@ -141,10 +141,10 @@ Ver [Autenticación en Serve Interfaces](./serve-interfaces.md#autenticación-ap
 
 ```bash
 # Desde el directorio del proyecto:
-agentkit deploy --region europe-southwest1
+klisk deploy --region europe-southwest1
 
 # O especificando la ruta:
-agentkit deploy --path mi-agente --region europe-southwest1
+klisk deploy --path mi-agente --region europe-southwest1
 ```
 
 **Regiones recomendadas:**
@@ -160,7 +160,7 @@ agentkit deploy --path mi-agente --region europe-southwest1
 
 | Opcion | Descripcion |
 |---|---|
-| `--path` / `-p` | Ruta al proyecto AgentKit (default: directorio actual) |
+| `--path` / `-p` | Ruta al proyecto Klisk (default: directorio actual) |
 | `--region` / `-r` | Region de GCP |
 | `--service` / `-s` | Nombre del servicio (default: nombre del proyecto) |
 | `--project` | Project ID de GCP (si no quieres usar el default) |
@@ -240,7 +240,7 @@ Ve a https://console.cloud.google.com/billing y asocia una cuenta de facturacion
 
 ### "Cloud Run API is not enabled"
 
-`agentkit deploy` ofrece activarla automaticamente. Si falla:
+`klisk deploy` ofrece activarla automaticamente. Si falla:
 
 ```bash
 gcloud services enable run.googleapis.com
@@ -248,7 +248,7 @@ gcloud services enable run.googleapis.com
 
 ### El deploy falla con errores de APIs
 
-`agentkit deploy` detecta automaticamente las APIs que faltan y ofrece activarlas. Si falla, activalas manualmente:
+`klisk deploy` detecta automaticamente las APIs que faltan y ofrece activarlas. Si falla, activalas manualmente:
 
 ```bash
 gcloud services enable \
@@ -259,7 +259,7 @@ gcloud services enable \
 
 ### El deploy falla con "storage.objects.get access denied"
 
-`agentkit deploy` concede automaticamente los permisos de Storage al service account de Cloud Build. Si falla, concedelo manualmente:
+`klisk deploy` concede automaticamente los permisos de Storage al service account de Cloud Build. Si falla, concedelo manualmente:
 
 ```bash
 PROJECT_NUMBER=$(gcloud projects describe TU_PROJECT_ID --format='value(projectNumber)')
@@ -292,7 +292,7 @@ Si eres el owner del proyecto ya tienes todos los permisos.
 Simplemente ejecuta el mismo comando desde el directorio del proyecto:
 
 ```bash
-agentkit deploy --region europe-southwest1
+klisk deploy --region europe-southwest1
 ```
 
 Cloud Run mantiene el mismo URL entre despliegues.

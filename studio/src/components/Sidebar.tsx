@@ -14,7 +14,7 @@ export default function Sidebar({ snapshot, connected }: SidebarProps) {
     <div className="p-4 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-lg font-bold text-white">AgentKit Studio</h1>
+        <h1 className="text-lg font-bold text-white">Klisk Studio</h1>
         <div className="flex items-center gap-2 mt-1">
           <span
             className={`w-2 h-2 rounded-full ${

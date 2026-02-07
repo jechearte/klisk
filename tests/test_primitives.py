@@ -2,8 +2,8 @@
 
 from agents import Agent, FunctionTool
 
-from agentkit.core.registry import AgentRegistry
-from agentkit.core.primitives import define_agent, tool
+from klisk.core.registry import AgentRegistry
+from klisk.core.primitives import define_agent, tool
 
 
 def setup_function():

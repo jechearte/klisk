@@ -3,8 +3,8 @@
 import tempfile
 from pathlib import Path
 
-from agentkit.core.registry import AgentRegistry
-from agentkit.core.discovery import discover_project
+from klisk.core.registry import AgentRegistry
+from klisk.core.discovery import discover_project
 
 
 def setup_function():
@@ -14,7 +14,7 @@ def setup_function():
 def test_discover_project():
     with tempfile.TemporaryDirectory() as tmpdir:
         # Write config
-        config_path = Path(tmpdir) / "agentkit.config.yaml"
+        config_path = Path(tmpdir) / "klisk.config.yaml"
         config_path.write_text(
             "entry: agents/main.py\n"
             "name: TestBot\n"
@@ -25,7 +25,7 @@ def test_discover_project():
         agents_dir.mkdir()
         main_py = agents_dir / "main.py"
         main_py.write_text(
-            "from agentkit import define_agent, tool\n"
+            "from klisk import define_agent, tool\n"
             "\n"
             "@tool\n"
             "async def hello(name: str) -> str:\n"
@@ -48,7 +48,7 @@ def test_discover_project():
 
 def test_discover_missing_entry():
     with tempfile.TemporaryDirectory() as tmpdir:
-        config_path = Path(tmpdir) / "agentkit.config.yaml"
+        config_path = Path(tmpdir) / "klisk.config.yaml"
         config_path.write_text("entry: agents/main.py\nname: Test\n")
 
         try:
