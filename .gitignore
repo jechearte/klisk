@@ -17,3 +17,4 @@ studio/dist/
 *.swo
 .pytest_cache/
 .mypy_cache/
+klisk-guide.zip
