@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ChatMessage, Attachment } from "../types";
+import { ToolIcon, formatToolDisplayName, isBuiltinTool } from "../utils/builtinTools";
 
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/gif,image/webp,application/pdf";
 
@@ -215,11 +216,14 @@ export default function Chat({ messages, onSend }: ChatProps) {
         {messages.map((msg, i) => {
           if (msg.role === "tool_call") {
             const isRunning = msg.status === "running";
+            const toolIcon = isBuiltinTool(msg.tool)
+              ? <ToolIcon name={msg.tool} className={`w-4 h-4 text-blue-500 ${isRunning ? "animate-pulse" : ""}`} />
+              : <ToolCallIcon spinning={isRunning} />;
             return (
               <CollapsibleItem
                 key={i}
-                icon={<ToolCallIcon spinning={isRunning} />}
-                label={msg.tool}
+                icon={toolIcon}
+                label={formatToolDisplayName(msg.tool)}
                 badge={isRunning ? "running" : "done"}
                 spinning={false}
               >

@@ -1,5 +1,6 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { AgentInfo } from "../types";
+import { formatToolDisplayName } from "../utils/builtinTools";
 
 type AgentNodeData = AgentInfo & { label: string };
 
@@ -38,7 +39,7 @@ export default function AgentNode({ data }: NodeProps) {
               key={t}
               className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded"
             >
-              {t}
+              {formatToolDisplayName(t)}
             </span>
           ))}
         </div>

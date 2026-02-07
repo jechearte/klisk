@@ -1,4 +1,5 @@
 import type { ProjectSnapshot } from "../types";
+import { ToolIcon, formatToolDisplayName } from "../utils/builtinTools";
 
 interface SidebarProps {
   snapshot: ProjectSnapshot | null;
@@ -94,7 +95,7 @@ export default function Sidebar({ snapshot, connected }: SidebarProps) {
                         key={t}
                         className="text-xs bg-gray-800 text-gray-300 px-2 py-0.5 rounded"
                       >
-                        {t}
+                        {formatToolDisplayName(t)}
                       </span>
                     ))}
                   </div>
@@ -119,8 +120,9 @@ export default function Sidebar({ snapshot, connected }: SidebarProps) {
                 key={tool.name}
                 className="bg-gray-900 rounded-lg p-3 border border-gray-800"
               >
-                <div className="font-medium text-sm text-green-400">
-                  {tool.name}
+                <div className="flex items-center gap-2 font-medium text-sm text-green-400">
+                  <ToolIcon name={tool.name} className="w-3.5 h-3.5" />
+                  {formatToolDisplayName(tool.name)}
                 </div>
                 {tool.description && (
                   <div className="text-xs text-gray-400 mt-1">
