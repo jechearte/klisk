@@ -32,6 +32,7 @@ export default function AgentListing({ snapshot, onSelect }: AgentListingProps) 
   }
 
   const agents = Object.values(snapshot.agents);
+  const isWorkspace = snapshot.config && "workspace" in snapshot.config && snapshot.config.workspace === true;
 
   return (
     <div className="h-full overflow-auto p-8">
@@ -54,6 +55,11 @@ export default function AgentListing({ snapshot, onSelect }: AgentListingProps) 
                 <span className="font-semibold text-sm text-blue-600 dark:text-blue-400 truncate">
                   {agent.name}
                 </span>
+                {isWorkspace && agent.project && (
+                  <span className="ml-auto text-[10px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded flex-shrink-0">
+                    {agent.project}
+                  </span>
+                )}
               </div>
 
               {agent.model && (

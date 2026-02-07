@@ -17,7 +17,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from klisk.core.config import ProjectConfig
-from klisk.core.discovery import discover_project
+from klisk.core.discovery import discover_all_projects, discover_project
+from klisk.core.paths import PROJECTS_DIR
 from klisk.core.registry import AgentRegistry, ProjectSnapshot
 from klisk.server.chat import handle_websocket_chat
 from klisk.server.file_editor import (
@@ -155,27 +156,40 @@ def _get_provider_models() -> dict[str, list[str]]:
 
 
 _project_path: Path | None = None
+_workspace_mode: bool = False
 _snapshot: ProjectSnapshot | None = None
 _config: ProjectConfig | None = None
 _reload_clients: list[WebSocket] = []
 
 
-def create_app(project_dir: Path) -> FastAPI:
-    global _project_path, _snapshot, _config
+def create_app(project_dir: Path | None) -> FastAPI:
+    global _project_path, _workspace_mode, _snapshot, _config
 
-    _project_path = project_dir.resolve()
-    _config = ProjectConfig.load(_project_path)
+    _workspace_mode = project_dir is None
 
-    try:
-        _snapshot = discover_project(_project_path)
-    except Exception as e:
-        logger.exception("Failed to discover project at startup")
-        _snapshot = ProjectSnapshot()
-        _snapshot.config = {"error": str(e)}
+    if _workspace_mode:
+        _project_path = None
+        _config = None
+        try:
+            _snapshot = discover_all_projects()
+        except Exception as e:
+            logger.exception("Failed to discover workspace at startup")
+            _snapshot = ProjectSnapshot()
+            _snapshot.config = {"error": str(e)}
+    else:
+        _project_path = project_dir.resolve()
+        _config = ProjectConfig.load(_project_path)
+        try:
+            _snapshot = discover_project(_project_path)
+        except Exception as e:
+            logger.exception("Failed to discover project at startup")
+            _snapshot = ProjectSnapshot()
+            _snapshot.config = {"error": str(e)}
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        watcher_task = asyncio.create_task(start_watcher(_project_path, _on_file_change))
+        watch_dir = PROJECTS_DIR if _workspace_mode else _project_path
+        watcher_task = asyncio.create_task(start_watcher(watch_dir, _on_file_change))
         yield
         watcher_task.cancel()
 
@@ -233,11 +247,12 @@ def _build_api_router():
                 "temperature": e.temperature,
                 "reasoning_effort": e.reasoning_effort,
                 "source_file": e.source_file,
+                "project": e.project,
             }
             for e in _snapshot.agents.values()
         ]
 
-    @router.get("/agents/{name}")
+    @router.get("/agents/{name:path}")
     async def get_agent(name: str):
         if _snapshot and name in _snapshot.agents:
             e = _snapshot.agents[name]
@@ -249,6 +264,7 @@ def _build_api_router():
                 "temperature": e.temperature,
                 "reasoning_effort": e.reasoning_effort,
                 "source_file": e.source_file,
+                "project": e.project,
             }
         return {"error": "Agent not found"}
 
@@ -262,21 +278,24 @@ def _build_api_router():
                 "description": e.description,
                 "parameters": e.parameters,
                 "source_file": e.source_file,
+                "project": e.project,
             }
             for e in _snapshot.tools.values()
         ]
 
-    @router.get("/tools/{name}/source")
+    @router.get("/tools/{name:path}/source")
     async def get_tool_source(name: str):
         if not _snapshot or name not in _snapshot.tools:
             return {"error": "Tool not found"}
         entry = _snapshot.tools[name]
         if not entry.source_file:
             return {"source_code": ""}
-        code = get_function_source(entry.source_file, name)
+        # For source lookup, use the base function name (strip project prefix)
+        func_name = name.split("/")[-1] if "/" in name else name
+        code = get_function_source(entry.source_file, func_name)
         return {"source_code": code}
 
-    @router.put("/agents/{name}")
+    @router.put("/agents/{name:path}")
     async def update_agent(name: str, request: Request):
         body = await request.json()
         logger.info("PUT /api/agents/%s  body=%s", name, body)
@@ -294,17 +313,19 @@ def _build_api_router():
         if not updates:
             return {"ok": True}
 
-        logger.info("Updating agent '%s' in %s: %s", name, entry.source_file, updates)
+        # Use the base agent name (strip project prefix) for source edits
+        base_name = name.split("/")[-1] if "/" in name else name
+        logger.info("Updating agent '%s' in %s: %s", base_name, entry.source_file, updates)
 
         try:
-            update_agent_in_source(entry.source_file, name, updates)
+            update_agent_in_source(entry.source_file, base_name, updates)
         except Exception as e:
             logger.exception("Failed to update agent '%s'", name)
             return {"error": str(e)}
 
         return {"ok": True}
 
-    @router.put("/tools/{name}")
+    @router.put("/tools/{name:path}")
     async def update_tool(name: str, request: Request):
         body = await request.json()
         logger.info("PUT /api/tools/%s  body=%s", name, body)
@@ -322,13 +343,17 @@ def _build_api_router():
         if not updates:
             return {"ok": True}
 
-        old_name = name
+        # Use the base tool name (strip project prefix) for source edits
+        base_name = name.split("/")[-1] if "/" in name else name
+        old_name = base_name
         new_name = updates.get("name", old_name)
 
         try:
             update_tool_in_source(entry.source_file, old_name, updates)
-            if new_name != old_name and _project_path:
-                rename_tool_references(str(_project_path), old_name, new_name)
+            if new_name != old_name:
+                project_dir = _get_project_dir_for_source(entry.source_file)
+                if project_dir:
+                    rename_tool_references(str(project_dir), old_name, new_name)
         except Exception as e:
             logger.exception("Failed to update tool '%s'", name)
             return {"error": str(e)}
@@ -355,7 +380,10 @@ async def _handle_reload(websocket: WebSocket) -> None:
 async def _on_file_change() -> None:
     global _snapshot
     try:
-        _snapshot = discover_project(_project_path)
+        if _workspace_mode:
+            _snapshot = discover_all_projects()
+        else:
+            _snapshot = discover_project(_project_path)
     except Exception as e:
         logger.exception("Failed to reload project")
         _snapshot = ProjectSnapshot()
@@ -370,6 +398,20 @@ async def _on_file_change() -> None:
             disconnected.append(ws)
     for ws in disconnected:
         _reload_clients.remove(ws)
+
+
+def _get_project_dir_for_source(source_file: str) -> Path | None:
+    """Resolve the project directory that contains the given source file."""
+    if _project_path:
+        return _project_path
+    # Workspace mode: find the project dir from the source file path
+    src = Path(source_file).resolve()
+    projects_str = str(PROJECTS_DIR.resolve())
+    if str(src).startswith(projects_str):
+        # The project dir is the first directory under PROJECTS_DIR
+        rel = src.relative_to(PROJECTS_DIR.resolve())
+        return PROJECTS_DIR / rel.parts[0]
+    return None
 
 
 def _find_studio_dist() -> Path | None:

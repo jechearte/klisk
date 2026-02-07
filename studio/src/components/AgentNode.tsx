@@ -15,6 +15,12 @@ export default function AgentNode({ data }: NodeProps) {
         </span>
       </div>
 
+      {agent.project && (
+        <div className="text-[10px] text-gray-400 dark:text-gray-500 mb-0.5">
+          {agent.project}
+        </div>
+      )}
+
       {agent.model && (
         <div className="text-[11px] text-gray-400 dark:text-gray-500 mb-1">{agent.model}</div>
       )}

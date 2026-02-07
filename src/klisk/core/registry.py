@@ -14,6 +14,7 @@ class ToolEntry:
     parameters: dict[str, Any]
     source_file: str | None = None
     function_tool: Any = None  # The underlying FunctionTool from the SDK
+    project: str | None = None
 
 
 @dataclass
@@ -26,6 +27,7 @@ class AgentEntry:
     reasoning_effort: str | None = None
     source_file: str | None = None
     sdk_agent: Any = None  # The underlying Agent from the SDK
+    project: str | None = None
 
 
 @dataclass
@@ -45,6 +47,7 @@ class ProjectSnapshot:
                     "temperature": entry.temperature,
                     "reasoning_effort": entry.reasoning_effort,
                     "source_file": entry.source_file,
+                    "project": entry.project,
                 }
                 for name, entry in self.agents.items()
             },
@@ -54,6 +57,7 @@ class ProjectSnapshot:
                     "description": entry.description,
                     "parameters": entry.parameters,
                     "source_file": entry.source_file,
+                    "project": entry.project,
                 }
                 for name, entry in self.tools.items()
             },

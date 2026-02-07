@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import importlib.util
+import logging
 import sys
 from pathlib import Path
 
 from klisk.core.config import ProjectConfig
 from klisk.core.registry import AgentRegistry, ProjectSnapshot
+
+logger = logging.getLogger(__name__)
 
 
 def discover_project(project_dir: str | Path) -> ProjectSnapshot:
@@ -92,3 +95,80 @@ def _import_module_from_path(file_path: Path, project_dir: Path) -> None:
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
+
+
+def discover_all_projects() -> ProjectSnapshot:
+    """Load all projects from ~/klisk/projects/ and return a merged snapshot.
+
+    Each agent/tool entry is tagged with its project name.
+    If two projects define an agent/tool with the same name, the entries are
+    prefixed with ``project_name/`` to avoid collisions.
+    """
+    from klisk.core.paths import PROJECTS_DIR
+
+    merged = ProjectSnapshot()
+    merged.config = {"name": "Klisk Workspace", "workspace": True}
+
+    if not PROJECTS_DIR.exists():
+        return merged
+
+    # Collect snapshots per project, tracking name collisions
+    project_snapshots: list[tuple[str, ProjectSnapshot]] = []
+    agent_origins: dict[str, list[str]] = {}  # agent_name -> [project_names]
+    tool_origins: dict[str, list[str]] = {}   # tool_name  -> [project_names]
+
+    for entry in sorted(PROJECTS_DIR.iterdir()):
+        if not entry.is_dir():
+            continue
+        config_file = entry / "klisk.config.yaml"
+        if not config_file.exists():
+            continue
+        project_name = entry.name
+        try:
+            snap = discover_project(entry)
+        except Exception as exc:
+            logger.warning("Failed to load project '%s': %s", project_name, exc)
+            continue
+
+        # Tag entries with project name
+        for ae in snap.agents.values():
+            ae.project = project_name
+            agent_origins.setdefault(ae.name, []).append(project_name)
+        for te in snap.tools.values():
+            te.project = project_name
+            tool_origins.setdefault(te.name, []).append(project_name)
+
+        project_snapshots.append((project_name, snap))
+
+    # Detect collisions (name used in more than one project)
+    colliding_agents = {n for n, projs in agent_origins.items() if len(projs) > 1}
+    colliding_tools = {n for n, projs in tool_origins.items() if len(projs) > 1}
+
+    # Merge into a single snapshot, prefixing colliding names
+    for project_name, snap in project_snapshots:
+        for name, ae in snap.agents.items():
+            key = f"{project_name}/{name}" if name in colliding_agents else name
+            ae.name = key
+            merged.agents[key] = ae
+        for name, te in snap.tools.items():
+            key = f"{project_name}/{name}" if name in colliding_tools else name
+            te.name = key
+            merged.tools[key] = te
+
+    return merged
+
+
+def load_all_project_envs() -> None:
+    """Load .env files from all projects in ~/klisk/projects/ (no override)."""
+    from dotenv import load_dotenv
+    from klisk.core.paths import PROJECTS_DIR
+
+    if not PROJECTS_DIR.exists():
+        return
+
+    for entry in sorted(PROJECTS_DIR.iterdir()):
+        if not entry.is_dir():
+            continue
+        env_file = entry / ".env"
+        if env_file.exists():
+            load_dotenv(env_file, override=False)

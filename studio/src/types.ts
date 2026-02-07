@@ -6,6 +6,7 @@ export interface AgentInfo {
   temperature: number | null;
   reasoning_effort: string | null;
   source_file: string | null;
+  project?: string | null;
 }
 
 export interface ToolInfo {
@@ -13,6 +14,7 @@ export interface ToolInfo {
   description: string;
   parameters: Record<string, unknown>;
   source_file: string | null;
+  project?: string | null;
 }
 
 export interface ProjectSnapshot {
