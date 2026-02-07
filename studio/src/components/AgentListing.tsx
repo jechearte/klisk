@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ProjectSnapshot } from "../types";
 
 interface AgentListingProps {
@@ -6,6 +7,8 @@ interface AgentListingProps {
 }
 
 export default function AgentListing({ snapshot, onSelect }: AgentListingProps) {
+  const [search, setSearch] = useState("");
+
   if (!snapshot || Object.keys(snapshot.agents).length === 0) {
     const error =
       snapshot?.config && typeof snapshot.config === "object" && "error" in snapshot.config
@@ -31,8 +34,18 @@ export default function AgentListing({ snapshot, onSelect }: AgentListingProps) 
     );
   }
 
-  const agents = Object.values(snapshot.agents);
+  const allAgents = Object.values(snapshot.agents);
   const isWorkspace = snapshot.config && "workspace" in snapshot.config && snapshot.config.workspace === true;
+
+  const query = search.toLowerCase().trim();
+  const agents = query
+    ? allAgents.filter(
+        (a) =>
+          a.name.toLowerCase().includes(query) ||
+          (a.project && a.project.toLowerCase().includes(query)) ||
+          (a.instructions && a.instructions.toLowerCase().includes(query))
+      )
+    : allAgents;
 
   return (
     <div className="h-full overflow-auto p-8">
@@ -40,9 +53,39 @@ export default function AgentListing({ snapshot, onSelect }: AgentListingProps) 
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
           Agents
         </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           Select an agent to start a conversation
         </p>
+
+        <div className="relative mb-6">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth="1.5"
+            stroke="currentColor"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+            />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search agents..."
+            className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+          />
+        </div>
+
+        {agents.length === 0 ? (
+          <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">
+            No agents match "{search}"
+          </p>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {agents.map((agent) => (
             <button
@@ -98,6 +141,7 @@ export default function AgentListing({ snapshot, onSelect }: AgentListingProps) 
             </button>
           ))}
         </div>
+        )}
       </div>
     </div>
   );
