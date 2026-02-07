@@ -114,14 +114,19 @@ For non-OpenAI models, use `provider/model` format (e.g. `"anthropic/claude-sonn
 ### 5. Develop and test with Studio
 
 ```bash
-klisk dev my-agent
+klisk dev my-agent       # Single-project mode
+klisk dev                # Workspace mode — loads ALL projects
 ```
 
-Opens a visual Studio with:
+**Single-project mode** (`klisk dev <name>`): Opens Studio for one project.
+
+**Workspace mode** (`klisk dev` without arguments): Loads every project from `~/klisk/projects/` into a single Studio session. Agents/tools are tagged with their project name. If two projects define an agent with the same name, they get prefixed (`project-a/MyAgent`, `project-b/MyAgent`). `.env` files from all projects are loaded (no override).
+
+Studio features:
 - Graph view of agents and tools
 - Chat panel to test the agent
 - Live editing of agent/tool properties
-- Hot reload on file changes
+- Hot reload on file changes (watches all projects in workspace mode)
 
 ### 6. Test from the terminal
 
@@ -173,7 +178,8 @@ See [references/deploy.md](references/deploy.md) for options and troubleshooting
 
 ```bash
 klisk create <name>              # Scaffold new project in ~/klisk/projects/
-klisk dev <name>                 # Start Studio + hot reload
+klisk dev <name>                 # Start Studio + hot reload (single project)
+klisk dev                        # Start Studio in workspace mode (all projects)
 klisk run -p <name> "<message>"  # Run agent (or -i for interactive)
 klisk check <name>               # Validate project
 klisk list                       # List all projects
