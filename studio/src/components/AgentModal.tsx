@@ -137,18 +137,23 @@ export default function AgentModal({ agent, onClose, onSave }: AgentModalProps) 
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
               Reasoning Effort
             </label>
-            <select
-              value={reasoningEffort}
-              onChange={(e) => setReasoningEffort(e.target.value)}
-              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 pr-8 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500"
-            >
-              <option value="none">none</option>
-              <option value="minimal">minimal</option>
-              <option value="low">low</option>
-              <option value="medium">medium</option>
-              <option value="high">high</option>
-              <option value="xhigh">xhigh</option>
-            </select>
+            <div className="relative">
+              <select
+                value={reasoningEffort}
+                onChange={(e) => setReasoningEffort(e.target.value)}
+                className="w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 pr-10 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500"
+              >
+                <option value="none">none</option>
+                <option value="minimal">minimal</option>
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+                <option value="xhigh">xhigh</option>
+              </select>
+              <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+              </svg>
+            </div>
           </div>
         </div>
 
