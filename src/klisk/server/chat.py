@@ -206,6 +206,7 @@ async def handle_websocket_chat(
     previous_response_id: str | None = None
     conversation_history: list | None = None
     current_agent_name: str | None = None
+    was_litellm: bool = False
 
     try:
         while True:
@@ -248,13 +249,24 @@ async def handle_websocket_chat(
 
             use_litellm = is_litellm_model(agent_entry.model)
 
+            # Provider changed (OpenAI↔LiteLLM): bridge history across formats
+            if use_litellm != was_litellm and (previous_response_id or conversation_history):
+                if use_litellm:
+                    # Was OpenAI → now LiteLLM: we can't recover server-side
+                    # history from previous_response_id, so reset.
+                    previous_response_id = None
+                else:
+                    # Was LiteLLM → now OpenAI: carry conversation_history
+                    # as input (works with Responses API as a message list).
+                    previous_response_id = None
+
             try:
                 from agents import ModelSettings, RunConfig, Runner
 
                 attachments = msg.get("attachments")
                 content = _build_content_parts(user_message, attachments, litellm=use_litellm)
 
-                if use_litellm and conversation_history is not None:
+                if conversation_history is not None:
                     run_input = conversation_history + [{"role": "user", "content": content}]
                 elif isinstance(content, list):
                     # Native OpenAI path with attachments — wrap in Responses API message
@@ -366,8 +378,12 @@ async def handle_websocket_chat(
                                 },
                             })
 
+                # Always keep conversation_history so it can bridge provider switches
+                conversation_history = result.to_input_list()
+                was_litellm = use_litellm
+
                 if use_litellm:
-                    conversation_history = result.to_input_list()
+                    previous_response_id = None
                 else:
                     previous_response_id = result.last_response_id
 
@@ -430,13 +446,18 @@ async def handle_streaming_chat(
         return
 
     use_litellm = is_litellm_model(agent_entry.model)
+    was_litellm = state.get("was_litellm", False)
+
+    # Provider changed (OpenAI↔LiteLLM): bridge history across formats
+    if use_litellm != was_litellm and (previous_response_id or conversation_history):
+        previous_response_id = None
 
     try:
         from agents import ModelSettings, RunConfig, Runner
 
         content = _build_content_parts(message, attachments, litellm=use_litellm)
 
-        if use_litellm and conversation_history is not None:
+        if conversation_history is not None:
             run_input = conversation_history + [{"role": "user", "content": content}]
         elif isinstance(content, list):
             run_input = [{"role": "user", "content": content}]
@@ -539,12 +560,13 @@ async def handle_streaming_chat(
                         "data": {"output": str(getattr(item, "output", ""))},
                     }
 
+        # Always keep conversation_history so it can bridge provider switches
+        state["conversation_history"] = result.to_input_list()
+        state["was_litellm"] = use_litellm
         if use_litellm:
-            state["conversation_history"] = result.to_input_list()
             state.pop("previous_response_id", None)
         else:
             state["previous_response_id"] = result.last_response_id
-            state.pop("conversation_history", None)
 
         final_output = result.final_output
         yield {
