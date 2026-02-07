@@ -77,7 +77,17 @@ def check(
                             f"define_agent() parameter, not inside model_settings"
                         )
 
-            # 6. Validate tools have docstrings and type hints
+            # 6. Validate reasoning_effort values
+            VALID_EFFORTS = {"none", "minimal", "low", "medium", "high", "xhigh"}
+            for agent_name, agent_entry in snapshot.agents.items():
+                if agent_entry.reasoning_effort and agent_entry.reasoning_effort not in VALID_EFFORTS:
+                    errors.append(
+                        f"Agent '{agent_name}': invalid reasoning_effort "
+                        f"'{agent_entry.reasoning_effort}'. "
+                        f"Valid values: {', '.join(sorted(VALID_EFFORTS))}"
+                    )
+
+            # 7. Validate tools have docstrings and type hints
             for name, tool_entry in snapshot.tools.items():
                 if not tool_entry.description:
                     errors.append(f"Tool '{name}' missing docstring")

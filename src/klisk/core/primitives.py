@@ -79,7 +79,8 @@ def define_agent(
       ``"gemini/gemini-2.5-flash"``, ``"mistral/mistral-large-latest"``
 
     The *reasoning_effort* parameter controls how much reasoning the model uses.
-    Supported values: ``"none"``, ``"low"``, ``"medium"`` (default), ``"high"``.
+    Supported values: ``"none"``, ``"minimal"``, ``"low"``, ``"medium"`` (default),
+    ``"high"``, ``"xhigh"``.
     LiteLLM translates this to each provider's equivalent parameter.
 
     The *builtin_tools* parameter enables provider-hosted tools:
