@@ -551,13 +551,15 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 px-4 py-2 text-center text-xs text-gray-400 dark:text-gray-500">
-        Built by{" "}
+      <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 px-4 py-4 flex items-center justify-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+        <span>Built with</span>
+        <span className="text-red-400">&#9829;</span>
+        <span>by</span>
         <a
           href="https://www.linkedin.com/in/echeverriajuan/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline"
+          className="font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
         >
           Juan Echeverria
         </a>
