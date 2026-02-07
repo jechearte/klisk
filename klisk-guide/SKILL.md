@@ -189,6 +189,56 @@ klisk deploy init <name>         # Generate deploy files
 klisk deploy -p <name>           # Deploy to Cloud Run
 ```
 
+## Built-in Tools (OpenAI models only)
+
+Klisk wraps OpenAI's hosted tools as built-in tools. Pass them via the `builtin_tools` parameter of `define_agent()`. They **only work with OpenAI models** — using them with other providers raises `ValueError`.
+
+### Available built-in tools
+
+| Tool | String shortcut | Import |
+|---|---|---|
+| Web search | `"web_search"` | `from klisk import WebSearch` |
+| Code interpreter | `"code_interpreter"` | `from klisk import CodeInterpreter` |
+| File search | *(none — requires config)* | `from klisk import FileSearch` |
+| Image generation | `"image_generation"` | `from klisk import ImageGeneration` |
+
+### Usage — string shortcuts (simplest)
+
+```python
+agent = define_agent(
+    name="Assistant",
+    model="gpt-5.2",
+    instructions="You are a helpful assistant.",
+    tools=get_tools("my_tool"),
+    builtin_tools=["web_search", "code_interpreter", "image_generation"],
+)
+```
+
+### Usage — object form (for configuration)
+
+```python
+from klisk import define_agent, get_tools, WebSearch, FileSearch, ImageGeneration
+
+agent = define_agent(
+    name="Researcher",
+    model="gpt-5.2",
+    instructions="You research topics deeply.",
+    tools=get_tools("summarize"),
+    builtin_tools=[
+        WebSearch(search_context_size="high"),          # "low", "medium" (default), "high"
+        FileSearch(vector_store_ids=["vs_abc123"]),     # MUST use object form
+        ImageGeneration(quality="high", size="1024x1024"),
+    ],
+)
+```
+
+### Configuration options
+
+- **WebSearch**: `search_context_size` — `"low"` | `"medium"` (default) | `"high"`
+- **CodeInterpreter**: `container` — optional dict for container config
+- **FileSearch**: `vector_store_ids` (required), `max_num_results` (optional). **Cannot use string shortcut** — must use `FileSearch(vector_store_ids=[...])`.
+- **ImageGeneration**: `model` (default `"gpt-image-1"`), `quality` (`"auto"` | `"low"` | `"medium"` | `"high"`), `size` (`"auto"` | `"1024x1024"` | `"1536x1024"` | `"1024x1536"`)
+
 ## Key Patterns
 
 ### Multi-agent with handoffs
