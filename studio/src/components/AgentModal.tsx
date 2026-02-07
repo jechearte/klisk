@@ -140,7 +140,7 @@ export default function AgentModal({ agent, onClose, onSave }: AgentModalProps) 
             <select
               value={reasoningEffort}
               onChange={(e) => setReasoningEffort(e.target.value)}
-              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500"
+              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 pr-8 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500"
             >
               <option value="none">none</option>
               <option value="minimal">minimal</option>
