@@ -41,7 +41,7 @@ def _resolve_model(model_str: str | None) -> Any:
     except ImportError:
         raise ImportError(
             f"LiteLLM is required to use '{model_str}'. "
-            "Install it with: pip install 'klisk[litellm]'"
+            "Install it with: pip install litellm"
         )
 
     # Disable OpenAI tracing when there is no OpenAI API key
