@@ -53,6 +53,9 @@ _CURATED_MODELS: dict[str, list[str]] = {
 }
 
 
+_CHAT_MODES = {"chat", "responses"}
+
+
 def _get_provider_models() -> dict[str, list[str]]:
     """Return {provider: [model, ...]} from litellm or fallback to curated list."""
     try:
@@ -65,14 +68,18 @@ def _get_provider_models() -> dict[str, list[str]]:
             for m in sorted(raw):
                 info = litellm.model_cost.get(m, {})
                 mode = info.get("mode")
-                if mode and mode != "chat":
+                if mode and mode not in _CHAT_MODES:
                     continue
                 # Strip provider prefix (gemini models come as "gemini/gemini-2.5-flash")
                 clean = m.split("/", 1)[1] if "/" in m else m
                 chat_models.append(clean)
             result[provider] = chat_models if chat_models else _CURATED_MODELS.get(provider, [])
         return result
-    except (ImportError, Exception):
+    except ImportError:
+        logger.debug("litellm not installed, using curated model list")
+        return dict(_CURATED_MODELS)
+    except Exception:
+        logger.exception("Failed to load models from litellm")
         return dict(_CURATED_MODELS)
 
 
