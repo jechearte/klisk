@@ -7,9 +7,26 @@ interface AgentListingProps {
 
 export default function AgentListing({ snapshot, onSelect }: AgentListingProps) {
   if (!snapshot || Object.keys(snapshot.agents).length === 0) {
+    const error =
+      snapshot?.config && typeof snapshot.config === "object" && "error" in snapshot.config
+        ? String((snapshot.config as Record<string, unknown>).error)
+        : null;
+
     return (
-      <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500 text-sm">
-        No agents found
+      <div className="flex flex-col items-center justify-center h-full gap-3 px-8">
+        <span className="text-gray-400 dark:text-gray-500 text-sm">
+          No agents found
+        </span>
+        {error && (
+          <div className="max-w-xl w-full bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
+            <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">
+              Project load error
+            </p>
+            <pre className="text-xs text-red-600 dark:text-red-300 whitespace-pre-wrap break-words font-mono">
+              {error}
+            </pre>
+          </div>
+        )}
       </div>
     );
   }

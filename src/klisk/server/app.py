@@ -169,6 +169,7 @@ def create_app(project_dir: Path) -> FastAPI:
     try:
         _snapshot = discover_project(_project_path)
     except Exception as e:
+        logger.exception("Failed to discover project at startup")
         _snapshot = ProjectSnapshot()
         _snapshot.config = {"error": str(e)}
 
@@ -356,6 +357,7 @@ async def _on_file_change() -> None:
     try:
         _snapshot = discover_project(_project_path)
     except Exception as e:
+        logger.exception("Failed to reload project")
         _snapshot = ProjectSnapshot()
         _snapshot.config = {"error": str(e)}
 

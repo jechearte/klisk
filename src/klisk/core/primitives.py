@@ -103,10 +103,21 @@ def define_agent(
     is_openai = model is None or "/" not in model or model.startswith("openai/")
 
     # Resolve builtin tools (web_search, code_interpreter, etc.)
-    # All builtin tools require OpenAI models — resolve_builtin_tools raises for non-OpenAI.
+    # Builtin tools require OpenAI models — skip them with a warning for non-OpenAI.
     if builtin_tools:
-        hosted_sdk_tools, _ = resolve_builtin_tools(builtin_tools, is_openai)
-        sdk_tools.extend(hosted_sdk_tools)
+        if not is_openai:
+            import warnings
+            skipped = ", ".join(
+                builtin_tool_name(bt) for bt in builtin_tools
+            )
+            warnings.warn(
+                f"Builtin tools ({skipped}) are only supported with OpenAI models "
+                f"and will be disabled for '{model}'.",
+                stacklevel=2,
+            )
+        else:
+            hosted_sdk_tools, _ = resolve_builtin_tools(builtin_tools, is_openai)
+            sdk_tools.extend(hosted_sdk_tools)
         for bt in builtin_tools:
             tool_names.append(builtin_tool_name(bt))
 
