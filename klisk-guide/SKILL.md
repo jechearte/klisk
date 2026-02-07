@@ -85,6 +85,30 @@ agent = define_agent(
 
 Key parameters: `name`, `instructions`, `model`, `temperature`, `reasoning_effort`, `tools`, plus SDK kwargs (`handoffs`, `guardrails`, `output_type`).
 
+**Important:** `temperature` and `reasoning_effort` MUST be passed as direct parameters of `define_agent()`, NOT inside `model_settings`. If you pass `model_settings` explicitly, the automatic `temperature` and `reasoning_effort` configuration is skipped and those parameters are ignored. Wrong:
+
+```python
+# DON'T do this — temperature and reasoning_effort are ignored
+agent = define_agent(
+    name="MyAgent",
+    temperature=0.7,
+    reasoning_effort="medium",
+    model_settings=ModelSettings(temperature=0.3),  # overrides everything
+)
+```
+
+Correct:
+
+```python
+# DO this — let define_agent() build model_settings automatically
+agent = define_agent(
+    name="MyAgent",
+    temperature=0.7,
+    reasoning_effort="medium",
+    tools=get_tools("my_tool"),
+)
+```
+
 For non-OpenAI models, use `provider/model` format (e.g. `"anthropic/claude-sonnet-4-20250514"`). Requires `pip install 'klisk[litellm]'`. See [references/litellm.md](references/litellm.md).
 
 ### 5. Develop and test with Studio
@@ -122,7 +146,7 @@ Supported: JPEG, PNG, GIF, WebP images and PDF files (max 20MB each).
 klisk check my-agent
 ```
 
-Verifies config, entry point, agent/tool discovery, and docstrings.
+Verifies config, entry point, agent/tool discovery, docstrings, and correct usage of `temperature`/`reasoning_effort` (must be `define_agent()` params, not inside `model_settings`).
 
 ### 8. Serve in production
 
