@@ -100,7 +100,7 @@ CodeInterpreter(container=None)
 
 ### FileSearch
 
-Search through OpenAI vector stores. Requires pre-created vector stores via the OpenAI API.
+Search through OpenAI vector stores. The model retrieves relevant chunks from your uploaded documents to answer questions.
 
 ```python
 from klisk import FileSearch
@@ -114,6 +114,77 @@ FileSearch(vector_store_ids=["vs_abc123"], max_num_results=10)
 | `max_num_results` | `int` \| `None` | `None` | Maximum number of results to return. |
 
 **No string shortcut** — `FileSearch` always requires `vector_store_ids`, so it must be used in object form. Using `"file_search"` as a string shortcut raises `ValueError`.
+
+#### Setting up a vector store
+
+Before using `FileSearch` in your agent, you need to upload your documents to OpenAI and create a vector store. This is done once, via the OpenAI API — Klisk does not manage vector stores.
+
+You can create a setup script in your project (e.g. `scripts/setup_vector_store.py`):
+
+```python
+from openai import OpenAI
+
+client = OpenAI()  # uses OPENAI_API_KEY from .env
+
+# 1. Upload files
+file1 = client.files.create(file=open("docs/manual.pdf", "rb"), purpose="assistants")
+file2 = client.files.create(file=open("docs/faq.pdf", "rb"), purpose="assistants")
+
+# 2. Create a vector store
+vector_store = client.vector_stores.create(name="my-knowledge-base")
+
+# 3. Add files to the vector store
+client.vector_stores.files.create(vector_store_id=vector_store.id, file_id=file1.id)
+client.vector_stores.files.create(vector_store_id=vector_store.id, file_id=file2.id)
+
+# 4. Print the vector store ID — use this in your agent
+print(f"Vector store ID: {vector_store.id}")  # → vs_abc123...
+```
+
+You can also upload files from a URL:
+
+```python
+import requests
+from io import BytesIO
+
+url = "https://example.com/report.pdf"
+response = requests.get(url)
+file = client.files.create(
+    file=("report.pdf", BytesIO(response.content)),
+    purpose="assistants"
+)
+```
+
+After running the script, copy the vector store ID (`vs_...`) and use it in your agent:
+
+```python
+from klisk import define_agent, FileSearch
+
+agent = define_agent(
+    name="DocSearch",
+    model="gpt-5.2",
+    instructions="Answer questions based on the uploaded documents.",
+    builtin_tools=[
+        FileSearch(vector_store_ids=["vs_abc123"]),
+    ],
+)
+```
+
+**Alternatively**, you can create vector stores from the [OpenAI dashboard](https://platform.openai.com/storage/vector-stores) (Storage > Vector Stores) without writing any code.
+
+#### Supported file types
+
+OpenAI vector stores support: PDF, TXT, MD, DOCX, PPTX, HTML, JSON, CSV, and more. Each file can be up to 512 MB / 5M tokens. A vector store can hold up to 10,000 files.
+
+#### Checking vector store status
+
+After uploading files, wait until processing completes before using the agent:
+
+```python
+files = client.vector_stores.files.list(vector_store_id=vector_store.id)
+for f in files:
+    print(f"{f.id}: {f.status}")  # should be "completed"
+```
 
 ### ImageGeneration
 
