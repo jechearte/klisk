@@ -83,7 +83,9 @@ agent = define_agent(
 )
 ```
 
-Key parameters: `name`, `instructions`, `model`, `temperature`, `reasoning_effort`, `tools`, plus SDK kwargs (`handoffs`, `guardrails`, `output_type`).
+Key parameters: `name`, `instructions`, `model`, `temperature`, `reasoning_effort`, `tools`, `builtin_tools`, plus SDK kwargs (`handoffs`, `guardrails`, `output_type`).
+
+For OpenAI models, you can also add **built-in tools** (web search, code interpreter, file search, image generation) via the `builtin_tools` parameter. See [references/builtin_tools.md](references/builtin_tools.md).
 
 **Important:** `temperature` and `reasoning_effort` MUST be passed as direct parameters of `define_agent()`, NOT inside `model_settings`. If you pass `model_settings` explicitly, the automatic `temperature` and `reasoning_effort` configuration is skipped and those parameters are ignored. Wrong:
 
@@ -189,56 +191,6 @@ klisk deploy init <name>         # Generate deploy files
 klisk deploy -p <name>           # Deploy to Cloud Run
 ```
 
-## Built-in Tools (OpenAI models only)
-
-Klisk wraps OpenAI's hosted tools as built-in tools. Pass them via the `builtin_tools` parameter of `define_agent()`. They **only work with OpenAI models** — using them with other providers raises `ValueError`.
-
-### Available built-in tools
-
-| Tool | String shortcut | Import |
-|---|---|---|
-| Web search | `"web_search"` | `from klisk import WebSearch` |
-| Code interpreter | `"code_interpreter"` | `from klisk import CodeInterpreter` |
-| File search | *(none — requires config)* | `from klisk import FileSearch` |
-| Image generation | `"image_generation"` | `from klisk import ImageGeneration` |
-
-### Usage — string shortcuts (simplest)
-
-```python
-agent = define_agent(
-    name="Assistant",
-    model="gpt-5.2",
-    instructions="You are a helpful assistant.",
-    tools=get_tools("my_tool"),
-    builtin_tools=["web_search", "code_interpreter", "image_generation"],
-)
-```
-
-### Usage — object form (for configuration)
-
-```python
-from klisk import define_agent, get_tools, WebSearch, FileSearch, ImageGeneration
-
-agent = define_agent(
-    name="Researcher",
-    model="gpt-5.2",
-    instructions="You research topics deeply.",
-    tools=get_tools("summarize"),
-    builtin_tools=[
-        WebSearch(search_context_size="high"),          # "low", "medium" (default), "high"
-        FileSearch(vector_store_ids=["vs_abc123"]),     # MUST use object form
-        ImageGeneration(quality="high", size="1024x1024"),
-    ],
-)
-```
-
-### Configuration options
-
-- **WebSearch**: `search_context_size` — `"low"` | `"medium"` (default) | `"high"`
-- **CodeInterpreter**: `container` — optional dict for container config
-- **FileSearch**: `vector_store_ids` (required), `max_num_results` (optional). **Cannot use string shortcut** — must use `FileSearch(vector_store_ids=[...])`.
-- **ImageGeneration**: `model` (default `"gpt-image-1"`), `quality` (`"auto"` | `"low"` | `"medium"` | `"high"`), `size` (`"auto"` | `"1024x1024"` | `"1536x1024"` | `"1024x1536"`)
-
 ## Key Patterns
 
 ### Multi-agent with handoffs
@@ -272,4 +224,5 @@ router = define_agent(
 | Core API (define_agent, @tool, get_tools, registry, config) | [references/api_reference.md](references/api_reference.md) |
 | Multi-provider / LiteLLM setup | [references/litellm.md](references/litellm.md) |
 | Production server, API, auth, widget | [references/production.md](references/production.md) |
+| Built-in tools (web search, code interpreter, file search, image gen) | [references/builtin_tools.md](references/builtin_tools.md) |
 | Deployment to Google Cloud Run | [references/deploy.md](references/deploy.md) |
