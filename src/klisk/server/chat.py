@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Callable
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -193,8 +193,15 @@ def _build_content_parts(
     return parts if parts else text
 
 
-async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot) -> None:
-    """Handle a WebSocket chat session using agents from the given snapshot."""
+async def handle_websocket_chat(
+    websocket: WebSocket,
+    get_snapshot: Callable[[], ProjectSnapshot | None],
+) -> None:
+    """Handle a WebSocket chat session using agents from the given snapshot.
+
+    *get_snapshot* is called on every message so the chat always uses
+    the latest project snapshot after hot-reloads.
+    """
     await websocket.accept()
     previous_response_id: str | None = None
     conversation_history: list | None = None
@@ -214,6 +221,7 @@ async def handle_websocket_chat(websocket: WebSocket, snapshot: ProjectSnapshot)
             if msg.get("previous_response_id"):
                 previous_response_id = msg["previous_response_id"]
 
+            snapshot = get_snapshot()
             if not snapshot or not snapshot.agents:
                 await websocket.send_json({"type": "error", "data": "No agents loaded"})
                 continue

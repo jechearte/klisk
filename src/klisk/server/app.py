@@ -339,7 +339,7 @@ def _build_api_router():
 
 
 async def _handle_chat(websocket: WebSocket) -> None:
-    await handle_websocket_chat(websocket, _snapshot)
+    await handle_websocket_chat(websocket, lambda: _snapshot)
 
 
 async def _handle_reload(websocket: WebSocket) -> None:
