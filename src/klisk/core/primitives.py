@@ -25,7 +25,7 @@ def _resolve_model(model_str: str | None) -> Any:
     - Any other prefix (e.g. "anthropic/claude-...") → LitellmModel via LiteLLM
     """
     if model_str is None:
-        return None
+        return "gpt-5.2"
 
     if "/" not in model_str:
         return model_str

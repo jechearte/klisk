@@ -105,7 +105,7 @@ export default function AgentModal({ agent, onClose, onSave }: AgentModalProps) 
               type="text"
               value={model}
               onChange={(e) => setModel(e.target.value)}
-              placeholder="gpt-4o"
+              placeholder="gpt-5.2"
               className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500"
             />
           </div>
