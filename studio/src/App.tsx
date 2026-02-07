@@ -441,6 +441,7 @@ export default function App() {
               </svg>
             </button>
           )}
+          <img src="/favicon.png" alt="Klisk" className="w-5 h-5" />
           <h1 className="text-sm font-semibold text-gray-900 dark:text-white">
             {isDetail ? currentView.agentName : "Klisk Studio"}
           </h1>
@@ -453,7 +454,7 @@ export default function App() {
             <span className="text-[11px] text-gray-500 dark:text-gray-400">
               {connected ? "Connected" : "Disconnected"}
             </span>
-            {typeof config.name === "string" && (
+            {typeof config.name === "string" && !config.workspace && (
               <>
                 <span className="text-gray-300 dark:text-gray-600">|</span>
                 <span className="text-[11px] text-gray-500 dark:text-gray-400">
