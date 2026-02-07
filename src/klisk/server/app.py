@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -31,29 +32,94 @@ logger = logging.getLogger(__name__)
 
 _CURATED_MODELS: dict[str, list[str]] = {
     "openai": [
+        "gpt-5.2",
+        "gpt-5.2-pro",
+        "gpt-5.1",
+        "gpt-5",
+        "gpt-5-mini",
+        "gpt-5-nano",
+        "gpt-5-pro",
         "gpt-4.1",
         "gpt-4.1-mini",
         "gpt-4.1-nano",
+        "gpt-4.5-preview",
         "gpt-4o",
         "gpt-4o-mini",
+        "gpt-4-turbo",
+        "o4-mini",
         "o3",
         "o3-mini",
-        "o4-mini",
+        "o3-pro",
+        "o1",
+        "o1-mini",
+        "o1-pro",
+        "codex-mini-latest",
     ],
     "anthropic": [
         "claude-opus-4-6",
+        "claude-opus-4-5",
+        "claude-opus-4-1",
         "claude-sonnet-4-5",
         "claude-haiku-4-5",
     ],
     "gemini": [
+        "gemini-3-pro-preview",
+        "gemini-3-flash-preview",
         "gemini-2.5-pro",
         "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
         "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
     ],
 }
 
 
 _CHAT_MODES = {"chat", "responses"}
+
+# ---------------------------------------------------------------------------
+# Model filtering: keep only canonical, current models relevant for agents
+# ---------------------------------------------------------------------------
+
+_EXCLUDE_PREFIXES = (
+    "ft:", "gpt-3.5", "gpt-4-", "gpt-4-32k", "chatgpt-",
+    "claude-3-", "claude-4-",
+    "gemini-pro", "gemini-exp-", "gemini-gemma-", "gemma-",
+    "gemini-1.5-", "learnlm-", "gemini-robotics-",
+)
+_EXCLUDE_SUBSTRINGS = (
+    "realtime", "audio", "search-preview", "vision",
+    "deep-research", "container", "-codex", "-chat",
+    "-tts", "-live-", "image-generation",
+    "-exp-", "thinking-exp", "computer-use",
+)
+_EXCLUDE_SUFFIXES = ("-latest", "-001", "-002", "-003", "-exp")
+
+# Match: -YYYY-MM-DD, -YYYYMMDD, preview-MM-DD, preview-MM-YYYY
+_DATE_SUFFIX_RE = re.compile(r"-(\d{4}-\d{2}-\d{2}|\d{8})$")
+_PREVIEW_DATE_RE = re.compile(r"preview-\d{2}-\d{2,4}$")
+
+_EXCLUDE_EXACT = {"gpt-4"}
+# Models whose canonical name matches an exclude rule but should be kept
+_ALWAYS_INCLUDE = {"codex-mini-latest"}
+
+
+def _is_relevant_model(name: str) -> bool:
+    """Filter out dated snapshots, legacy, and non-agent models."""
+    if name in _ALWAYS_INCLUDE:
+        return True
+    if name in _EXCLUDE_EXACT:
+        return False
+    if _DATE_SUFFIX_RE.search(name):
+        return False
+    if _PREVIEW_DATE_RE.search(name):
+        return False
+    if any(name.startswith(p) for p in _EXCLUDE_PREFIXES):
+        return False
+    if any(s in name for s in _EXCLUDE_SUBSTRINGS):
+        return False
+    if any(name.endswith(s) for s in _EXCLUDE_SUFFIXES):
+        return False
+    return True
 
 
 def _get_provider_models() -> dict[str, list[str]]:
@@ -64,6 +130,7 @@ def _get_provider_models() -> dict[str, list[str]]:
         result: dict[str, list[str]] = {}
         for provider in ("openai", "anthropic", "gemini"):
             raw = litellm.models_by_provider.get(provider, set())
+            seen: set[str] = set()
             chat_models: list[str] = []
             for m in sorted(raw):
                 info = litellm.model_cost.get(m, {})
@@ -72,14 +139,18 @@ def _get_provider_models() -> dict[str, list[str]]:
                     continue
                 # Strip provider prefix (gemini models come as "gemini/gemini-2.5-flash")
                 clean = m.split("/", 1)[1] if "/" in m else m
+                if clean in seen or not _is_relevant_model(clean):
+                    continue
+                seen.add(clean)
                 chat_models.append(clean)
             result[provider] = chat_models if chat_models else _CURATED_MODELS.get(provider, [])
         return result
     except ImportError:
-        logger.debug("litellm not installed, using curated model list")
         return dict(_CURATED_MODELS)
-    except Exception:
-        logger.exception("Failed to load models from litellm")
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        print(f"[klisk] _get_provider_models failed: {exc}", flush=True)
         return dict(_CURATED_MODELS)
 
 
