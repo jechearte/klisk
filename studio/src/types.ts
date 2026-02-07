@@ -28,6 +28,10 @@ export interface Attachment {
   data: string; // base64, no data URL prefix
 }
 
+export interface ModelsResponse {
+  providers: Record<string, string[]>;
+}
+
 export type ChatMessage =
   | { role: "user"; content: string; attachments?: Attachment[] }
   | { role: "assistant"; content: string }

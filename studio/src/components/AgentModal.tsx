@@ -1,5 +1,32 @@
 import { useState, useEffect } from "react";
-import type { AgentInfo } from "../types";
+import type { AgentInfo, ModelsResponse } from "../types";
+
+const KNOWN_PROVIDERS = ["openai", "anthropic", "gemini"] as const;
+
+interface ParsedModel {
+  provider: string;
+  model: string;
+}
+
+function parseModelString(model: string | null): ParsedModel {
+  if (!model || model === "") return { provider: "openai", model: "" };
+  if (!model.includes("/")) return { provider: "openai", model };
+  const [prefix, ...rest] = model.split("/");
+  if ((KNOWN_PROVIDERS as readonly string[]).includes(prefix)) {
+    return { provider: prefix, model: rest.join("/") };
+  }
+  return { provider: "custom", model };
+}
+
+function buildModelString(
+  provider: string,
+  selectedModel: string,
+  customModel: string
+): string {
+  if (provider === "custom") return customModel;
+  if (provider === "openai") return selectedModel;
+  return selectedModel ? `${provider}/${selectedModel}` : "";
+}
 
 interface AgentModalProps {
   agent: AgentInfo;
@@ -10,7 +37,6 @@ interface AgentModalProps {
 export default function AgentModal({ agent, onClose, onSave }: AgentModalProps) {
   const [name, setName] = useState(agent.name);
   const [instructions, setInstructions] = useState(agent.instructions ?? "");
-  const [model, setModel] = useState(agent.model ?? "");
   const [temperature, setTemperature] = useState<string>(
     agent.temperature != null ? String(agent.temperature) : ""
   );
@@ -18,6 +44,63 @@ export default function AgentModal({ agent, onClose, onSave }: AgentModalProps) 
     agent.reasoning_effort ?? "medium"
   );
   const [saving, setSaving] = useState(false);
+
+  // Provider + Model state
+  const [provider, setProvider] = useState("openai");
+  const [selectedModel, setSelectedModel] = useState("");
+  const [customModel, setCustomModel] = useState("");
+  const [providerModels, setProviderModels] = useState<Record<string, string[]>>({});
+  const [loadingModels, setLoadingModels] = useState(true);
+
+  // Fetch models and parse agent.model on mount
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchModels() {
+      try {
+        const res = await fetch("/api/models");
+        if (!res.ok) throw new Error("Failed to fetch models");
+        const data: ModelsResponse = await res.json();
+        if (cancelled) return;
+        setProviderModels(data.providers);
+
+        // Parse the current agent model
+        const parsed = parseModelString(agent.model);
+        const models = data.providers[parsed.provider];
+
+        if (parsed.provider === "custom" || !models) {
+          setProvider("custom");
+          setCustomModel(agent.model ?? "");
+        } else if (parsed.model && !models.includes(parsed.model)) {
+          // Model not in list → custom
+          setProvider("custom");
+          setCustomModel(agent.model ?? "");
+        } else {
+          setProvider(parsed.provider);
+          setSelectedModel(parsed.model);
+        }
+      } catch {
+        // Fetch failed → custom mode
+        if (cancelled) return;
+        setProvider("custom");
+        setCustomModel(agent.model ?? "");
+      } finally {
+        if (!cancelled) setLoadingModels(false);
+      }
+    }
+    fetchModels();
+    return () => { cancelled = true; };
+  }, [agent.model]);
+
+  // When provider changes, auto-select first model
+  const handleProviderChange = (newProvider: string) => {
+    setProvider(newProvider);
+    if (newProvider === "custom") {
+      setCustomModel(buildModelString(provider, selectedModel, customModel));
+    } else {
+      const models = providerModels[newProvider] ?? [];
+      setSelectedModel(models[0] ?? "");
+    }
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -34,7 +117,10 @@ export default function AgentModal({ agent, onClose, onSave }: AgentModalProps) 
       if (name !== agent.name) updates.name = name;
       if (instructions !== (agent.instructions ?? ""))
         updates.instructions = instructions;
-      if (model !== (agent.model ?? "")) updates.model = model;
+
+      const modelValue = buildModelString(provider, selectedModel, customModel);
+      if (modelValue !== (agent.model ?? "")) updates.model = modelValue;
+
       const temp = temperature !== "" ? parseFloat(temperature) : null;
       if (temp !== agent.temperature) updates.temperature = temp;
       if (reasoningEffort !== (agent.reasoning_effort ?? "medium"))
@@ -52,6 +138,14 @@ export default function AgentModal({ agent, onClose, onSave }: AgentModalProps) 
       onClose();
     }
   };
+
+  const currentModels = providerModels[provider] ?? [];
+
+  const chevron = (
+    <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+    </svg>
+  );
 
   return (
     <div
@@ -101,18 +195,63 @@ export default function AgentModal({ agent, onClose, onSave }: AgentModalProps) 
             />
           </div>
 
-          {/* Model */}
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-              Model
-            </label>
-            <input
-              type="text"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              placeholder="gpt-5.2"
-              className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500"
-            />
+          {/* Provider + Model */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Provider */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Provider
+              </label>
+              <div className="relative">
+                <select
+                  value={provider}
+                  onChange={(e) => handleProviderChange(e.target.value)}
+                  disabled={loadingModels}
+                  className="w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 pr-10 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                >
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="gemini">Gemini</option>
+                  <option value="custom">Custom</option>
+                </select>
+                {chevron}
+              </div>
+            </div>
+
+            {/* Model */}
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                Model
+              </label>
+              {provider === "custom" ? (
+                <input
+                  type="text"
+                  value={customModel}
+                  onChange={(e) => setCustomModel(e.target.value)}
+                  placeholder="provider/model-name"
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500"
+                />
+              ) : (
+                <div className="relative">
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    disabled={loadingModels}
+                    className="w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 pr-10 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                  >
+                    {selectedModel === "" && (
+                      <option value="">Select a model...</option>
+                    )}
+                    {currentModels.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                  {chevron}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Temperature */}
@@ -150,9 +289,7 @@ export default function AgentModal({ agent, onClose, onSave }: AgentModalProps) 
                 <option value="high">high</option>
                 <option value="xhigh">xhigh</option>
               </select>
-              <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-              </svg>
+              {chevron}
             </div>
           </div>
         </div>

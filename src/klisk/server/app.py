@@ -29,6 +29,53 @@ from klisk.server.watcher import start_watcher
 
 logger = logging.getLogger(__name__)
 
+_CURATED_MODELS: dict[str, list[str]] = {
+    "openai": [
+        "gpt-4.1",
+        "gpt-4.1-mini",
+        "gpt-4.1-nano",
+        "gpt-4o",
+        "gpt-4o-mini",
+        "o3",
+        "o3-mini",
+        "o4-mini",
+    ],
+    "anthropic": [
+        "claude-opus-4-6",
+        "claude-sonnet-4-5",
+        "claude-haiku-4-5",
+    ],
+    "gemini": [
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+    ],
+}
+
+
+def _get_provider_models() -> dict[str, list[str]]:
+    """Return {provider: [model, ...]} from litellm or fallback to curated list."""
+    try:
+        import litellm
+
+        result: dict[str, list[str]] = {}
+        for provider in ("openai", "anthropic", "gemini"):
+            raw = litellm.models_by_provider.get(provider, set())
+            chat_models: list[str] = []
+            for m in sorted(raw):
+                info = litellm.model_cost.get(m, {})
+                mode = info.get("mode")
+                if mode and mode != "chat":
+                    continue
+                # Strip provider prefix (gemini models come as "gemini/gemini-2.5-flash")
+                clean = m.split("/", 1)[1] if "/" in m else m
+                chat_models.append(clean)
+            result[provider] = chat_models if chat_models else _CURATED_MODELS.get(provider, [])
+        return result
+    except (ImportError, Exception):
+        return dict(_CURATED_MODELS)
+
+
 _project_path: Path | None = None
 _snapshot: ProjectSnapshot | None = None
 _config: ProjectConfig | None = None
@@ -89,6 +136,10 @@ def _build_api_router():
     @router.get("/project")
     async def get_project():
         return _snapshot.to_dict() if _snapshot else {}
+
+    @router.get("/models")
+    async def get_models():
+        return {"providers": _get_provider_models()}
 
     @router.get("/agents")
     async def get_agents():
