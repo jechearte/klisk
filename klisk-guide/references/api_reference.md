@@ -28,7 +28,7 @@ def define_agent(
 - `instructions` (str | None): System prompt / personality
 - `model` (str | None): LLM model — `"gpt-5.2"` or `provider/model` format (see [litellm.md](litellm.md))
 - `temperature` (float | None): Sampling temperature
-- `reasoning_effort` (str | None): `"none"`, `"low"`, `"medium"`, `"high"` — defaults to `None` (not sent). Only set for reasoning models (o3, o4-mini)
+- `reasoning_effort` (str | None): `"none"`, `"low"`, `"medium"`, `"high"` — defaults to `None` (not sent). Only for o-series (o1, o3, o4-mini) and gpt-5+ (gpt-5.1, gpt-5.2)
 - `tools` (list | None): `FunctionTool` objects from `@tool` or `get_tools()`
 - `**kwargs`: Forwarded to SDK `Agent()` — supports `handoffs`, `guardrails`, `output_type`, etc.
 

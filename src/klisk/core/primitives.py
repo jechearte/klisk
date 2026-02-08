@@ -81,7 +81,7 @@ def define_agent(
     The *reasoning_effort* parameter controls how much reasoning the model uses.
     Supported values: ``"none"``, ``"minimal"``, ``"low"``, ``"medium"``,
     ``"high"``, ``"xhigh"``. Defaults to ``None`` (not sent to the API).
-    Only set this for reasoning models (e.g. ``o3``, ``o4-mini``).
+    Only set this for o-series models (o1, o3, o4-mini) and gpt-5+ (gpt-5.1, gpt-5.2).
     LiteLLM translates this to each provider's equivalent parameter.
 
     The *builtin_tools* parameter enables provider-hosted tools:

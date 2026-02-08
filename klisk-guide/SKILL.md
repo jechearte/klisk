@@ -85,7 +85,7 @@ agent = define_agent(
 
 Key parameters: `name`, `instructions`, `model`, `temperature`, `reasoning_effort`, `tools`, `builtin_tools`, plus SDK kwargs (`handoffs`, `guardrails`, `output_type`).
 
-**Note:** `reasoning_effort` defaults to `None` (not sent to the API). Only set it for reasoning models like `o3` or `o4-mini`. Non-reasoning models like `gpt-4.1` do NOT support this parameter.
+**Note:** `reasoning_effort` defaults to `None` (not sent to the API). Only set it for o-series models (o1, o3, o4-mini, etc.) and gpt-5+ (gpt-5.1, gpt-5.2, etc.). Models like `gpt-4.1` or `gpt-4o` do NOT support this parameter.
 
 For OpenAI models, you can also add **built-in tools** (web search, code interpreter, file search, image generation) via the `builtin_tools` parameter. See [references/builtin_tools.md](references/builtin_tools.md).
 
