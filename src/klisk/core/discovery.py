@@ -12,6 +12,9 @@ from klisk.core.registry import AgentRegistry, ProjectSnapshot
 
 logger = logging.getLogger(__name__)
 
+# Directories inside a project that should never be treated as user source code.
+_SKIP_DIRS = {"venv", "env", "node_modules", "__pycache__"}
+
 
 def discover_project(project_dir: str | Path) -> ProjectSnapshot:
     """Load a project from disk and return a snapshot of its agents and tools.
@@ -51,13 +54,30 @@ def discover_project(project_dir: str | Path) -> ProjectSnapshot:
 
 
 def _clean_project_modules(project_dir: Path) -> None:
-    """Remove previously loaded project modules from sys.modules for hot reload."""
+    """Remove previously loaded project modules from sys.modules for hot reload.
+
+    Only removes user source modules whose files live directly in the project
+    tree.  Modules inside virtual-env directories (``.venv``, ``venv``, etc.)
+    are preserved so that ``klisk`` and its dependencies keep working even when
+    installed in the project's own virtual environment.
+    """
     project_str = str(project_dir)
     for key in list(sys.modules.keys()):
+        if key == "__main__":
+            continue
         mod = sys.modules[key]
         mod_file = getattr(mod, "__file__", None)
-        if mod_file and str(Path(mod_file).resolve()).startswith(project_str):
-            del sys.modules[key]
+        if not mod_file:
+            continue
+        resolved = str(Path(mod_file).resolve())
+        if not resolved.startswith(project_str):
+            continue
+        # Check if the file is inside a venv / hidden directory within the project
+        rel = resolved[len(project_str):].lstrip("/").lstrip("\\")
+        first_part = rel.split("/")[0].split("\\")[0]
+        if first_part in _SKIP_DIRS or first_part.startswith("."):
+            continue
+        del sys.modules[key]
 
 
 def _import_project_modules(project_dir: Path, exclude: Path) -> None:
@@ -69,9 +89,11 @@ def _import_project_modules(project_dir: Path, exclude: Path) -> None:
             continue
         if py_file.name == "__init__.py":
             continue
-        # Only check relative parts within the project for hidden dirs
+        # Skip hidden dirs, venvs, and other non-source directories
         rel_parts = py_file.resolve().relative_to(project_resolved).parts
-        if any(part.startswith(".") or part == "__pycache__" for part in rel_parts):
+        if any(
+            part.startswith(".") or part in _SKIP_DIRS for part in rel_parts
+        ):
             continue
         _import_module_from_path(py_file, project_dir)
 
