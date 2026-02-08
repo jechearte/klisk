@@ -214,6 +214,7 @@ router = define_agent(
 
 ## Important Rules
 
+- **Default model is `gpt-5.2`**. Always use `model="gpt-5.2"` unless the user explicitly requests a different model.
 - Tools are auto-discovered: all `.py` files imported before the entry point
 - Every `@tool` function **must** have a docstring and type hints
 - `define_agent()` returns the SDK `Agent` object — usable with `Runner.run()` directly
