@@ -131,7 +131,7 @@ def create_production_app(project_dir: Path) -> FastAPI:
                 await websocket.send_json({"type": "auth_error", "data": "Invalid API key"})
                 await websocket.close(code=4001)
                 return
-        await handle_websocket_chat(websocket, snapshot)
+        await handle_websocket_chat(websocket, lambda: snapshot)
 
     # Serve chat_dist as static files (must be last — catches all routes)
     chat_dist = _find_chat_dist()
