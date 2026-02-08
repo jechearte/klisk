@@ -40,6 +40,7 @@ klisk = "klisk.cli:app"
 
 [project.urls]
 Homepage = "https://klisk.productomania.io"
+Repository = "https://github.com/jechearte/klisk"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/klisk"]
