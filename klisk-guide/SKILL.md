@@ -83,6 +83,8 @@ agent = define_agent(
 )
 ```
 
+**Always use `model="gpt-5.2"` by default** unless the user explicitly requests a different model.
+
 Key parameters: `name`, `instructions`, `model`, `temperature`, `reasoning_effort`, `tools`, `builtin_tools`, plus SDK kwargs (`handoffs`, `guardrails`, `output_type`).
 
 **Note:** `reasoning_effort` defaults to `None` (not sent to the API). Only set it for o-series models (o1, o3, o4-mini, etc.) and gpt-5+ (gpt-5.1, gpt-5.2, etc.). Models like `gpt-4.1` or `gpt-4o` do NOT support this parameter.
