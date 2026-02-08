@@ -41,7 +41,7 @@ export default function AgentModal({ agent, onClose, onSave }: AgentModalProps) 
     agent.temperature != null ? String(agent.temperature) : ""
   );
   const [reasoningEffort, setReasoningEffort] = useState<string>(
-    agent.reasoning_effort ?? "medium"
+    agent.reasoning_effort ?? ""
   );
   const [saving, setSaving] = useState(false);
 
@@ -123,8 +123,9 @@ export default function AgentModal({ agent, onClose, onSave }: AgentModalProps) 
 
       const temp = temperature !== "" ? parseFloat(temperature) : null;
       if (temp !== agent.temperature) updates.temperature = temp;
-      if (reasoningEffort !== (agent.reasoning_effort ?? "medium"))
-        updates.reasoning_effort = reasoningEffort;
+      const effortValue = reasoningEffort || null;
+      if (effortValue !== (agent.reasoning_effort ?? null))
+        updates.reasoning_effort = effortValue;
 
       console.log("[AgentModal] updates:", updates);
 
@@ -282,6 +283,7 @@ export default function AgentModal({ agent, onClose, onSave }: AgentModalProps) 
                 onChange={(e) => setReasoningEffort(e.target.value)}
                 className="w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 pr-10 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500"
               >
+                <option value="">Not set</option>
                 <option value="none">none</option>
                 <option value="minimal">minimal</option>
                 <option value="low">low</option>

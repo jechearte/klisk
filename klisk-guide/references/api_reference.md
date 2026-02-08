@@ -17,7 +17,7 @@ def define_agent(
     instructions: str | None = None,
     model: str | None = None,
     temperature: float | None = None,
-    reasoning_effort: str = "medium",
+    reasoning_effort: str | None = None,
     tools: list[Any] | None = None,
     **kwargs: Any,
 ) -> Agent:
@@ -28,7 +28,7 @@ def define_agent(
 - `instructions` (str | None): System prompt / personality
 - `model` (str | None): LLM model — `"gpt-5.2"` or `provider/model` format (see [litellm.md](litellm.md))
 - `temperature` (float | None): Sampling temperature
-- `reasoning_effort` (str): `"none"`, `"low"`, `"medium"` (default), `"high"`
+- `reasoning_effort` (str | None): `"none"`, `"low"`, `"medium"`, `"high"` — defaults to `None` (not sent). Only set for reasoning models (o3, o4-mini)
 - `tools` (list | None): `FunctionTool` objects from `@tool` or `get_tools()`
 - `**kwargs`: Forwarded to SDK `Agent()` — supports `handoffs`, `guardrails`, `output_type`, etc.
 
@@ -36,7 +36,7 @@ def define_agent(
 
 **Behavior:**
 1. Resolves model string (native OpenAI or LiteLLM)
-2. Creates `ModelSettings` with `temperature` and `Reasoning(effort=reasoning_effort)`
+2. Creates `ModelSettings` with `temperature` and optionally `Reasoning(effort=reasoning_effort)` when set
 3. Creates `Agent` via the SDK
 4. Captures caller source file (for Studio)
 5. Registers in the global `AgentRegistry`

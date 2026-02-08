@@ -309,7 +309,8 @@ def _build_api_router():
             return {"error": "Source file unknown"}
 
         allowed = {"name", "instructions", "model", "temperature", "reasoning_effort"}
-        updates = {k: v for k, v in body.items() if k in allowed and v is not None}
+        nullable = {"temperature", "reasoning_effort"}
+        updates = {k: v for k, v in body.items() if k in allowed and (v is not None or k in nullable)}
         if not updates:
             return {"ok": True}
 

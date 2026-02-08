@@ -63,7 +63,7 @@ def define_agent(
     instructions: str | None = None,
     model: str | None = None,
     temperature: float | None = None,
-    reasoning_effort: str = "medium",
+    reasoning_effort: str | None = None,
     tools: list[Any] | None = None,
     builtin_tools: list[str | BuiltinTool] | None = None,
     **kwargs: Any,
@@ -79,8 +79,9 @@ def define_agent(
       ``"gemini/gemini-2.5-flash"``, ``"mistral/mistral-large-latest"``
 
     The *reasoning_effort* parameter controls how much reasoning the model uses.
-    Supported values: ``"none"``, ``"minimal"``, ``"low"``, ``"medium"`` (default),
-    ``"high"``, ``"xhigh"``.
+    Supported values: ``"none"``, ``"minimal"``, ``"low"``, ``"medium"``,
+    ``"high"``, ``"xhigh"``. Defaults to ``None`` (not sent to the API).
+    Only set this for reasoning models (e.g. ``o3``, ``o4-mini``).
     LiteLLM translates this to each provider's equivalent parameter.
 
     The *builtin_tools* parameter enables provider-hosted tools:
@@ -123,11 +124,14 @@ def define_agent(
 
     if "model_settings" not in kwargs:
         from agents import ModelSettings
-        from agents.model_settings import Reasoning
-        kwargs["model_settings"] = ModelSettings(
-            temperature=temperature,
-            reasoning=Reasoning(effort=reasoning_effort),
-        )
+        ms_kwargs: dict[str, Any] = {}
+        if temperature is not None:
+            ms_kwargs["temperature"] = temperature
+        if reasoning_effort is not None:
+            from agents.model_settings import Reasoning
+            ms_kwargs["reasoning"] = Reasoning(effort=reasoning_effort)
+        if ms_kwargs:
+            kwargs["model_settings"] = ModelSettings(**ms_kwargs)
 
     sdk_agent = Agent(
         name=name,
