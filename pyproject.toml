@@ -7,7 +7,15 @@ name = "klisk"
 version = "0.1.0"
 description = "A framework for building AI agents programmatically"
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.10"
+authors = [
+    { name = "Juan Echeverria", email = "juan@productomania.io" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
 dependencies = [
     "openai-agents[litellm]>=0.1,<1.0",
     "typer>=0.9,<1.0",
@@ -29,6 +37,9 @@ dev = [
 
 [project.scripts]
 klisk = "klisk.cli:app"
+
+[project.urls]
+Homepage = "https://klisk.productomania.io"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/klisk"]

@@ -18,3 +18,6 @@ studio/dist/
 .pytest_cache/
 .mypy_cache/
 klisk-guide.zip
+klisk-guide/
+PLAN.md
+klisk-vision.md
