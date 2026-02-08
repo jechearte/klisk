@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "klisk"
-version = "0.1.0"
+version = "0.1.1"
 description = "A framework for building AI agents programmatically"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -45,10 +45,6 @@ Repository = "https://github.com/jechearte/klisk"
 [tool.hatch.build.targets.wheel]
 packages = ["src/klisk"]
 
-[tool.hatch.build.targets.wheel.force-include]
-"src/klisk/templates" = "klisk/templates"
-"src/klisk/studio_dist" = "klisk/studio_dist"
-"src/klisk/chat_dist" = "klisk/chat_dist"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
