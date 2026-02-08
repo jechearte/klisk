@@ -8,7 +8,7 @@ from klisk.core.config import ProjectConfig
 
 def test_defaults():
     config = ProjectConfig()
-    assert config.entry == "agents/main.py"
+    assert config.entry == "src/main.py"
     assert config.name == "MyAgent"
     assert config.studio.port == 3000
     assert config.api.port == 8000
@@ -20,7 +20,7 @@ def test_load_from_yaml():
     with tempfile.TemporaryDirectory() as tmpdir:
         config_path = Path(tmpdir) / "klisk.config.yaml"
         config_path.write_text(
-            "entry: agents/bot.py\n"
+            "entry: src/bot.py\n"
             "name: TravelBot\n"
             "studio:\n"
             "  port: 4000\n"
@@ -29,7 +29,7 @@ def test_load_from_yaml():
             "  temperature: 0.5\n"
         )
         config = ProjectConfig.load(tmpdir)
-        assert config.entry == "agents/bot.py"
+        assert config.entry == "src/bot.py"
         assert config.name == "TravelBot"
         assert config.studio.port == 4000
         assert config.defaults.model == "gpt-4o-mini"
@@ -39,4 +39,4 @@ def test_load_from_yaml():
 def test_load_missing_file():
     with tempfile.TemporaryDirectory() as tmpdir:
         config = ProjectConfig.load(tmpdir)
-        assert config.entry == "agents/main.py"
+        assert config.entry == "src/main.py"

@@ -16,14 +16,14 @@ def test_discover_project():
         # Write config
         config_path = Path(tmpdir) / "klisk.config.yaml"
         config_path.write_text(
-            "entry: agents/main.py\n"
+            "entry: src/main.py\n"
             "name: TestBot\n"
         )
 
         # Write agent module
-        agents_dir = Path(tmpdir) / "agents"
-        agents_dir.mkdir()
-        main_py = agents_dir / "main.py"
+        src_dir = Path(tmpdir) / "src"
+        src_dir.mkdir()
+        main_py = src_dir / "main.py"
         main_py.write_text(
             "from klisk import define_agent, tool\n"
             "\n"
@@ -49,7 +49,7 @@ def test_discover_project():
 def test_discover_missing_entry():
     with tempfile.TemporaryDirectory() as tmpdir:
         config_path = Path(tmpdir) / "klisk.config.yaml"
-        config_path.write_text("entry: agents/main.py\nname: Test\n")
+        config_path.write_text("entry: src/main.py\nname: Test\n")
 
         try:
             discover_project(tmpdir)

@@ -18,10 +18,10 @@ def reset_registry():
 
 def _create_test_project(tmpdir: Path) -> Path:
     config = tmpdir / "klisk.config.yaml"
-    config.write_text("entry: agents/main.py\nname: TestBot\n")
-    agents_dir = tmpdir / "agents"
-    agents_dir.mkdir()
-    main_py = agents_dir / "main.py"
+    config.write_text("entry: src/main.py\nname: TestBot\n")
+    src_dir = tmpdir / "src"
+    src_dir.mkdir()
+    main_py = src_dir / "main.py"
     main_py.write_text(
         "from klisk import define_agent, tool\n"
         "\n"

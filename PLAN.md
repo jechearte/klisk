@@ -104,7 +104,7 @@ Parser de `klisk.config.yaml` con Pydantic.
 
 ```python
 class ProjectConfig(BaseModel):
-    entry: str = "agents/main.py"
+    entry: str = "src/main.py"
     name: str = "MyAgent"
     studio: StudioConfig = StudioConfig()
     api: ApiConfig = ApiConfig()
@@ -115,7 +115,7 @@ class ProjectConfig(BaseModel):
 
 Módulo que:
 1. Lee `klisk.config.yaml`
-2. Importa dinámicamente el entry point (`agents/main.py`)
+2. Importa dinámicamente el entry point (`src/main.py`)
 3. Al importar, los decoradores `define_agent()` y `@tool` pueblan el `AgentRegistry`
 4. Devuelve el `ProjectSnapshot` con toda la info del proyecto
 
@@ -143,7 +143,7 @@ $ klisk create mi-agente
 # Crea:
 #   mi-agente/
 #   ├── klisk.config.yaml
-#   ├── agents/
+#   ├── src/
 #   │   ├── main.py          # Agente de ejemplo funcional
 #   │   └── tools/
 #   │       └── example.py   # Tool de ejemplo
@@ -189,7 +189,7 @@ Valida que el proyecto esté bien formado:
 ```bash
 $ klisk check
   ✓ Config válida
-  ✓ Entry point: agents/main.py
+  ✓ Entry point: src/main.py
   ✓ 1 agente registrado
   ✓ 2 tools registradas
   ✗ tools/example.py: 'buscar_vuelos' missing docstring
@@ -215,7 +215,7 @@ Servidor FastAPI que conecta el framework con el Studio.
 ```
 GET  /api/project          → ProjectSnapshot (agentes, tools, config)
 GET  /api/agents            → Lista de agentes con su metadata
-GET  /api/agents/:name      → Detalle de un agente
+GET  /api/src/:name      → Detalle de un agente
 GET  /api/tools             → Lista de tools con su metadata
 ```
 

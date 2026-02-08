@@ -115,7 +115,7 @@ Pydantic model for `klisk.config.yaml`.
 
 ```python
 class ProjectConfig(BaseModel):
-    entry: str = "agents/main.py"
+    entry: str = "src/main.py"
     name: str = "MyAgent"
     studio: StudioConfig  # port: int = 3000
     api: ApiConfig        # port: int = 8000
@@ -173,7 +173,7 @@ class ProjectSnapshot:
 ## klisk.config.yaml
 
 ```yaml
-entry: agents/main.py          # Entry point (relative to project root)
+entry: src/main.py          # Entry point (relative to project root)
 name: MyProjectName             # Project name
 studio:
   port: 3000                    # Studio web UI port

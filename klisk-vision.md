@@ -72,7 +72,7 @@ Una forma estándar y opinada de estructurar un proyecto de agentes. Igual que R
 Todo agente se define en un archivo Python que exporta una config:
 
 ```python
-# agents/travel_agent.py
+# src/travel_agent.py
 from klisk import define_agent, tool
 
 @tool
@@ -94,7 +94,7 @@ travel_agent = define_agent(
 ```
 mi-agente/
 ├── klisk.config.yaml        # Config del proyecto
-├── agents/
+├── src/
 │   ├── main.py                 # Agente principal (entry point)
 │   ├── booking.py              # Sub-agentes
 │   └── tools/
@@ -113,7 +113,7 @@ mi-agente/
 `klisk.config.yaml` es el equivalente al `remotion.config.ts`:
 
 ```yaml
-entry: agents/main.py
+entry: src/main.py
 name: TravelBot
 studio:
   port: 3000
@@ -130,7 +130,7 @@ defaults:
 |---|---|
 | `define_agent()` | Wrapper sobre `Agent()` del SDK que registra el agente en el proyecto y lo hace visible para el Studio |
 | `@tool` | Wrapper sobre `@function_tool` que añade metadata para el Studio (categorías, iconos, testing) |
-| Auto-discovery | El framework escanea la carpeta `agents/` y registra todo automáticamente |
+| Auto-discovery | El framework escanea la carpeta `src/` y registra todo automáticamente |
 | Config centralizada | Modelo, temperatura, API keys, todo en un sitio |
 | Hot reload | Cambias el código, el agente se recarga |
 
@@ -163,7 +163,7 @@ Una interfaz web que se levanta con `klisk dev` y permite **visualizar y probar*
 │  Temp: 0.7           │  → LLM response (0.8s)       │
 │                      │                              │
 ├──────────────────────┴──────────────────────────────┤
-│  📁 agents/main.py  │  agents/booking.py  │ tools/  │
+│  📁 src/main.py  │  src/booking.py  │ tools/  │
 └─────────────────────────────────────────────────────┘
 ```
 

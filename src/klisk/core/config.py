@@ -17,7 +17,7 @@ class ApiConfig(BaseModel):
 
 
 class ProjectConfig(BaseModel):
-    entry: str = "agents/main.py"
+    entry: str = "src/main.py"
     name: str = "MyAgent"
     studio: StudioConfig = StudioConfig()
     api: ApiConfig = ApiConfig()

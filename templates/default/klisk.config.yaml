@@ -1,4 +1,4 @@
-entry: agents/main.py
+entry: src/main.py
 name: "{{project_name}}"
 studio:
   port: 3000
