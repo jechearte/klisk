@@ -155,7 +155,7 @@ Supported: JPEG, PNG, GIF, WebP images and PDF files (max 20MB each).
 klisk check my-agent
 ```
 
-Verifies config, entry point, agent/tool discovery, docstrings, and correct usage of `temperature`/`reasoning_effort` (must be `define_agent()` params, not inside `model_settings`).
+Verifies config, entry point, agent/tool discovery, docstrings, correct usage of `temperature`/`reasoning_effort` (must be `define_agent()` params, not inside `model_settings`), and warns if `reasoning_effort` is set on a model that doesn't support it (only o-series and gpt-5+ do).
 
 ### 8. Serve in production
 

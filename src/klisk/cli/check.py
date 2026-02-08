@@ -10,6 +10,33 @@ from klisk.core.config import ProjectConfig
 from klisk.core.paths import resolve_project
 
 
+def _supports_reasoning(model: str | None) -> bool:
+    """Check if an OpenAI model supports the reasoning_effort parameter.
+
+    Supported: o-series (o1, o3, o4-mini) and gpt-5+ (gpt-5.1, gpt-5.2).
+    Not supported: gpt-4.1, gpt-4o, gpt-4o-mini, etc.
+    """
+    if model is None:
+        return True  # default model (gpt-5.2) supports it
+
+    base = model.removeprefix("openai/")
+
+    # o-series models (o1, o3, o4-mini, etc.)
+    if base.startswith("o"):
+        return True
+
+    # gpt-N models: supported if N >= 5
+    if base.startswith("gpt-"):
+        version_part = base[4:]  # e.g. "5.2", "4.1", "4o", "4o-mini"
+        try:
+            major = int(version_part.split(".")[0].split("-")[0])
+            return major >= 5
+        except ValueError:
+            return False
+
+    return False
+
+
 def check(
     name_or_path: str = typer.Argument(".", help="Project name or path"),
 ) -> None:
@@ -83,20 +110,28 @@ def check(
             OPENAI_ONLY_EFFORTS = {"minimal", "xhigh"}
             for agent_name, agent_entry in snapshot.agents.items():
                 effort = agent_entry.reasoning_effort
-                if effort and effort not in VALID_EFFORTS:
+                if not effort:
+                    continue
+                if effort not in VALID_EFFORTS:
                     errors.append(
                         f"Agent '{agent_name}': invalid reasoning_effort "
                         f"'{effort}'. "
                         f"Valid values: {', '.join(sorted(VALID_EFFORTS))}"
                     )
-                elif effort and effort in OPENAI_ONLY_EFFORTS:
-                    model = agent_entry.model
-                    is_openai = model is None or "/" not in model or model.startswith("openai/")
-                    if not is_openai:
-                        warnings.append(
-                            f"Agent '{agent_name}': reasoning_effort='{effort}' "
-                            f"is OpenAI-specific and may not be supported by '{model}'"
-                        )
+                    continue
+                model = agent_entry.model
+                is_openai = model is None or "/" not in model or model.startswith("openai/")
+                if is_openai and not _supports_reasoning(model):
+                    warnings.append(
+                        f"Agent '{agent_name}': reasoning_effort='{effort}' "
+                        f"is not supported by '{model or 'default'}'. "
+                        f"Only o-series (o1, o3, o4-mini) and gpt-5+ support it"
+                    )
+                elif not is_openai and effort in OPENAI_ONLY_EFFORTS:
+                    warnings.append(
+                        f"Agent '{agent_name}': reasoning_effort='{effort}' "
+                        f"is OpenAI-specific and may not be supported by '{model}'"
+                    )
 
             # 7. Validate tools have docstrings and type hints
             for name, tool_entry in snapshot.tools.items():
