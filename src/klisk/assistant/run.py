@@ -18,16 +18,33 @@ def _check_sdk_installed() -> bool:
         return False
 
 
-def _ensure_claude_cli() -> None:
-    import shutil
+def _ensure_auth() -> None:
+    import os
 
-    if not shutil.which("claude"):
-        print(
-            "Error: Claude Code CLI not found.\n"
-            "Install it with: npm install -g @anthropic-ai/claude-code",
-            file=sys.stderr,
-        )
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return
+
+    print()
+    print("  No API key found.")
+    print()
+    print("  To get one, run this in another terminal:")
+    print()
+    print("    claude config get apiKey")
+    print()
+    print("  Or get one from https://console.anthropic.com/settings/keys")
+    print()
+
+    try:
+        key = input("  Paste your API key: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
         raise SystemExit(1)
+
+    if not key:
+        print("\nError: No key provided.", file=sys.stderr)
+        raise SystemExit(1)
+
+    os.environ["ANTHROPIC_API_KEY"] = key
 
 
 async def _run_loop(cwd: Path) -> None:
@@ -121,6 +138,6 @@ def run_assistant(cwd: Path) -> None:
         )
         raise SystemExit(1)
 
-    _ensure_claude_cli()
+    _ensure_auth()
 
     asyncio.run(_run_loop(cwd))
