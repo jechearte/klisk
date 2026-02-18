@@ -1,6 +1,6 @@
 # Klisk
 
-The easiest way to build AI agents in Python.
+The easiest way to build AI agents.
 
 Klisk is a framework for building AI agents programmatically. Define agents and tools with a simple API, iterate with an interactive Studio, and deploy to production — all from the CLI.
 
@@ -13,8 +13,16 @@ pip install klisk
 ## Quick start
 
 ```bash
+klisk                    # creates ~/klisk workspace
+cd ~/klisk
+claude                   # or your preferred AI agent
+> "Create an agent that ..."
+```
+
+Or create a project manually:
+
+```bash
 klisk create my-agent
-cd my-agent
 ```
 
 This scaffolds a ready-to-run project:
@@ -106,18 +114,6 @@ define_agent(
 
 Available: `web_search`, `code_interpreter`, `file_search`, `image_generation`.
 
-## Reasoning models
-
-Configure reasoning effort for o-series and gpt-5+ models:
-
-```python
-define_agent(
-    name="Analyst",
-    model="o3",
-    reasoning_effort="high",
-)
-```
-
 ## Production
 
 Serve your agent with a chat UI and REST API:
@@ -147,6 +143,7 @@ klisk deploy         # Deploy to Cloud Run
 
 | Command | Description |
 |---------|-------------|
+| `klisk` | Initialize workspace and show welcome |
 | `klisk create <name>` | Scaffold a new project |
 | `klisk dev [name]` | Start Studio with hot reload |
 | `klisk run [message]` | Run agent from terminal |
