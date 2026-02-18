@@ -18,20 +18,33 @@ def _check_sdk_installed() -> bool:
         return False
 
 
-def _check_auth() -> None:
+def _ensure_auth() -> None:
     import os
 
     if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
         return
 
-    print(
-        "\n  No authentication found.\n"
-        "\n  Run this command to log in with your Claude account:\n"
-        "\n    claude setup-token\n"
-        "\n  Then run 'klisk assistant' again.\n",
-        file=sys.stderr,
-    )
-    raise SystemExit(1)
+    print()
+    print("  No authentication found.")
+    print()
+    print("  To log in with your Claude account, run:")
+    print()
+    print("    claude setup-token")
+    print()
+    print("  Then paste the token below.")
+    print()
+
+    try:
+        token = input("  Token: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        raise SystemExit(1)
+
+    if not token:
+        print("\nError: No token provided.", file=sys.stderr)
+        raise SystemExit(1)
+
+    os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
 
 
 async def _run_loop(cwd: Path) -> None:
@@ -125,6 +138,6 @@ def run_assistant(cwd: Path) -> None:
         )
         raise SystemExit(1)
 
-    _check_auth()
+    _ensure_auth()
 
     asyncio.run(_run_loop(cwd))
