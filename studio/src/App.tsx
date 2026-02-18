@@ -75,6 +75,7 @@ type ViewState = { page: "listing" } | { page: "detail"; agentName: string };
 
 export default function App() {
   const [serverOnline, setServerOnline] = useState<boolean | null>(null);
+  const [connectionKey, setConnectionKey] = useState(0);
   const [snapshot, setSnapshot] = useState<ProjectSnapshot | null>(null);
   const [currentView, setCurrentView] = useState<ViewState>({ page: "listing" });
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -197,8 +198,14 @@ export default function App() {
       }
     };
 
+    ws.onclose = () => {
+      fetch("/api/project")
+        .then((r) => { if (!r.ok) throw new Error(); })
+        .catch(() => setServerOnline(false));
+    };
+
     return () => ws.close();
-  }, []);
+  }, [connectionKey]);
 
   // Connect to chat WebSocket
   useEffect(() => {
@@ -206,7 +213,12 @@ export default function App() {
     chatWsRef.current = ws;
 
     ws.onopen = () => setConnected(true);
-    ws.onclose = () => setConnected(false);
+    ws.onclose = () => {
+      setConnected(false);
+      fetch("/api/project")
+        .then((r) => { if (!r.ok) throw new Error(); })
+        .catch(() => setServerOnline(false));
+    };
 
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data);
@@ -306,7 +318,7 @@ export default function App() {
     };
 
     return () => ws.close();
-  }, []);
+  }, [connectionKey]);
 
   // Safety: navigate back to listing if selected agent is removed during hot reload
   useEffect(() => {
@@ -442,12 +454,12 @@ export default function App() {
     return (
       <OfflineScreen
         onServerReady={() => {
-          // Re-fetch snapshot when server comes back
           fetch("/api/project")
             .then((r) => r.json())
             .then((data) => {
               setSnapshot(data);
               setServerOnline(true);
+              setConnectionKey((k) => k + 1); // reconecta los WebSockets
             })
             .catch(() => {});
         }}
