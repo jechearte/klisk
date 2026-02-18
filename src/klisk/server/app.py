@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -12,7 +13,8 @@ from typing import Any
 import logging
 
 import uvicorn
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from dotenv import load_dotenv
+from fastapi import FastAPI, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -361,6 +363,50 @@ def _build_api_router():
 
         return {"ok": True}
 
+    @router.get("/env")
+    async def get_env(project: str | None = Query(None)):
+        env_path = _resolve_env_path(project)
+        projects = _list_project_names()
+        if env_path is None:
+            if _workspace_mode and not project:
+                return {"variables": [], "projects": projects}
+            return {"error": "Cannot resolve project path"}
+        variables = _read_env_file(env_path)
+        return {"variables": variables, "projects": projects}
+
+    @router.put("/env")
+    async def put_env(request: Request, project: str | None = Query(None)):
+        env_path = _resolve_env_path(project)
+        if env_path is None:
+            return {"error": "Cannot resolve project path"}
+
+        body = await request.json()
+        variables: list[dict[str, str]] = body.get("variables", [])
+
+        # Validate keys
+        seen_keys: set[str] = set()
+        for var in variables:
+            key = var.get("key", "").strip()
+            if not key:
+                continue
+            if not _ENV_KEY_RE.match(key):
+                return {"error": f"Invalid key: {key}"}
+            if key in seen_keys:
+                return {"error": f"Duplicate key: {key}"}
+            seen_keys.add(key)
+
+        # Filter out entries with empty keys
+        variables = [v for v in variables if v.get("key", "").strip()]
+
+        try:
+            _write_env_file(env_path, variables)
+            load_dotenv(env_path, override=True)
+        except Exception as e:
+            logger.exception("Failed to write .env file")
+            return {"error": str(e)}
+
+        return {"ok": True}
+
     return router
 
 
@@ -413,6 +459,71 @@ def _get_project_dir_for_source(source_file: str) -> Path | None:
         rel = src.relative_to(PROJECTS_DIR.resolve())
         return PROJECTS_DIR / rel.parts[0]
     return None
+
+
+_ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _resolve_env_path(project: str | None) -> Path | None:
+    """Resolve the path to the .env file for the given project."""
+    if _workspace_mode:
+        if not project:
+            return None
+        return PROJECTS_DIR / project / ".env"
+    if _project_path:
+        return _project_path / ".env"
+    return None
+
+
+def _list_project_names() -> list[str]:
+    """List available project directory names (workspace mode only)."""
+    if not _workspace_mode:
+        return []
+    if not PROJECTS_DIR.is_dir():
+        return []
+    return sorted(
+        d.name
+        for d in PROJECTS_DIR.iterdir()
+        if d.is_dir() and not d.name.startswith(".")
+    )
+
+
+def _read_env_file(path: Path) -> list[dict[str, str]]:
+    """Parse a .env file into a list of {key, value} dicts."""
+    if not path.exists():
+        return []
+    variables: list[dict[str, str]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip()
+        # Strip surrounding quotes
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+            value = value[1:-1]
+        variables.append({"key": key, "value": value})
+    return variables
+
+
+def _write_env_file(path: Path, variables: list[dict[str, str]]) -> None:
+    """Write a list of {key, value} dicts to a .env file."""
+    lines: list[str] = []
+    for var in variables:
+        key = var["key"].strip()
+        value = var["value"]
+        if not key:
+            continue
+        # Quote values that contain spaces, #, or quotes
+        if any(c in value for c in (" ", "#", '"', "'")):
+            escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+            lines.append(f'{key}="{escaped}"')
+        else:
+            lines.append(f"{key}={value}")
+    path.write_text("\n".join(lines) + "\n" if lines else "", encoding="utf-8")
 
 
 def _find_studio_dist() -> Path | None:

@@ -23,6 +23,11 @@ export interface ProjectSnapshot {
   config: Record<string, unknown>;
 }
 
+export interface EnvVariable {
+  key: string;
+  value: string;
+}
+
 export interface Attachment {
   type: "image" | "file";
   name: string;
