@@ -18,9 +18,6 @@ def _check_sdk_installed() -> bool:
         return False
 
 
-_TOKEN_FILE = Path.home() / ".klisk" / "token"
-
-
 def _ensure_auth() -> None:
     import os
 
@@ -30,13 +27,6 @@ def _ensure_auth() -> None:
     # Ya autenticado via env var
     if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
         return
-
-    # Leer token guardado
-    if _TOKEN_FILE.exists():
-        saved = _TOKEN_FILE.read_text().strip()
-        if saved:
-            os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = saved
-            return
 
     # Pedir token al usuario
     print()
@@ -59,10 +49,6 @@ def _ensure_auth() -> None:
         print("\nError: No token provided.", file=sys.stderr)
         raise SystemExit(1)
 
-    # Guardar y activar
-    _TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
-    _TOKEN_FILE.write_text(token)
-    _TOKEN_FILE.chmod(0o600)
     os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
 
 
@@ -124,11 +110,21 @@ async def _run_loop(cwd: Path, model: str) -> None:
 
         import os
 
+        # Ensure CLAUDECODE is cleared to avoid nested session detection
+        os.environ.pop("CLAUDECODE", None)
+
         sdk_env: dict[str, str] = {}
         for key in ("ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN"):
             val = os.environ.get(key)
             if val:
                 sdk_env[key] = val
+
+        # Debug: show which auth keys are being passed
+        if sdk_env:
+            auth_keys = ", ".join(sdk_env.keys())
+            console.print(f"  [dim]Auth: {auth_keys}[/dim]")
+        else:
+            console.print("  [bold red]Warning: No auth tokens found in env![/bold red]")
 
         options = ClaudeAgentOptions(
             model=model,
