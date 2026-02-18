@@ -118,6 +118,9 @@ async def _run_loop(cwd: Path, model: str) -> None:
     console.print("  [dim]Type 'exit' or Ctrl+C to quit.[/dim]")
     console.print()
 
+    def _on_stderr(line: str) -> None:
+        console.print(f"  [dim red]{line.rstrip()}[/dim red]")
+
     session_id: str | None = None
 
     while True:
@@ -141,6 +144,7 @@ async def _run_loop(cwd: Path, model: str) -> None:
             permission_mode="acceptEdits",
             cwd=str(cwd),
             max_turns=50,
+            stderr=_on_stderr,
         )
 
         if session_id:
