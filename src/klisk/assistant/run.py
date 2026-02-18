@@ -62,6 +62,29 @@ def _ensure_auth() -> None:
     os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
 
 
+def _format_tool_detail(name: str, raw_json: str) -> str:
+    import json
+
+    try:
+        inp = json.loads(raw_json)
+    except (json.JSONDecodeError, ValueError):
+        return ""
+
+    detail = ""
+    if name in ("Read", "Write", "Edit"):
+        detail = inp.get("file_path", "")
+    elif name == "Bash":
+        detail = inp.get("command", "")
+        if len(detail) > 60:
+            detail = detail[:57] + "..."
+    elif name == "Grep":
+        detail = inp.get("pattern", "")
+    elif name == "Glob":
+        detail = inp.get("pattern", "")
+
+    return f": {detail}" if detail else ""
+
+
 async def _run_loop(cwd: Path, model: str) -> None:
     from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
     from claude_agent_sdk.types import StreamEvent
@@ -107,6 +130,8 @@ async def _run_loop(cwd: Path, model: str) -> None:
 
         console.print()
         text_buffer = ""
+        tool_input_buffer = ""
+        current_tool = ""
         in_tool = False
         live: Live | None = None
         try:
@@ -130,8 +155,8 @@ async def _run_loop(cwd: Path, model: str) -> None:
                                 live.stop()
                                 live = None
                                 text_buffer = ""
-                            name = block.get("name", "")
-                            console.print(f"  [dim]> {name}[/dim]")
+                            current_tool = block.get("name", "")
+                            tool_input_buffer = ""
                             in_tool = True
                         elif block.get("type") == "text":
                             text_buffer = ""
@@ -148,9 +173,17 @@ async def _run_loop(cwd: Path, model: str) -> None:
                             text_buffer += delta.get("text", "")
                             if live:
                                 live.update(Markdown(text_buffer))
+                        elif delta.get("type") == "input_json_delta" and in_tool:
+                            tool_input_buffer += delta.get("partial_json", "")
 
                     elif event_type == "content_block_stop":
                         if in_tool:
+                            detail = _format_tool_detail(
+                                current_tool, tool_input_buffer
+                            )
+                            console.print(
+                                f"  [dim]> {current_tool}{detail}[/dim]"
+                            )
                             in_tool = False
                         elif live:
                             live.stop()
