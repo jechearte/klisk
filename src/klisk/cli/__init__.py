@@ -17,6 +17,36 @@ app = typer.Typer(
     add_completion=False,
 )
 
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context) -> None:
+    """A framework for building AI agents programmatically."""
+    if ctx.invoked_subcommand is not None:
+        return
+
+    from klisk.core.paths import get_projects_dir, KLISK_HOME
+
+    get_projects_dir()  # creates ~/klisk/ and ~/klisk/projects/
+
+    home_display = f"~/{KLISK_HOME.relative_to(KLISK_HOME.parent)}"
+
+    typer.echo(
+        f"""
+  Welcome to Klisk!
+
+  Your workspace is ready at {home_display}
+
+  Next steps:
+    cd {home_display}
+    claude               # or your preferred AI agent
+    > "Create an agent that ..."
+
+  Or create a project manually:
+    klisk create my-agent
+"""
+    )
+
+
 app.command()(create)
 app.command()(delete)
 app.command()(dev)
