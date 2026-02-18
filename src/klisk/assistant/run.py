@@ -136,6 +136,14 @@ async def _run_loop(cwd: Path, model: str) -> None:
         if not stripped:
             continue
 
+        import os
+
+        sdk_env: dict[str, str] = {}
+        for key in ("ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN"):
+            val = os.environ.get(key)
+            if val:
+                sdk_env[key] = val
+
         options = ClaudeAgentOptions(
             model=model,
             system_prompt=SYSTEM_PROMPT,
@@ -144,6 +152,7 @@ async def _run_loop(cwd: Path, model: str) -> None:
             permission_mode="acceptEdits",
             cwd=str(cwd),
             max_turns=50,
+            env=sdk_env,
             stderr=_on_stderr,
         )
 
@@ -225,6 +234,11 @@ async def _run_loop(cwd: Path, model: str) -> None:
             if live:
                 live.stop()
             console.print(f"\n  [bold red]Error:[/bold red] {e}")
+            # Show subprocess details if available
+            if hasattr(e, "stderr") and e.stderr:
+                console.print(f"  [dim red]{e.stderr}[/dim red]")
+            if hasattr(e, "stdout") and e.stdout:
+                console.print(f"  [dim]{e.stdout}[/dim]")
 
         console.print()
 
