@@ -36,22 +36,21 @@ def _ensure_claude_login() -> None:
         )
         raise SystemExit(1)
 
-    # Comprobar si ya está autenticado con `claude auth status`
+    # Verificar/activar auth con un prompt mínimo en print mode.
+    # Si no hay credenciales, Claude Code abre el navegador para OAuth.
+    print("Checking Claude authentication...")
     result = subprocess.run(
-        ["claude", "auth", "status"],
-        capture_output=True,
-        text=True,
+        ["claude", "-p", "hi"],
+        stdout=subprocess.DEVNULL,
+        timeout=120,
     )
-    if result.returncode == 0:
-        return  # ya autenticado
-
-    # No autenticado → lanzar login
-    print("Logging in to Claude...\n")
-    login_result = subprocess.run(["claude", "login"])
-    if login_result.returncode != 0:
-        print("\nError: Login failed.", file=sys.stderr)
+    if result.returncode != 0:
+        print(
+            "Error: Claude authentication failed.\n"
+            "Run 'claude' in your terminal to authenticate.",
+            file=sys.stderr,
+        )
         raise SystemExit(1)
-    print()
 
 
 async def _run_loop(cwd: Path) -> None:
