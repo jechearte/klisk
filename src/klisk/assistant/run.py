@@ -18,33 +18,21 @@ def _check_sdk_installed() -> bool:
         return False
 
 
-def _ensure_auth() -> None:
+def _prepare_env() -> None:
     import os
+    import shutil
 
-    if os.environ.get("ANTHROPIC_API_KEY"):
-        return
+    # Limpiar CLAUDECODE para que el subprocess de Claude Code no detecte
+    # una sesión anidada y pueda usar sus credenciales OAuth normalmente.
+    os.environ.pop("CLAUDECODE", None)
 
-    print()
-    print("  No API key found.")
-    print()
-    print("  To get one, run this in another terminal:")
-    print()
-    print("    claude config get apiKey")
-    print()
-    print("  Or get one from https://console.anthropic.com/settings/keys")
-    print()
-
-    try:
-        key = input("  Paste your API key: ").strip()
-    except (EOFError, KeyboardInterrupt):
-        print()
+    if not shutil.which("claude"):
+        print(
+            "Error: Claude Code CLI not found.\n"
+            "Install it with: npm install -g @anthropic-ai/claude-code",
+            file=sys.stderr,
+        )
         raise SystemExit(1)
-
-    if not key:
-        print("\nError: No key provided.", file=sys.stderr)
-        raise SystemExit(1)
-
-    os.environ["ANTHROPIC_API_KEY"] = key
 
 
 async def _run_loop(cwd: Path) -> None:
@@ -123,6 +111,15 @@ async def _run_loop(cwd: Path) -> None:
         except KeyboardInterrupt:
             print("\n  (interrupted)")
         except Exception as e:
+            msg = str(e).lower()
+            if "not logged in" in msg or "login" in msg or "unauthorized" in msg:
+                print(
+                    "\n  Not logged into Claude."
+                    "\n  Run 'claude' in another terminal to log in,"
+                    "\n  then try again.",
+                    file=sys.stderr,
+                )
+                break
             print(f"\n  Error: {e}", file=sys.stderr)
 
         print()
@@ -138,6 +135,6 @@ def run_assistant(cwd: Path) -> None:
         )
         raise SystemExit(1)
 
-    _ensure_auth()
+    _prepare_env()
 
     asyncio.run(_run_loop(cwd))
