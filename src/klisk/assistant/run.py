@@ -62,12 +62,12 @@ def _ensure_auth() -> None:
     os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
 
 
-async def _run_loop(cwd: Path) -> None:
+async def _run_loop(cwd: Path, model: str) -> None:
     from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
     from claude_agent_sdk.types import StreamEvent
 
     print()
-    print("  Klisk Assistant")
+    print(f"  Klisk Assistant ({model})")
     print(f"  Working in: {cwd}")
     print("  Type 'exit' or Ctrl+C to quit.")
     print()
@@ -88,6 +88,7 @@ async def _run_loop(cwd: Path) -> None:
             continue
 
         options = ClaudeAgentOptions(
+            model=model,
             system_prompt=SYSTEM_PROMPT,
             include_partial_messages=True,
             allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
@@ -144,7 +145,7 @@ async def _run_loop(cwd: Path) -> None:
         print()
 
 
-def run_assistant(cwd: Path) -> None:
+def run_assistant(cwd: Path, *, model: str = "opus") -> None:
     """Start the interactive assistant loop."""
     if not _check_sdk_installed():
         print(
@@ -156,4 +157,4 @@ def run_assistant(cwd: Path) -> None:
 
     _ensure_auth()
 
-    asyncio.run(_run_loop(cwd))
+    asyncio.run(_run_loop(cwd, model))

@@ -12,6 +12,11 @@ def assistant(
         None,
         help="Project name or path (defaults to ~/klisk/projects/)",
     ),
+    model: str = typer.Option(
+        "opus",
+        "--model", "-m",
+        help="Claude model to use (opus, sonnet, haiku).",
+    ),
 ) -> None:
     """Start an AI assistant to help build and manage Klisk agents."""
     from klisk.core.paths import get_projects_dir, resolve_project
@@ -23,4 +28,4 @@ def assistant(
 
     from klisk.assistant import run_assistant
 
-    run_assistant(cwd)
+    run_assistant(cwd, model=model)
