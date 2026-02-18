@@ -18,13 +18,40 @@ def _check_sdk_installed() -> bool:
         return False
 
 
-def _check_auth() -> bool:
+def _ensure_claude_login() -> None:
     import os
+    import shutil
+    import subprocess
 
-    return bool(
-        os.environ.get("ANTHROPIC_API_KEY")
-        or os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
+    # Si ya hay auth via env vars, no hacer nada
+    if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        return
+
+    # Verificar que el CLI de claude existe
+    if not shutil.which("claude"):
+        print(
+            "Error: Claude Code CLI not found.\n"
+            "Install it with: npm install -g @anthropic-ai/claude-code",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
+    # Comprobar si ya está autenticado con `claude auth status`
+    result = subprocess.run(
+        ["claude", "auth", "status"],
+        capture_output=True,
+        text=True,
     )
+    if result.returncode == 0:
+        return  # ya autenticado
+
+    # No autenticado → lanzar login
+    print("Logging in to Claude...\n")
+    login_result = subprocess.run(["claude", "login"])
+    if login_result.returncode != 0:
+        print("\nError: Login failed.", file=sys.stderr)
+        raise SystemExit(1)
+    print()
 
 
 async def _run_loop(cwd: Path) -> None:
@@ -118,12 +145,6 @@ def run_assistant(cwd: Path) -> None:
         )
         raise SystemExit(1)
 
-    if not _check_auth():
-        print(
-            "Error: No authentication found.\n"
-            "Set ANTHROPIC_API_KEY in your environment, or run: claude setup-token",
-            file=sys.stderr,
-        )
-        raise SystemExit(1)
+    _ensure_claude_login()
 
     asyncio.run(_run_loop(cwd))
