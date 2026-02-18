@@ -386,14 +386,35 @@ def deploy_init(
     else:
         typer.echo("  Skipped .dockerignore (already exists)")
 
-    # --- requirements.txt (always regenerated to match wheel) ---
+    # --- requirements.txt (klisk wheel + user dependencies) ---
     req_path = project_path / "requirements.txt"
     if use_litellm:
-        req_content = f"./{wheel_name}[litellm]\n"
+        wheel_line = f"./{wheel_name}[litellm]"
     else:
-        req_content = f"./{wheel_name}\n"
-    req_path.write_text(req_content)
-    typer.echo(f"  Created requirements.txt ({wheel_name}{'[litellm]' if use_litellm else ''})")
+        wheel_line = f"./{wheel_name}"
+
+    # Read user dependencies from existing requirements.txt, filtering klisk
+    user_deps: list[str] = []
+    if req_path.exists():
+        for line in req_path.read_text().splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            # Skip klisk itself (replaced by the wheel)
+            if stripped.lower().startswith("klisk"):
+                continue
+            # Skip any previous wheel references
+            if stripped.startswith("./klisk-") and stripped.endswith(".whl"):
+                continue
+            user_deps.append(stripped)
+
+    req_lines = [wheel_line] + user_deps
+    req_path.write_text("\n".join(req_lines) + "\n")
+
+    dep_info = wheel_name + ("[litellm]" if use_litellm else "")
+    if user_deps:
+        dep_info += f" + {len(user_deps)} user dep(s)"
+    typer.echo(f"  Created requirements.txt ({dep_info})")
 
     typer.echo()
     typer.echo("  Done! Next steps:")
