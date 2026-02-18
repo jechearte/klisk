@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import glob as glob_mod
 import importlib.util
 import logging
 import sys
@@ -14,6 +15,23 @@ logger = logging.getLogger(__name__)
 
 # Directories inside a project that should never be treated as user source code.
 _SKIP_DIRS = {"venv", "env", "node_modules", "__pycache__"}
+
+
+def _activate_venv_packages(project_dir: Path) -> None:
+    """Add the project's venv site-packages to sys.path if present."""
+    for venv_name in (".venv", "venv"):
+        venv_dir = project_dir / venv_name
+        if not venv_dir.is_dir():
+            continue
+        # Unix: lib/python*/site-packages  Windows: Lib/site-packages
+        candidates = glob_mod.glob(str(venv_dir / "lib" / "python*" / "site-packages"))
+        if not candidates:
+            candidates = glob_mod.glob(str(venv_dir / "Lib" / "site-packages"))
+        for sp in candidates:
+            if sp not in sys.path:
+                sys.path.insert(0, sp)
+                logger.debug("Activated venv site-packages: %s", sp)
+        break  # Only use the first venv found
 
 
 def discover_project(project_dir: str | Path) -> ProjectSnapshot:
@@ -30,6 +48,8 @@ def discover_project(project_dir: str | Path) -> ProjectSnapshot:
 
     registry = AgentRegistry.get_instance()
     registry.clear()
+
+    _activate_venv_packages(project_dir)
 
     entry_path = project_dir / config.entry
     if not entry_path.exists():
