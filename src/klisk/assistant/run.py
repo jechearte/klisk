@@ -18,66 +18,39 @@ def _check_sdk_installed() -> bool:
         return False
 
 
-_TOKEN_FILE = Path.home() / ".klisk" / "token"
-
-
-def _save_token(token: str) -> None:
-    _TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
-    _TOKEN_FILE.write_text(token)
-    _TOKEN_FILE.chmod(0o600)
-
-
 def _prepare_env() -> None:
     import os
+    import shutil
+    import subprocess
 
     # Limpiar CLAUDECODE para que el subprocess de Claude Code
     # no detecte una sesión anidada y falle.
     os.environ.pop("CLAUDECODE", None)
 
-
-def _ensure_auth() -> None:
-    import os
-
-    # Si ya hay API key, no hace falta nada más
-    if os.environ.get("ANTHROPIC_API_KEY"):
-        return
-
-    # Si hay token en el entorno, guardarlo para futuras sesiones
-    env_token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
-    if env_token:
-        if not _TOKEN_FILE.exists():
-            _save_token(env_token)
-        return
-
-    # Intentar leer token guardado
-    if _TOKEN_FILE.exists():
-        saved = _TOKEN_FILE.read_text().strip()
-        if saved:
-            os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = saved
-            return
-
-    print()
-    print("  No authentication found.")
-    print()
-    print("  To log in with your Claude account, run:")
-    print()
-    print("    claude setup-token")
-    print()
-    print("  Then paste the token below.")
-    print()
-
-    try:
-        token = input("  Token: ").strip()
-    except (EOFError, KeyboardInterrupt):
-        print()
+    # Verificar que el CLI de claude existe
+    if not shutil.which("claude"):
+        print(
+            "Error: Claude Code CLI not found.\n"
+            "Install it with: npm install -g @anthropic-ai/claude-code",
+            file=sys.stderr,
+        )
         raise SystemExit(1)
 
-    if not token:
-        print("\nError: No token provided.", file=sys.stderr)
+    # Verificar que claude está autenticado
+    result = subprocess.run(
+        ["claude", "-p", "hi", "--max-turns", "0"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        print(
+            "\n  Not logged into Claude Code.\n"
+            "\n  Run 'claude' in a terminal to log in (opens browser),\n"
+            "  then run 'klisk assistant' again.\n",
+            file=sys.stderr,
+        )
         raise SystemExit(1)
-
-    _save_token(token)
-    os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
 
 
 def _format_tool_detail(name: str, raw_json: str) -> str:
@@ -136,14 +109,6 @@ async def _run_loop(cwd: Path, model: str) -> None:
         if not stripped:
             continue
 
-        import os
-
-        sdk_env: dict[str, str] = {}
-        for key in ("ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN"):
-            val = os.environ.get(key)
-            if val:
-                sdk_env[key] = val
-
         options = ClaudeAgentOptions(
             model=model,
             system_prompt=SYSTEM_PROMPT,
@@ -152,7 +117,6 @@ async def _run_loop(cwd: Path, model: str) -> None:
             permission_mode="acceptEdits",
             cwd=str(cwd),
             max_turns=50,
-            env=sdk_env,
             stderr=_on_stderr,
         )
 
@@ -254,6 +218,5 @@ def run_assistant(cwd: Path, *, model: str = "opus") -> None:
         raise SystemExit(1)
 
     _prepare_env()
-    _ensure_auth()
 
     asyncio.run(_run_loop(cwd, model))
