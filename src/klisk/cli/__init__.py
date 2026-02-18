@@ -2,6 +2,7 @@
 
 import typer
 
+from klisk.cli.assistant import assistant
 from klisk.cli.create import create
 from klisk.cli.delete import delete
 from klisk.cli.dev import dev
@@ -47,6 +48,7 @@ def main(ctx: typer.Context) -> None:
     )
 
 
+app.command()(assistant)
 app.command()(create)
 app.command()(delete)
 app.command()(dev)
