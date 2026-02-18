@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface OfflineScreenProps {
   onServerReady: () => void;
@@ -7,6 +7,8 @@ interface OfflineScreenProps {
 export default function OfflineScreen({ onServerReady }: OfflineScreenProps) {
   const [copied, setCopied] = useState(false);
   const [dots, setDots] = useState(".");
+  const onServerReadyRef = useRef(onServerReady);
+  useEffect(() => { onServerReadyRef.current = onServerReady; }, [onServerReady]);
 
   // Animate the reconnecting dots
   useEffect(() => {
@@ -23,7 +25,7 @@ export default function OfflineScreen({ onServerReady }: OfflineScreenProps) {
       try {
         const res = await fetch("/api/project");
         if (res.ok && active) {
-          onServerReady();
+          onServerReadyRef.current();
         }
       } catch {
         // still offline
@@ -35,7 +37,7 @@ export default function OfflineScreen({ onServerReady }: OfflineScreenProps) {
       active = false;
       clearInterval(interval);
     };
-  }, [onServerReady]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCopy = () => {
     navigator.clipboard.writeText("klisk dev").then(() => {
