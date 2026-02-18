@@ -65,20 +65,25 @@ def _ensure_auth() -> None:
 async def _run_loop(cwd: Path, model: str) -> None:
     from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
     from claude_agent_sdk.types import StreamEvent
+    from rich.console import Console
+    from rich.live import Live
+    from rich.markdown import Markdown
 
-    print()
-    print(f"  Klisk Assistant ({model})")
-    print(f"  Working in: {cwd}")
-    print("  Type 'exit' or Ctrl+C to quit.")
-    print()
+    console = Console()
+
+    console.print()
+    console.print(f"  [bold green]Klisk Assistant[/bold green] [dim]({model})[/dim]")
+    console.print(f"  [dim]Working in:[/dim] {cwd}")
+    console.print("  [dim]Type 'exit' or Ctrl+C to quit.[/dim]")
+    console.print()
 
     session_id: str | None = None
 
     while True:
         try:
-            user_input = input("You: ")
+            user_input = console.input("[bold green]You:[/bold green] ")
         except (EOFError, KeyboardInterrupt):
-            print()
+            console.print()
             break
 
         stripped = user_input.strip()
@@ -100,8 +105,10 @@ async def _run_loop(cwd: Path, model: str) -> None:
         if session_id:
             options.resume = session_id
 
-        print()
+        console.print()
+        text_buffer = ""
         in_tool = False
+        live: Live | None = None
         try:
             async for message in query(prompt=stripped, options=options):
                 # Capture session ID from init message
@@ -112,7 +119,6 @@ async def _run_loop(cwd: Path, model: str) -> None:
                 ):
                     session_id = message.data.get("session_id", session_id)
 
-                # Stream text token-by-token
                 elif isinstance(message, StreamEvent):
                     event = message.event
                     event_type = event.get("type")
@@ -120,29 +126,52 @@ async def _run_loop(cwd: Path, model: str) -> None:
                     if event_type == "content_block_start":
                         block = event.get("content_block", {})
                         if block.get("type") == "tool_use":
+                            if live:
+                                live.stop()
+                                live = None
+                                text_buffer = ""
                             name = block.get("name", "")
-                            print(f"\n  > {name}", end="", flush=True)
+                            console.print(f"  [dim]> {name}[/dim]")
                             in_tool = True
+                        elif block.get("type") == "text":
+                            text_buffer = ""
+                            live = Live(
+                                Markdown(text_buffer),
+                                console=console,
+                                refresh_per_second=8,
+                            )
+                            live.start()
 
                     elif event_type == "content_block_delta":
                         delta = event.get("delta", {})
                         if delta.get("type") == "text_delta" and not in_tool:
-                            print(delta.get("text", ""), end="", flush=True)
+                            text_buffer += delta.get("text", "")
+                            if live:
+                                live.update(Markdown(text_buffer))
 
                     elif event_type == "content_block_stop":
                         if in_tool:
                             in_tool = False
+                        elif live:
+                            live.stop()
+                            live = None
+                            text_buffer = ""
 
                 elif isinstance(message, ResultMessage):
-                    if hasattr(message, "result") and message.result:
-                        print(message.result, flush=True)
+                    if live:
+                        live.stop()
+                        live = None
 
         except KeyboardInterrupt:
-            print("\n  (interrupted)")
+            if live:
+                live.stop()
+            console.print("\n  [dim](interrupted)[/dim]")
         except Exception as e:
-            print(f"\n  Error: {e}", file=sys.stderr)
+            if live:
+                live.stop()
+            console.print(f"\n  [bold red]Error:[/bold red] {e}")
 
-        print()
+        console.print()
 
 
 def run_assistant(cwd: Path, *, model: str = "opus") -> None:
