@@ -27,6 +27,14 @@ def _save_token(token: str) -> None:
     _TOKEN_FILE.chmod(0o600)
 
 
+def _prepare_env() -> None:
+    import os
+
+    # Limpiar CLAUDECODE para que el subprocess de Claude Code
+    # no detecte una sesión anidada y falle.
+    os.environ.pop("CLAUDECODE", None)
+
+
 def _ensure_auth() -> None:
     import os
 
@@ -227,6 +235,7 @@ def run_assistant(cwd: Path, *, model: str = "opus") -> None:
         )
         raise SystemExit(1)
 
+    _prepare_env()
     _ensure_auth()
 
     asyncio.run(_run_loop(cwd, model))
