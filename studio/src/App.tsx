@@ -75,7 +75,6 @@ type ViewState = { page: "listing" } | { page: "detail"; agentName: string };
 
 export default function App() {
   const [serverOnline, setServerOnline] = useState<boolean | null>(null);
-  const [connectionKey, setConnectionKey] = useState(0);
   const [snapshot, setSnapshot] = useState<ProjectSnapshot | null>(null);
   const [currentView, setCurrentView] = useState<ViewState>({ page: "listing" });
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -184,141 +183,171 @@ export default function App() {
       });
   }, []);
 
-  // Connect to reload WebSocket
+  // Connect to reload WebSocket (auto-reconnects)
   useEffect(() => {
-    const ws = new WebSocket(`ws://${window.location.host}/ws/reload`);
-    reloadWsRef.current = ws;
+    let active = true;
+    let ws: WebSocket;
+    let retryTimer: ReturnType<typeof setTimeout>;
 
-    ws.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      if (data.type === "reload") {
-        setSnapshot(data.snapshot);
-        setToast("Project reloaded");
-        setTimeout(() => setToast(null), 2000);
-      }
+    const connect = () => {
+      if (!active) return;
+      ws = new WebSocket(`ws://${window.location.host}/ws/reload`);
+      reloadWsRef.current = ws;
+
+      ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if (data.type === "reload") {
+          setSnapshot(data.snapshot);
+          setToast("Project reloaded");
+          setTimeout(() => setToast(null), 2000);
+        }
+      };
+
+      ws.onclose = () => {
+        if (!active) return;
+        retryTimer = setTimeout(connect, 2000);
+      };
     };
 
-    ws.onclose = () => {
-      fetch("/api/project")
-        .then((r) => { if (!r.ok) throw new Error(); })
-        .catch(() => setServerOnline(false));
+    connect();
+
+    return () => {
+      active = false;
+      clearTimeout(retryTimer);
+      ws?.close();
     };
+  }, []);
 
-    return () => ws.close();
-  }, [connectionKey]);
-
-  // Connect to chat WebSocket
+  // Connect to chat WebSocket (auto-reconnects)
   useEffect(() => {
-    const ws = new WebSocket(`ws://${window.location.host}/ws/chat`);
-    chatWsRef.current = ws;
+    let active = true;
+    let ws: WebSocket;
+    let retryTimer: ReturnType<typeof setTimeout>;
 
-    ws.onopen = () => setConnected(true);
-    ws.onclose = () => {
-      setConnected(false);
-      fetch("/api/project")
-        .then((r) => { if (!r.ok) throw new Error(); })
-        .catch(() => setServerOnline(false));
-    };
+    const connect = () => {
+      if (!active) return;
+      ws = new WebSocket(`ws://${window.location.host}/ws/chat`);
+      chatWsRef.current = ws;
 
-    ws.onmessage = (e) => {
-      const data = JSON.parse(e.data);
+      ws.onopen = () => {
+        setConnected(true);
+        setServerOnline(true);
+      };
 
-      switch (data.type) {
-        case "thinking":
-          setMessages((prev) => {
-            for (let i = prev.length - 1; i >= 0; i--) {
-              const msg = prev[i];
-              if (msg.role === "thinking") {
+      ws.onclose = () => {
+        if (!active) return;
+        setConnected(false);
+        chatWsRef.current = null;
+        fetch("/api/project")
+          .then((r) => { if (!r.ok) throw new Error(); })
+          .catch(() => setServerOnline(false));
+        retryTimer = setTimeout(connect, 2000);
+      };
+
+      ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+
+        switch (data.type) {
+          case "thinking":
+            setMessages((prev) => {
+              for (let i = prev.length - 1; i >= 0; i--) {
+                const msg = prev[i];
+                if (msg.role === "thinking") {
+                  return [
+                    ...prev.slice(0, i),
+                    { ...msg, content: msg.content + data.data },
+                    ...prev.slice(i + 1),
+                  ];
+                }
+                if (msg.role !== "assistant" || msg.content.trim() !== "") {
+                  break;
+                }
+              }
+              return [...prev, { role: "thinking" as const, content: data.data }];
+            });
+            break;
+
+          case "token":
+            if (!data.data) break;
+            setMessages((prev) => {
+              const last = prev[prev.length - 1];
+              if (last && last.role === "assistant") {
                 return [
-                  ...prev.slice(0, i),
-                  { ...msg, content: msg.content + data.data },
-                  ...prev.slice(i + 1),
+                  ...prev.slice(0, -1),
+                  { ...last, content: last.content + data.data },
                 ];
               }
-              if (msg.role !== "assistant" || msg.content.trim() !== "") {
-                break;
-              }
-            }
-            return [...prev, { role: "thinking" as const, content: data.data }];
-          });
-          break;
-
-        case "token":
-          if (!data.data) break;
-          setMessages((prev) => {
-            const last = prev[prev.length - 1];
-            if (last && last.role === "assistant") {
-              return [
-                ...prev.slice(0, -1),
-                { ...last, content: last.content + data.data },
-              ];
-            }
-            return [...prev, { role: "assistant", content: data.data }];
-          });
-          break;
-
-        case "tool_call":
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "tool_call" as const,
-              tool: data.data.tool,
-              arguments: data.data.arguments ?? "",
-              output: "",
-              status: "running" as const,
-            },
-          ]);
-          break;
-
-        case "tool_result":
-          setMessages((prev) => {
-            const idx = [...prev].reverse().findIndex(
-              (m) => m.role === "tool_call" && m.status === "running"
-            );
-            if (idx === -1) return prev;
-            const realIdx = prev.length - 1 - idx;
-            const item = prev[realIdx];
-            if (item.role !== "tool_call") return prev;
-            return [
-              ...prev.slice(0, realIdx),
-              { ...item, output: data.data.output ?? "", status: "done" as const },
-              ...prev.slice(realIdx + 1),
-            ];
-          });
-          break;
-
-        case "done":
-          // Auto-complete any remaining running tool calls (e.g. hosted tools)
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.role === "tool_call" && m.status === "running"
-                ? { ...m, status: "done" as const }
-                : m
-            )
-          );
-          if (data.response_id) {
-            responseIdRef.current = data.response_id;
-            // Save scoped to current agent
-            setCurrentView((cv) => {
-              if (cv.page === "detail") {
-                localStorage.setItem(responseIdKey(cv.agentName), data.response_id);
-              }
-              return cv;
+              return [...prev, { role: "assistant", content: data.data }];
             });
-          }
-          break;
+            break;
 
-        case "error":
-          setMessages((prev) => [
-            ...prev,
-            { role: "system", content: `Error: ${data.data}` },
-          ]);
-          break;
-      }
+          case "tool_call":
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "tool_call" as const,
+                tool: data.data.tool,
+                arguments: data.data.arguments ?? "",
+                output: "",
+                status: "running" as const,
+              },
+            ]);
+            break;
+
+          case "tool_result":
+            setMessages((prev) => {
+              const idx = [...prev].reverse().findIndex(
+                (m) => m.role === "tool_call" && m.status === "running"
+              );
+              if (idx === -1) return prev;
+              const realIdx = prev.length - 1 - idx;
+              const item = prev[realIdx];
+              if (item.role !== "tool_call") return prev;
+              return [
+                ...prev.slice(0, realIdx),
+                { ...item, output: data.data.output ?? "", status: "done" as const },
+                ...prev.slice(realIdx + 1),
+              ];
+            });
+            break;
+
+          case "done":
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.role === "tool_call" && m.status === "running"
+                  ? { ...m, status: "done" as const }
+                  : m
+              )
+            );
+            if (data.response_id) {
+              responseIdRef.current = data.response_id;
+              setCurrentView((cv) => {
+                if (cv.page === "detail") {
+                  localStorage.setItem(responseIdKey(cv.agentName), data.response_id);
+                }
+                return cv;
+              });
+            }
+            break;
+
+          case "error":
+            setMessages((prev) => [
+              ...prev,
+              { role: "system", content: `Error: ${data.data}` },
+            ]);
+            break;
+        }
+      };
     };
 
-    return () => ws.close();
-  }, [connectionKey]);
+    connect();
+
+    return () => {
+      active = false;
+      clearTimeout(retryTimer);
+      ws?.close();
+    };
+  }, []);
 
   // Safety: navigate back to listing if selected agent is removed during hot reload
   useEffect(() => {
@@ -459,7 +488,6 @@ export default function App() {
             .then((data) => {
               setSnapshot(data);
               setServerOnline(true);
-              setConnectionKey((k) => k + 1); // reconecta los WebSockets
             })
             .catch(() => {});
         }}
