@@ -48,12 +48,8 @@ def _ensure_auth() -> None:
 
 
 async def _run_loop(cwd: Path) -> None:
-    from claude_agent_sdk import (
-        AssistantMessage,
-        ClaudeAgentOptions,
-        ResultMessage,
-        query,
-    )
+    from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
+    from claude_agent_sdk.types import StreamEvent
 
     print()
     print("  Klisk Assistant")
@@ -78,6 +74,7 @@ async def _run_loop(cwd: Path) -> None:
 
         options = ClaudeAgentOptions(
             system_prompt=SYSTEM_PROMPT,
+            include_partial_messages=True,
             allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
             permission_mode="acceptEdits",
             cwd=str(cwd),
@@ -88,6 +85,7 @@ async def _run_loop(cwd: Path) -> None:
             options.resume = session_id
 
         print()
+        in_tool = False
         try:
             async for message in query(prompt=stripped, options=options):
                 # Capture session ID from init message
@@ -98,24 +96,27 @@ async def _run_loop(cwd: Path) -> None:
                 ):
                     session_id = message.data.get("session_id", session_id)
 
-                # Print assistant text
-                if isinstance(message, AssistantMessage):
-                    for block in message.content:
-                        if hasattr(block, "text"):
-                            print(block.text, end="", flush=True)
-                        elif hasattr(block, "name"):
-                            tool_name = block.name
-                            # Show a brief indicator for tool calls
-                            detail = ""
-                            if hasattr(block, "input"):
-                                inp = block.input
-                                if isinstance(inp, dict):
-                                    path = inp.get("file_path") or inp.get("pattern") or inp.get("command", "")
-                                    if path:
-                                        detail = f": {path}"
-                            print(f"\n  > {tool_name}{detail}", flush=True)
+                # Stream text token-by-token
+                elif isinstance(message, StreamEvent):
+                    event = message.event
+                    event_type = event.get("type")
 
-                # Print final result
+                    if event_type == "content_block_start":
+                        block = event.get("content_block", {})
+                        if block.get("type") == "tool_use":
+                            name = block.get("name", "")
+                            print(f"\n  > {name}", end="", flush=True)
+                            in_tool = True
+
+                    elif event_type == "content_block_delta":
+                        delta = event.get("delta", {})
+                        if delta.get("type") == "text_delta" and not in_tool:
+                            print(delta.get("text", ""), end="", flush=True)
+
+                    elif event_type == "content_block_stop":
+                        if in_tool:
+                            in_tool = False
+
                 elif isinstance(message, ResultMessage):
                     if hasattr(message, "result") and message.result:
                         print(message.result, flush=True)
