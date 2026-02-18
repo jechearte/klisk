@@ -6,6 +6,7 @@ import Chat from "./components/Chat";
 import AgentModal from "./components/AgentModal";
 import ToolModal from "./components/ToolModal";
 import EnvModal from "./components/EnvModal";
+import OfflineScreen from "./components/OfflineScreen";
 import type {
   ProjectSnapshot,
   ChatMessage,
@@ -73,6 +74,7 @@ function migrateLegacyStorage(firstAgentName: string) {
 type ViewState = { page: "listing" } | { page: "detail"; agentName: string };
 
 export default function App() {
+  const [serverOnline, setServerOnline] = useState<boolean | null>(null);
   const [snapshot, setSnapshot] = useState<ProjectSnapshot | null>(null);
   const [currentView, setCurrentView] = useState<ViewState>({ page: "listing" });
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -165,12 +167,20 @@ export default function App() {
     localStorage.setItem(messagesKey(agentName), JSON.stringify(toSave));
   }, [messages, currentView]);
 
-  // Fetch initial project snapshot
+  // Fetch initial project snapshot — detect server availability
   useEffect(() => {
     fetch("/api/project")
-      .then((r) => r.json())
-      .then(setSnapshot)
-      .catch(() => {});
+      .then((r) => {
+        if (!r.ok) throw new Error("not ok");
+        return r.json();
+      })
+      .then((data) => {
+        setSnapshot(data);
+        setServerOnline(true);
+      })
+      .catch(() => {
+        setServerOnline(false);
+      });
   }, []);
 
   // Connect to reload WebSocket
@@ -426,6 +436,24 @@ export default function App() {
 
   const config = snapshot?.config ?? {};
   const isDetail = currentView.page === "detail";
+
+  // Show offline screen while loading or when server is unavailable
+  if (serverOnline === false) {
+    return (
+      <OfflineScreen
+        onServerReady={() => {
+          // Re-fetch snapshot when server comes back
+          fetch("/api/project")
+            .then((r) => r.json())
+            .then((data) => {
+              setSnapshot(data);
+              setServerOnline(true);
+            })
+            .catch(() => {});
+        }}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
