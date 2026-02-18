@@ -18,21 +18,20 @@ def _check_sdk_installed() -> bool:
         return False
 
 
-def _prepare_env() -> None:
+def _check_auth() -> None:
     import os
-    import shutil
 
-    # Limpiar CLAUDECODE para que el subprocess de Claude Code no detecte
-    # una sesión anidada y pueda usar sus credenciales OAuth normalmente.
-    os.environ.pop("CLAUDECODE", None)
+    if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        return
 
-    if not shutil.which("claude"):
-        print(
-            "Error: Claude Code CLI not found.\n"
-            "Install it with: npm install -g @anthropic-ai/claude-code",
-            file=sys.stderr,
-        )
-        raise SystemExit(1)
+    print(
+        "\n  No authentication found.\n"
+        "\n  Run this command to log in with your Claude account:\n"
+        "\n    claude setup-token\n"
+        "\n  Then run 'klisk assistant' again.\n",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
 
 
 async def _run_loop(cwd: Path) -> None:
@@ -111,15 +110,6 @@ async def _run_loop(cwd: Path) -> None:
         except KeyboardInterrupt:
             print("\n  (interrupted)")
         except Exception as e:
-            msg = str(e).lower()
-            if "not logged in" in msg or "login" in msg or "unauthorized" in msg:
-                print(
-                    "\n  Not logged into Claude."
-                    "\n  Run 'claude' in another terminal to log in,"
-                    "\n  then try again.",
-                    file=sys.stderr,
-                )
-                break
             print(f"\n  Error: {e}", file=sys.stderr)
 
         print()
@@ -135,6 +125,6 @@ def run_assistant(cwd: Path) -> None:
         )
         raise SystemExit(1)
 
-    _prepare_env()
+    _check_auth()
 
     asyncio.run(_run_loop(cwd))
