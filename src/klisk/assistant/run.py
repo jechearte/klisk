@@ -21,10 +21,24 @@ def _check_sdk_installed() -> bool:
 _TOKEN_FILE = Path.home() / ".klisk" / "token"
 
 
+def _save_token(token: str) -> None:
+    _TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _TOKEN_FILE.write_text(token)
+    _TOKEN_FILE.chmod(0o600)
+
+
 def _ensure_auth() -> None:
     import os
 
-    if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+    # Si ya hay API key, no hace falta nada más
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return
+
+    # Si hay token en el entorno, guardarlo para futuras sesiones
+    env_token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
+    if env_token:
+        if not _TOKEN_FILE.exists():
+            _save_token(env_token)
         return
 
     # Intentar leer token guardado
@@ -54,11 +68,7 @@ def _ensure_auth() -> None:
         print("\nError: No token provided.", file=sys.stderr)
         raise SystemExit(1)
 
-    # Guardar token para próximas sesiones
-    _TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
-    _TOKEN_FILE.write_text(token)
-    _TOKEN_FILE.chmod(0o600)
-
+    _save_token(token)
     os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
 
 
