@@ -336,28 +336,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
         {messages.map((msg, i) => {
           if (msg.role === "tool_use") {
             return (
-              <div key={i} className="flex justify-start">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="w-3.5 h-3.5 text-blue-500"
-                  >
-                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-                  </svg>
-                  <span className="font-medium">{msg.tool}</span>
-                  {msg.detail && (
-                    <span className="text-gray-400 dark:text-gray-500 truncate max-w-[200px]">
-                      {msg.detail}
-                    </span>
-                  )}
-                </div>
-              </div>
+              <ToolUseChip key={i} tool={msg.tool} detail={msg.detail} />
             );
           }
 
@@ -537,6 +516,64 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
 );
 
 export default AssistantPanel;
+
+function ToolUseChip({ tool, detail }: { tool: string; detail: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasDetail = Boolean(detail);
+
+  return (
+    <div className="flex justify-start">
+      <button
+        type="button"
+        onClick={() => hasDetail && setExpanded((v) => !v)}
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-left transition-colors ${
+          hasDetail
+            ? "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+            : "cursor-default"
+        }`}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="w-3.5 h-3.5 text-blue-500 flex-shrink-0"
+        >
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+        </svg>
+        <span className="font-medium flex-shrink-0">{tool}</span>
+        {hasDetail && (
+          <span
+            className={`text-gray-400 dark:text-gray-500 ${
+              expanded ? "break-all" : "truncate max-w-[200px]"
+            }`}
+          >
+            {detail}
+          </span>
+        )}
+        {hasDetail && (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className={`w-3 h-3 flex-shrink-0 text-gray-400 transition-transform ${
+              expanded ? "rotate-180" : ""
+            }`}
+          >
+            <path
+              fillRule="evenodd"
+              d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+              clipRule="evenodd"
+            />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
+}
 
 function QuestionCard({
   question,
