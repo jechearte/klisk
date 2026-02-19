@@ -142,7 +142,7 @@ export default function App() {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem(STORAGE_KEY_THEME, dark ? "dark" : "light");
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", dark ? "#030712" : "#f9fafb");
+    if (meta) meta.setAttribute("content", dark ? "#111827" : "#f3f4f6");
   }, [dark]);
 
   const toggleSidebar = useCallback(() => {
