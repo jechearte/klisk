@@ -258,33 +258,35 @@ export default function DeployPage({ project, isWorkspace, onToast }: DeployPage
                 <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
                   Requirements
                 </h3>
-                <ol className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                  <li className="flex items-start gap-2">
-                    <span className="text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0 text-xs">1.</span>
+                <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <li className="flex items-start gap-2.5">
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
                     <span>
-                      Install <a href="https://cloud.google.com/sdk/docs/install" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Google Cloud CLI</a> (gcloud)
+                      <a href="https://cloud.google.com/sdk/docs/install" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Google Cloud CLI</a> installed and authenticated
                     </span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0 text-xs">2.</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
                     <span>
-                      Authenticate: <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded font-mono">gcloud auth login</code>
+                      A GCP project with billing enabled
                     </span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0 text-xs">3.</span>
-                    <span>Configure a GCP project with billing enabled</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0 text-xs">4.</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
                     <span>
-                      Set API keys in <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded font-mono">.env</code>
+                      GCP project ID and region configured in <strong className="text-gray-700 dark:text-gray-300">Settings</strong>
                     </span>
                   </li>
-                </ol>
+                  <li className="flex items-start gap-2.5">
+                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
+                    <span>
+                      LLM API keys set in <strong className="text-gray-700 dark:text-gray-300">Environment</strong>
+                    </span>
+                  </li>
+                </ul>
                 <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
                   <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Then run from terminal:
+                    Deploy from terminal:
                   </p>
                   <code className="text-sm font-mono text-gray-900 dark:text-gray-100 mt-1 block">
                     klisk deploy{isWorkspace && project ? ` ${project}` : ""}
