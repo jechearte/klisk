@@ -33,13 +33,6 @@ const DEFAULT_CONFIG: DeployConfig = {
   },
 };
 
-type DeployTab = "interfaces" | "api";
-
-const TABS: { id: DeployTab; label: string }[] = [
-  { id: "interfaces", label: "Interfaces" },
-  { id: "api", label: "API" },
-];
-
 type PreviewMode = "chat" | "widget";
 
 function Toggle({
@@ -483,46 +476,6 @@ function WidgetPreview({ config, projectName }: { config: DeployConfig; projectN
   );
 }
 
-function ApiPreview({ config }: { config: DeployConfig }) {
-  const origins = config.api.cors_origins;
-  return (
-    <div className="flex items-center justify-center h-full p-6">
-      <div className="w-full max-w-[320px] space-y-4">
-        {/* Endpoint card */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">POST</span>
-            <span className="text-xs font-mono text-gray-700 dark:text-gray-300">/api/chat</span>
-          </div>
-          <div className="px-4 py-3 space-y-2">
-            <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">CORS Origins</div>
-            <div className="flex flex-wrap gap-1.5">
-              {origins.map((o, i) => (
-                <span key={i} className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-                  {o}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Sample request */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800">
-            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sample Request</span>
-          </div>
-          <pre className="px-4 py-3 text-[10px] font-mono text-gray-600 dark:text-gray-400 leading-relaxed overflow-x-auto">
-{`curl -X POST /api/chat \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer $KEY" \\
-  -d '{"message": "Hello"}'`}
-          </pre>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ---- Main Component ----
 
 export default function DeploySettings({
@@ -535,7 +488,6 @@ export default function DeploySettings({
   const [savedConfig, setSavedConfig] = useState<DeployConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<DeployTab>("interfaces");
   const [previewMode, setPreviewMode] = useState<PreviewMode>("chat");
 
   const hasChanges = JSON.stringify(config) !== JSON.stringify(savedConfig);
@@ -576,7 +528,7 @@ export default function DeploySettings({
       if (data.error) {
         onToast(`Error: ${data.error}`);
       } else {
-        onToast("Deploy settings saved");
+        onToast("Settings saved");
         setSavedConfig(config);
       }
     } catch (err) {
@@ -617,17 +569,6 @@ export default function DeploySettings({
     }));
   };
 
-  const updateCorsOrigins = (text: string) => {
-    const origins = text
-      .split("\n")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    setConfig((prev) => ({
-      ...prev,
-      api: { ...prev.api, cors_origins: origins },
-    }));
-  };
-
   const widgetSnippet = `<script src="https://your-domain.com/widget.js"></script>`;
 
   if (loading) {
@@ -642,31 +583,9 @@ export default function DeploySettings({
     <div className="flex h-full">
       {/* Left: Settings */}
       <div className="w-[420px] flex-shrink-0 border-r border-gray-200 dark:border-gray-800 flex flex-col min-h-0">
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors relative ${
-                activeTab === tab.id
-                  ? "text-blue-600 dark:text-blue-400"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-              }`}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400" />
-              )}
-            </button>
-          ))}
-        </div>
-
         {/* Form */}
         <div className="flex-1 overflow-y-auto">
           <div className="px-5 py-5 space-y-4">
-            {activeTab === "interfaces" && (
-              <>
                 {/* Shared settings */}
                 <Field label="Title">
                   <input
@@ -834,26 +753,6 @@ export default function DeploySettings({
                     </div>
                   </Field>
                 </div>
-              </>
-            )}
-
-            {activeTab === "api" && (
-              <>
-                <Field label="CORS Origins (one per line)">
-                  <textarea
-                    value={config.api.cors_origins.join("\n")}
-                    onChange={(e) => updateCorsOrigins(e.target.value)}
-                    placeholder="*"
-                    rows={3}
-                    className={inputClass + " resize-none font-mono"}
-                  />
-                </Field>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Use <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">*</code> to allow all origins, or specify domains like <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">https://example.com</code>.
-                  API keys can be managed in the .env tab.
-                </p>
-              </>
-            )}
           </div>
         </div>
 
@@ -882,28 +781,24 @@ export default function DeploySettings({
       <div className="flex-1 min-w-0 bg-gray-50 dark:bg-gray-950 flex flex-col">
         <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-800 flex-shrink-0 flex items-center justify-between">
           <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Preview</span>
-          {activeTab === "interfaces" && (
-            <div className="flex items-center bg-gray-200 dark:bg-gray-800 rounded-lg p-0.5">
-              {(["chat", "widget"] as PreviewMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setPreviewMode(mode)}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                    previewMode === mode
-                      ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                  }`}
-                >
-                  {mode === "chat" ? "Chat Page" : "Widget"}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="flex items-center bg-gray-200 dark:bg-gray-800 rounded-lg p-0.5">
+            {(["chat", "widget"] as PreviewMode[]).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setPreviewMode(mode)}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                  previewMode === mode
+                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                {mode === "chat" ? "Chat Page" : "Widget"}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex-1 min-h-0">
-          {activeTab === "interfaces" && previewMode === "chat" && <ChatPreview config={config} projectName={projectName} />}
-          {activeTab === "interfaces" && previewMode === "widget" && <WidgetPreview config={config} projectName={projectName} />}
-          {activeTab === "api" && <ApiPreview config={config} />}
+          {previewMode === "chat" ? <ChatPreview config={config} projectName={projectName} /> : <WidgetPreview config={config} projectName={projectName} />}
         </div>
       </div>
     </div>
