@@ -11,7 +11,7 @@ def test_defaults():
     assert config.entry == "src/main.py"
     assert config.name == "MyAgent"
     assert config.studio.port == 3000
-    assert config.api.port == 8000
+    assert config.api.port == 8321
     assert config.defaults.model == "gpt-5.2"
     assert config.defaults.temperature == 0.7
 

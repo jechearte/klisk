@@ -22,7 +22,7 @@ def dev(
 
         load_all_project_envs()
 
-        port = 8000
+        port = 8321
         typer.echo(f"  Studio + API: http://localhost:{port}")
         typer.echo(f"  Workspace:    {PROJECTS_DIR}")
         typer.echo("  Watching all projects for changes...")

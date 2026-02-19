@@ -540,5 +540,5 @@ def _find_studio_dist() -> Path | None:
     return None
 
 
-def run_server(app: FastAPI, host: str = "0.0.0.0", port: int = 8000) -> None:
+def run_server(app: FastAPI, host: str = "0.0.0.0", port: int = 8321) -> None:
     uvicorn.run(app, host=host, port=port, log_level="info")

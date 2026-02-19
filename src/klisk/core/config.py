@@ -13,7 +13,7 @@ class StudioConfig(BaseModel):
 
 
 class ApiConfig(BaseModel):
-    port: int = 8000
+    port: int = 8321
 
 
 class ProjectConfig(BaseModel):
