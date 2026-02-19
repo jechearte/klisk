@@ -148,7 +148,7 @@ def _format_tool_detail(name: str, raw_json: str) -> str:
 
 
 async def _run_loop(cwd: Path, model: str) -> None:
-    from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
+    from claude_agent_sdk import ClaudeAgentOptions, HookMatcher, ResultMessage, query
     from claude_agent_sdk.types import StreamEvent
     from rich.console import Console
     from rich.live import Live
@@ -164,6 +164,18 @@ async def _run_loop(cwd: Path, model: str) -> None:
 
     # Use the same Claude binary available in the user's PATH so auth state matches.
     cli_path = shutil.which("claude")
+
+    async def _bash_guard(input_data, tool_use_id, context):  # type: ignore[no-untyped-def]
+        """Allow klisk CLI commands automatically; ask the user for anything else."""
+        command = input_data.get("tool_input", {}).get("command", "").strip()
+        if command.startswith("klisk"):
+            return {}
+        return {
+            "hookSpecificOutput": {
+                "hookEventName": input_data["hook_event_name"],
+                "permissionDecision": "ask",
+            }
+        }
 
     def _on_stderr(line: str) -> None:
         console.print(f"  [dim red]{line.rstrip()}[/dim red]")
@@ -209,7 +221,12 @@ async def _run_loop(cwd: Path, model: str) -> None:
             include_partial_messages=True,
             allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Skill"],
             setting_sources=["user", "project"],
-            permission_mode="acceptEdits",
+            permission_mode="bypassPermissions",
+            hooks={
+                "PreToolUse": [
+                    HookMatcher(matcher="Bash", hooks=[_bash_guard]),
+                ],
+            },
             cwd=str(cwd),
             max_turns=50,
             env=sdk_env,
