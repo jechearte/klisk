@@ -29,4 +29,10 @@ The user is a non-technical person who wants to build an AI agent. They may not 
 - After creating or modifying an agent, always validate with `klisk check`.
 - After validation passes, open the Studio with `klisk dev` so the user can see their agent in action.
 - If the user asks to create an agent, do everything end-to-end: create project, define tools, define agent, validate, and open Studio.
+
+# Security
+
+- NEVER read, display, or access .env files. They contain API keys and secrets.
+- Do not use cat, head, tail, Read, grep, or any other method to view .env file contents.
+- If the user asks about API keys or environment variables, tell them to edit the .env file themselves or use the Studio's environment panel.
 """

@@ -124,6 +124,28 @@ def _ensure_auth() -> None:
     os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
 
 
+def _targets_env_file(tool_name: str, input_data: dict) -> bool:  # type: ignore[type-arg]
+    """Return True if the tool use targets a .env file."""
+    import os
+
+    if tool_name in ("Read", "Write", "Edit"):
+        fp = input_data.get("file_path", "")
+        basename = os.path.basename(fp)
+        if basename == ".env" or basename.startswith(".env."):
+            return True
+    elif tool_name == "Grep":
+        for field in ("path", "glob"):
+            if ".env" in input_data.get(field, ""):
+                return True
+    elif tool_name == "Glob":
+        if ".env" in input_data.get("pattern", ""):
+            return True
+    elif tool_name == "Bash":
+        if ".env" in input_data.get("command", ""):
+            return True
+    return False
+
+
 def _format_tool_detail(name: str, raw_json: str) -> str:
     import json
 
@@ -191,6 +213,12 @@ async def _run_loop(cwd: Path, model: str) -> None:
 
     async def _can_use_tool(tool_name, input_data, context):  # type: ignore[no-untyped-def]
         """Handle AskUserQuestion, auto-approve safe Bash, prompt for the rest."""
+        # Block access to .env files — they contain secrets.
+        if _targets_env_file(tool_name, input_data):
+            return PermissionResultDeny(
+                message="Access to .env files is blocked. These files contain secrets and cannot be read, written, or referenced."
+            )
+
         # Present clarifying questions to the user and collect answers.
         if tool_name == "AskUserQuestion":
             questions = input_data.get("questions", [])
