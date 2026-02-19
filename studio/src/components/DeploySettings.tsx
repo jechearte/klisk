@@ -422,10 +422,13 @@ export default function DeploySettings({
   onToast,
 }: DeploySettingsProps) {
   const [config, setConfig] = useState<DeployConfig>(DEFAULT_CONFIG);
+  const [savedConfig, setSavedConfig] = useState<DeployConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<DeployTab>("interfaces");
   const [previewMode, setPreviewMode] = useState<PreviewMode>("chat");
+
+  const hasChanges = JSON.stringify(config) !== JSON.stringify(savedConfig);
 
   const fetchConfig = useCallback(async () => {
     setLoading(true);
@@ -438,6 +441,7 @@ export default function DeploySettings({
         return;
       }
       setConfig(data);
+      setSavedConfig(data);
     } catch (err) {
       onToast(`Error: ${String(err)}`);
     } finally {
@@ -463,6 +467,7 @@ export default function DeploySettings({
         onToast(`Error: ${data.error}`);
       } else {
         onToast("Deploy settings saved");
+        setSavedConfig(config);
       }
     } catch (err) {
       onToast(`Error: ${String(err)}`);
@@ -691,10 +696,19 @@ export default function DeploySettings({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end px-5 py-3 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
+          {hasChanges && (
+            <button
+              onClick={() => setConfig(savedConfig)}
+              disabled={saving}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+          )}
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !hasChanges}
             className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition-colors"
           >
             {saving ? "Saving..." : "Save"}
