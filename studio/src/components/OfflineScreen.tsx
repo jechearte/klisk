@@ -31,7 +31,7 @@ export default function OfflineScreen({ onServerReady }: OfflineScreenProps) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCopy = () => {
-    navigator.clipboard.writeText("klisk dev").then(() => {
+    navigator.clipboard.writeText("klisk studio").then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -49,7 +49,7 @@ export default function OfflineScreen({ onServerReady }: OfflineScreenProps) {
         </div>
 
         <div className="flex items-center gap-2 bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 w-full">
-          <code className="text-sm text-green-400 flex-1 font-mono">$ klisk dev</code>
+          <code className="text-sm text-green-400 flex-1 font-mono">$ klisk studio</code>
           <button
             onClick={handleCopy}
             className="text-xs text-gray-400 hover:text-gray-200 transition-colors px-2 py-1 rounded hover:bg-gray-800"
