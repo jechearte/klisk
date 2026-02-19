@@ -254,7 +254,7 @@ function ChatPreview({
           <div ref={messagesEndRef} />
         </div>
         {/* Input area */}
-        <div className="px-4 pb-3 flex-shrink-0">
+        <div className="px-4 pb-1.5 flex-shrink-0">
           <form
             onSubmit={(e) => { e.preventDefault(); handleSend(); }}
             className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-3xl px-4 py-2"
@@ -421,7 +421,7 @@ function WidgetPreview({ config, projectName }: { config: DeployConfig; projectN
               <div ref={messagesEndRef} />
             </div>
             {/* Input area — same as chat page */}
-            <div className="px-4 pb-3 flex-shrink-0">
+            <div className="px-4 pb-1.5 flex-shrink-0">
               <form
                 onSubmit={(e) => { e.preventDefault(); handleSend(); }}
                 className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-3xl px-4 py-2"
