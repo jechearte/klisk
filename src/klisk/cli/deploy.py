@@ -257,13 +257,13 @@ def _read_env_vars(project_path: Path) -> dict[str, str]:
 
 
 def deploy(
-    project: Optional[str] = typer.Option(None, "--path", "-p", help="Project name or path (default: current dir)"),
+    project: str = typer.Argument(".", help="Project name or path"),
     service: Optional[str] = typer.Option(None, "--service", "-s", help="Cloud Run service name"),
     region: Optional[str] = typer.Option(None, "--region", "-r", help="GCP region"),
     gcp_project: Optional[str] = typer.Option(None, "--project", help="GCP project ID"),
 ) -> None:
     """Deploy to Google Cloud Run."""
-    project_path = resolve_project(project or ".")
+    project_path = resolve_project(project)
 
     # --- Check Dockerfile exists first (fast, no network) ---
     dockerfile_path = project_path / "Dockerfile"
