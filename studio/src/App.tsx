@@ -531,6 +531,8 @@ export default function App() {
 
   return (
     <div className="flex h-screen overflow-hidden">
+      {/* PWA Window Controls Overlay drag region */}
+      <div className="wco-titlebar hidden bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800" />
       {/* Sidebar */}
       <Sidebar
         collapsed={sidebarCollapsed}

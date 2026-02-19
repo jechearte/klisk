@@ -14,6 +14,25 @@ body {
     sans-serif;
 }
 
+/* Window Controls Overlay (PWA title bar removal) */
+@media (display-mode: window-controls-overlay) {
+  #root {
+    padding-top: env(titlebar-area-height, 0px);
+  }
+
+  .wco-titlebar {
+    display: block !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(titlebar-area-height, 0px);
+    -webkit-app-region: drag;
+    app-region: drag;
+    z-index: 9999;
+  }
+}
+
 /* Transparent scrollbar — light mode */
 ::-webkit-scrollbar {
   width: 6px;

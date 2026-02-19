@@ -13,6 +13,7 @@ export default defineConfig({
         description: "AI Agent Development Studio",
         start_url: "/",
         display: "standalone",
+        display_override: ["window-controls-overlay"],
         background_color: "#030712",
         theme_color: "#111827",
         icons: [
