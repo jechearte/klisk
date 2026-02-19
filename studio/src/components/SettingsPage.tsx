@@ -14,14 +14,17 @@ export default function SettingsPage({ onToast }: SettingsPageProps) {
     setLoading(true);
     try {
       const res = await fetch("/api/global-config");
+      if (!res.ok) return;
       const data = await res.json();
       if (data.error) {
         onToast(`Error: ${data.error}`);
         return;
       }
-      setConfig(data);
-    } catch (err) {
-      onToast(`Error: ${String(err)}`);
+      if (data.gcloud) {
+        setConfig(data);
+      }
+    } catch {
+      // Endpoint may not exist yet — use defaults
     } finally {
       setLoading(false);
     }
@@ -87,7 +90,7 @@ export default function SettingsPage({ onToast }: SettingsPageProps) {
                         </label>
                         <input
                           type="text"
-                          value={config.gcloud.project}
+                          value={config.gcloud?.project ?? ""}
                           onChange={(e) =>
                             setConfig((c) => ({
                               ...c,
@@ -104,7 +107,7 @@ export default function SettingsPage({ onToast }: SettingsPageProps) {
                         </label>
                         <input
                           type="text"
-                          value={config.gcloud.region}
+                          value={config.gcloud?.region ?? ""}
                           onChange={(e) =>
                             setConfig((c) => ({
                               ...c,
