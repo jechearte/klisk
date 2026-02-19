@@ -55,6 +55,9 @@ export interface WidgetDeployConfig {
   welcome_message: string;
   placeholder: string;
   auto_open: boolean;
+  user_message_color: string;
+  header_color: string;
+  bubble_icon: string;
 }
 
 export interface ApiDeployConfig {

@@ -24,6 +24,9 @@ const DEFAULT_CONFIG: DeployConfig = {
     welcome_message: "",
     placeholder: "Type a message...",
     auto_open: false,
+    user_message_color: "#2563eb",
+    header_color: "",
+    bubble_icon: "chat",
   },
   api: {
     cors_origins: ["*"],
@@ -93,6 +96,53 @@ const inputClass =
 const selectClass =
   "w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 pr-10 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500";
 
+// ---- Helpers ----
+
+function luminance(hex: string): number {
+  const c = hex.replace("#", "");
+  if (c.length !== 6) return 1;
+  const r = parseInt(c.slice(0, 2), 16) / 255;
+  const g = parseInt(c.slice(2, 4), 16) / 255;
+  const b = parseInt(c.slice(4, 6), 16) / 255;
+  const toLinear = (v: number) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+function isDark(hex: string): boolean {
+  return luminance(hex) < 0.4;
+}
+
+const BUBBLE_ICONS: Record<string, React.ReactNode> = {
+  chat: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  ),
+  sparkle: (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2l2.09 6.26L20.18 10l-6.09 1.74L12 18l-2.09-6.26L3.82 10l6.09-1.74L12 2z"/>
+      <path d="M19 15l1.04 3.13L23.18 19l-3.14.87L19 23l-1.04-3.13L14.82 19l3.14-.87L19 15z" opacity=".6"/>
+    </svg>
+  ),
+  help: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+      <line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  ),
+  headset: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+      <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+    </svg>
+  ),
+};
+
+function BubbleIcon({ icon, className }: { icon: string; className?: string }) {
+  return <span className={className} style={{ display: "inline-flex" }}>{BUBBLE_ICONS[icon] || BUBBLE_ICONS.chat}</span>;
+}
+
 // ---- Preview Components ----
 
 type ChatMessage = { role: "user" | "assistant"; text: string };
@@ -150,11 +200,22 @@ function ChatPreview({
     >
       <div className="w-full max-w-[520px] h-[580px] bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_16px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
-          <span className="text-[15px] font-semibold text-gray-900 dark:text-white flex-1 truncate">{title}</span>
+        <div
+          className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
+          style={config.widget.header_color ? { background: config.widget.header_color } : undefined}
+        >
+          <span
+            className="text-[15px] font-semibold flex-1 truncate"
+            style={{ color: config.widget.header_color && isDark(config.widget.header_color) ? "#ffffff" : undefined }}
+          >
+            {title}
+          </span>
           <div className="flex items-center gap-1">
             {/* Theme button */}
-            <div className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 text-gray-400">
+            <div
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600"
+              style={{ color: config.widget.header_color && isDark(config.widget.header_color) ? "rgba(255,255,255,0.6)" : undefined, borderColor: config.widget.header_color && isDark(config.widget.header_color) ? "rgba(255,255,255,0.2)" : undefined }}
+            >
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                 <path fillRule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clipRule="evenodd" />
               </svg>
@@ -162,7 +223,8 @@ function ChatPreview({
             {/* Clear button */}
             <button
               onClick={handleClear}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:opacity-80 transition-colors"
+              style={{ color: config.widget.header_color && isDark(config.widget.header_color) ? "rgba(255,255,255,0.6)" : undefined, borderColor: config.widget.header_color && isDark(config.widget.header_color) ? "rgba(255,255,255,0.2)" : undefined }}
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -186,7 +248,7 @@ function ChatPreview({
                   className="max-w-[85%] px-3.5 py-2 rounded-xl text-sm leading-relaxed break-words"
                   style={
                     msg.role === "user"
-                      ? { background: "#2563eb", color: "#ffffff" }
+                      ? { background: config.widget.user_message_color || "#2563eb", color: "#ffffff" }
                       : { background: "#f3f4f6", color: "#1f2937" }
                   }
                 >
@@ -300,17 +362,29 @@ function WidgetPreview({ config, projectName }: { config: DeployConfig; projectN
             }}
           >
             {/* Header — same as chat page */}
-            <div className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
-              <span className="text-[15px] font-semibold text-gray-900 dark:text-white flex-1 truncate">{title}</span>
+            <div
+              className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
+              style={config.widget.header_color ? { background: config.widget.header_color } : undefined}
+            >
+              <span
+                className="text-[15px] font-semibold flex-1 truncate"
+                style={{ color: config.widget.header_color && isDark(config.widget.header_color) ? "#ffffff" : undefined }}
+              >
+                {title}
+              </span>
               <div className="flex items-center gap-1">
-                <div className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 text-gray-400">
+                <div
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600"
+                  style={{ color: config.widget.header_color && isDark(config.widget.header_color) ? "rgba(255,255,255,0.6)" : undefined, borderColor: config.widget.header_color && isDark(config.widget.header_color) ? "rgba(255,255,255,0.2)" : undefined }}
+                >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                     <path fillRule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clipRule="evenodd" />
                   </svg>
                 </div>
                 <button
                   onClick={handleClear}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:opacity-80 transition-colors"
+                  style={{ color: config.widget.header_color && isDark(config.widget.header_color) ? "rgba(255,255,255,0.6)" : undefined, borderColor: config.widget.header_color && isDark(config.widget.header_color) ? "rgba(255,255,255,0.2)" : undefined }}
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -334,7 +408,7 @@ function WidgetPreview({ config, projectName }: { config: DeployConfig; projectN
                       className="max-w-[85%] px-3.5 py-2 rounded-xl text-sm leading-relaxed break-words"
                       style={
                         msg.role === "user"
-                          ? { background: "#2563eb", color: "#ffffff" }
+                          ? { background: config.widget.user_message_color || "#2563eb", color: "#ffffff" }
                           : { background: "#f3f4f6", color: "#1f2937" }
                       }
                     >
@@ -393,9 +467,7 @@ function WidgetPreview({ config, projectName }: { config: DeployConfig; projectN
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           ) : (
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
+            <BubbleIcon icon={config.widget.bubble_icon || "chat"} className="w-6 h-6" />
           )}
         </button>
       </div>
@@ -614,7 +686,7 @@ export default function DeploySettings({
                     className={inputClass}
                   />
                 </Field>
-                <Field label="Accent color">
+                <Field label="Bubble color">
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
@@ -628,6 +700,58 @@ export default function DeploySettings({
                       onChange={(e) => updateWidget("color", e.target.value)}
                       className={inputClass + " flex-1"}
                     />
+                  </div>
+                </Field>
+                <Field label="User message color">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={config.widget.user_message_color || "#2563eb"}
+                      onChange={(e) => updateWidget("user_message_color", e.target.value)}
+                      className="w-8 h-8 rounded border border-gray-300 dark:border-gray-700 cursor-pointer p-0"
+                    />
+                    <input
+                      type="text"
+                      value={config.widget.user_message_color}
+                      onChange={(e) => updateWidget("user_message_color", e.target.value)}
+                      className={inputClass + " flex-1"}
+                    />
+                  </div>
+                </Field>
+                <Field label="Header background">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={config.widget.header_color || "#ffffff"}
+                      onChange={(e) => updateWidget("header_color", e.target.value)}
+                      className="w-8 h-8 rounded border border-gray-300 dark:border-gray-700 cursor-pointer p-0"
+                    />
+                    <input
+                      type="text"
+                      value={config.widget.header_color}
+                      onChange={(e) => updateWidget("header_color", e.target.value)}
+                      placeholder="Default"
+                      className={inputClass + " flex-1"}
+                    />
+                  </div>
+                </Field>
+                <Field label="Bubble icon">
+                  <div className="flex gap-2">
+                    {(["chat", "sparkle", "help", "headset"] as const).map((icon) => (
+                      <button
+                        key={icon}
+                        type="button"
+                        onClick={() => updateWidget("bubble_icon", icon)}
+                        className={`w-10 h-10 rounded-lg border flex items-center justify-center transition-colors ${
+                          config.widget.bubble_icon === icon
+                            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                            : "border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
+                        }`}
+                        title={icon.charAt(0).toUpperCase() + icon.slice(1)}
+                      >
+                        <BubbleIcon icon={icon} className="w-5 h-5" />
+                      </button>
+                    ))}
                   </div>
                 </Field>
                 <Toggle

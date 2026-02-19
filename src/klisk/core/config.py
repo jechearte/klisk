@@ -69,6 +69,9 @@ class WidgetDeployConfig(BaseModel):
     welcome_message: str = ""
     placeholder: str = "Type a message..."
     auto_open: bool = False
+    user_message_color: str = "#2563eb"
+    header_color: str = ""
+    bubble_icon: str = "chat"
 
 
 class ApiDeployConfig(BaseModel):

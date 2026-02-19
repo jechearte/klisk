@@ -19,6 +19,9 @@ deploy:
     welcome_message: ""
     placeholder: "Type a message..."
     auto_open: false
+    user_message_color: "#2563eb"
+    header_color: ""
+    bubble_icon: "chat"
   api:
     cors_origins:
       - "*"

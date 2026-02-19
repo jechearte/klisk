@@ -996,6 +996,31 @@
       if (chatConfig.attachments === false) {
         attachBtn.style.display = 'none';
       }
+      // Apply widget style customizations
+      var wc = deploy.widget || {};
+      if (wc.user_message_color) {
+        document.documentElement.style.setProperty('--bubble-user', wc.user_message_color);
+      }
+      if (wc.header_color) {
+        var headerEl = document.querySelector('.header');
+        if (headerEl) {
+          headerEl.style.background = wc.header_color;
+          // Adjust text color for contrast
+          var c = wc.header_color.replace('#', '');
+          if (c.length === 6) {
+            var r = parseInt(c.slice(0,2),16)/255, g = parseInt(c.slice(2,4),16)/255, b = parseInt(c.slice(4,6),16)/255;
+            var toL = function(v) { return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); };
+            var lum = 0.2126*toL(r) + 0.7152*toL(g) + 0.0722*toL(b);
+            if (lum < 0.4) {
+              headerEl.style.color = '#ffffff';
+              headerEl.querySelectorAll('.header-btn').forEach(function(btn) {
+                btn.style.color = 'rgba(255,255,255,0.6)';
+                btn.style.borderColor = 'rgba(255,255,255,0.2)';
+              });
+            }
+          }
+        }
+      }
       authRequired = !!info.auth_required;
       if (authRequired && !authKey) {
         showAuthOverlay();
