@@ -4,3 +4,21 @@ studio:
   port: 3000
 api:
   port: 8321
+deploy:
+  chat:
+    enabled: true
+    title: ""
+    welcome_message: ""
+    attachments: true
+  widget:
+    enabled: true
+    color: "#2563eb"
+    position: bottom-right
+    width: 380px
+    height: 560px
+    welcome_message: ""
+    placeholder: "Type a message..."
+    auto_open: false
+  api:
+    cors_origins:
+      - "*"
