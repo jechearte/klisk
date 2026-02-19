@@ -4,62 +4,40 @@ import type { EnvVariable } from "../types";
 const SENSITIVE_PATTERNS = /KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL/i;
 
 interface EnvPageProps {
-  isWorkspace: boolean;
-  initialProject?: string;
+  project?: string;
   onToast: (msg: string) => void;
 }
 
 export default function EnvPage({
-  isWorkspace,
-  initialProject,
+  project,
   onToast,
 }: EnvPageProps) {
   const [variables, setVariables] = useState<EnvVariable[]>([]);
-  const [projects, setProjects] = useState<string[]>([]);
-  const [selectedProject, setSelectedProject] = useState(initialProject ?? "");
   const [revealed, setRevealed] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const fetchEnv = useCallback(
-    async (project?: string) => {
-      setLoading(true);
-      try {
-        const params = project ? `?project=${encodeURIComponent(project)}` : "";
-        const res = await fetch(`/api/env${params}`);
-        const data = await res.json();
-        if (data.error) {
-          onToast(`Error: ${data.error}`);
-          return;
-        }
-        setVariables(data.variables ?? []);
-        if (data.projects) setProjects(data.projects);
-      } catch (err) {
-        onToast(`Error: ${String(err)}`);
-      } finally {
-        setLoading(false);
+  const fetchEnv = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = project ? `?project=${encodeURIComponent(project)}` : "";
+      const res = await fetch(`/api/env${params}`);
+      const data = await res.json();
+      if (data.error) {
+        onToast(`Error: ${data.error}`);
+        return;
       }
-    },
-    [onToast]
-  );
-
-  useEffect(() => {
-    if (isWorkspace && !selectedProject) {
-      fetchEnv();
-    } else if (isWorkspace && selectedProject) {
-      fetchEnv(selectedProject);
-    } else {
-      fetchEnv();
+      setVariables(data.variables ?? []);
+    } catch (err) {
+      onToast(`Error: ${String(err)}`);
+    } finally {
+      setLoading(false);
     }
-  }, [isWorkspace, selectedProject, fetchEnv]);
+  }, [project, onToast]);
 
   useEffect(() => {
-    setRevealed(new Set());
-  }, [selectedProject]);
-
-  const handleProjectChange = (project: string) => {
-    setSelectedProject(project);
-  };
+    fetchEnv();
+  }, [fetchEnv]);
 
   const updateVariable = (index: number, field: "key" | "value", val: string) => {
     setVariables((prev) =>
@@ -106,13 +84,13 @@ export default function EnvPage({
   });
 
   const hasDuplicates = duplicateKeys.size > 0;
-  const canSave = !saving && !hasDuplicates && (!isWorkspace || !!selectedProject);
+  const canSave = !saving && !hasDuplicates;
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const params = isWorkspace && selectedProject
-        ? `?project=${encodeURIComponent(selectedProject)}`
+      const params = project
+        ? `?project=${encodeURIComponent(project)}`
         : "";
       const res = await fetch(`/api/env${params}`, {
         method: "PUT",
@@ -132,20 +110,6 @@ export default function EnvPage({
     }
   };
 
-  const chevron = (
-    <svg
-      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-    >
-      <path
-        fillRule="evenodd"
-        d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
@@ -161,46 +125,15 @@ export default function EnvPage({
 
         {/* Body */}
         <div className="px-6 py-4 space-y-4">
-          {/* Project selector (workspace only) */}
-          {isWorkspace && (
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Project
-              </label>
-              <div className="relative">
-                <select
-                  value={selectedProject}
-                  onChange={(e) => handleProjectChange(e.target.value)}
-                  className="w-full appearance-none bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 pr-10 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">Select a project...</option>
-                  {projects.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-                {chevron}
-              </div>
-            </div>
-          )}
-
-          {/* No project selected message (workspace) */}
-          {isWorkspace && !selectedProject && (
-            <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
-              Select a project to manage its environment variables.
-            </div>
-          )}
-
           {/* Loading */}
-          {loading && (isWorkspace ? !!selectedProject : true) && (
+          {loading && (
             <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
               Loading...
             </div>
           )}
 
           {/* Variable list */}
-          {!loading && (!isWorkspace || !!selectedProject) && (
+          {!loading && (
             <>
               {variables.length === 0 ? (
                 <div className="text-center py-8">

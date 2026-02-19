@@ -672,8 +672,7 @@ export default function App() {
           <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="px-4 py-6">
               <EnvPage
-                isWorkspace={!!config.workspace}
-                initialProject={
+                project={
                   snapshot?.agents[currentView.agentName]?.project ?? undefined
                 }
                 onToast={showToast}
