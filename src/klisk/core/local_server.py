@@ -101,17 +101,25 @@ def _write_pid_info(project: str, info: LocalServerInfo) -> None:
     pid_path.write_text(json.dumps(info.to_dict(), indent=2), encoding="utf-8")
 
 
-def _probe_health(port: int) -> bool:
-    """Check if a klisk production server is responding on the given port."""
+def _probe_server_name(port: int) -> str | None:
+    """Return the project name running on the given port, or None."""
     try:
-        r = httpx.get(f"http://127.0.0.1:{port}/health", timeout=2)
-        return r.status_code == 200
+        r = httpx.get(f"http://127.0.0.1:{port}/api/info", timeout=2)
+        if r.status_code == 200:
+            return r.json().get("name")
     except Exception:
-        return False
+        pass
+    return None
 
 
-def get_status(project: str, port: int = 8080) -> dict:
-    """Get the status of the local production server."""
+def get_status(project: str, port: int = 8080, config_name: str = "") -> dict:
+    """Get the status of the local production server.
+
+    Args:
+        project: Project directory name (used for PID file lookup).
+        port: Port to check as fallback.
+        config_name: Project config name to match against /api/info.
+    """
     info = _read_pid_info(project)
     if info is not None:
         return {
@@ -121,14 +129,16 @@ def get_status(project: str, port: int = 8080) -> dict:
             "url": f"http://localhost:{info.port}",
         }
 
-    # Fallback: check if port is in use and responds to /health
-    if _is_port_in_use(port) and _probe_health(port):
-        return {
-            "running": True,
-            "port": port,
-            "pid": None,
-            "url": f"http://localhost:{port}",
-        }
+    # Fallback: check if port is in use and the running project matches
+    if _is_port_in_use(port):
+        running_name = _probe_server_name(port)
+        if running_name and config_name and running_name == config_name:
+            return {
+                "running": True,
+                "port": port,
+                "pid": None,
+                "url": f"http://localhost:{port}",
+            }
 
     return {"running": False, "port": None, "pid": None, "url": None}
 

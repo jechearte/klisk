@@ -424,10 +424,11 @@ def _build_api_router():
         if project_dir is None:
             return {"running": False, "port": None, "pid": None, "url": None}
         from klisk.core.local_server import get_status
+        proj_cfg = ProjectConfig.load(project_dir)
         project_name = project or (
             _config.name if _config else project_dir.name
         )
-        return await asyncio.to_thread(get_status, project_name)
+        return await asyncio.to_thread(get_status, project_name, 8080, proj_cfg.name)
 
     @router.post("/local-server/start")
     async def local_server_start(request: Request, project: str | None = Query(None)):
