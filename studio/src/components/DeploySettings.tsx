@@ -30,13 +30,14 @@ const DEFAULT_CONFIG: DeployConfig = {
   },
 };
 
-type DeployTab = "chat" | "widget" | "api";
+type DeployTab = "interfaces" | "api";
 
 const TABS: { id: DeployTab; label: string }[] = [
-  { id: "chat", label: "Chat Page" },
-  { id: "widget", label: "Widget" },
+  { id: "interfaces", label: "Interfaces" },
   { id: "api", label: "API" },
 ];
+
+type PreviewMode = "chat" | "widget";
 
 function Toggle({
   label,
@@ -371,7 +372,8 @@ export default function DeploySettings({
   const [config, setConfig] = useState<DeployConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<DeployTab>("chat");
+  const [activeTab, setActiveTab] = useState<DeployTab>("interfaces");
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("chat");
 
   const fetchConfig = useCallback(async () => {
     setLoading(true);
@@ -415,6 +417,23 @@ export default function DeploySettings({
     } finally {
       setSaving(false);
     }
+  };
+
+  // Shared fields synced to both chat and widget
+  const SHARED_MAP: Record<string, { chat?: string; widget?: string }> = {
+    title: { chat: "title" },
+    welcome_message: { chat: "welcome_message", widget: "welcome_message" },
+    placeholder: { widget: "placeholder" },
+  };
+
+  const updateShared = (field: string, value: unknown) => {
+    const map = SHARED_MAP[field];
+    setConfig((prev) => {
+      const next = { ...prev };
+      if (map?.chat) next.chat = { ...prev.chat, [map.chat]: value };
+      if (map?.widget) next.widget = { ...prev.widget, [map.widget]: value };
+      return next;
+    });
   };
 
   const updateChat = (field: string, value: unknown) => {
@@ -479,18 +498,14 @@ export default function DeploySettings({
         {/* Form */}
         <div className="flex-1 overflow-y-auto">
           <div className="px-5 py-5 space-y-4">
-            {activeTab === "chat" && (
+            {activeTab === "interfaces" && (
               <>
-                <Toggle
-                  label="Enabled"
-                  checked={config.chat.enabled}
-                  onChange={(v) => updateChat("enabled", v)}
-                />
+                {/* Shared settings */}
                 <Field label="Title">
                   <input
                     type="text"
                     value={config.chat.title}
-                    onChange={(e) => updateChat("title", e.target.value)}
+                    onChange={(e) => updateShared("title", e.target.value)}
                     placeholder={projectName || "Agent name"}
                     className={inputClass}
                   />
@@ -498,87 +513,8 @@ export default function DeploySettings({
                 <Field label="Welcome message">
                   <textarea
                     value={config.chat.welcome_message}
-                    onChange={(e) => updateChat("welcome_message", e.target.value)}
+                    onChange={(e) => updateShared("welcome_message", e.target.value)}
                     placeholder="Send a message to start chatting"
-                    rows={2}
-                    className={inputClass + " resize-none"}
-                  />
-                </Field>
-                <Toggle
-                  label="File attachments"
-                  checked={config.chat.attachments}
-                  onChange={(v) => updateChat("attachments", v)}
-                />
-              </>
-            )}
-
-            {activeTab === "widget" && (
-              <>
-                <Toggle
-                  label="Enabled"
-                  checked={config.widget.enabled}
-                  onChange={(v) => updateWidget("enabled", v)}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <Field label="Button color">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={config.widget.color}
-                        onChange={(e) => updateWidget("color", e.target.value)}
-                        className="w-8 h-8 rounded border border-gray-300 dark:border-gray-700 cursor-pointer p-0"
-                      />
-                      <input
-                        type="text"
-                        value={config.widget.color}
-                        onChange={(e) => updateWidget("color", e.target.value)}
-                        className={inputClass + " flex-1"}
-                      />
-                    </div>
-                  </Field>
-                  <Field label="Position">
-                    <div className="relative">
-                      <select
-                        value={config.widget.position}
-                        onChange={(e) => updateWidget("position", e.target.value)}
-                        className={selectClass}
-                      >
-                        <option value="bottom-right">Bottom right</option>
-                        <option value="bottom-left">Bottom left</option>
-                      </select>
-                      <svg
-                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  </Field>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <Field label="Width">
-                    <input
-                      type="text"
-                      value={config.widget.width}
-                      onChange={(e) => updateWidget("width", e.target.value)}
-                      className={inputClass}
-                    />
-                  </Field>
-                  <Field label="Height">
-                    <input
-                      type="text"
-                      value={config.widget.height}
-                      onChange={(e) => updateWidget("height", e.target.value)}
-                      className={inputClass}
-                    />
-                  </Field>
-                </div>
-                <Field label="Welcome message">
-                  <textarea
-                    value={config.widget.welcome_message}
-                    onChange={(e) => updateWidget("welcome_message", e.target.value)}
-                    placeholder="Hi! How can I help you?"
                     rows={2}
                     className={inputClass + " resize-none"}
                   />
@@ -587,34 +523,98 @@ export default function DeploySettings({
                   <input
                     type="text"
                     value={config.widget.placeholder}
-                    onChange={(e) => updateWidget("placeholder", e.target.value)}
+                    onChange={(e) => updateShared("placeholder", e.target.value)}
                     className={inputClass}
                   />
                 </Field>
-                <Toggle
-                  label="Auto-open on page load"
-                  checked={config.widget.auto_open}
-                  onChange={(v) => updateWidget("auto_open", v)}
-                />
-                <Field label="Embed snippet">
-                  <div className="relative">
-                    <pre className="bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-600 dark:text-gray-400 font-mono overflow-x-auto">
-                      {widgetSnippet}
-                    </pre>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(widgetSnippet);
-                        onToast("Snippet copied to clipboard");
-                      }}
-                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-                      title="Copy"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
-                      </svg>
-                    </button>
+                <Field label="Accent color">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={config.widget.color}
+                      onChange={(e) => updateWidget("color", e.target.value)}
+                      className="w-8 h-8 rounded border border-gray-300 dark:border-gray-700 cursor-pointer p-0"
+                    />
+                    <input
+                      type="text"
+                      value={config.widget.color}
+                      onChange={(e) => updateWidget("color", e.target.value)}
+                      className={inputClass + " flex-1"}
+                    />
                   </div>
                 </Field>
+                <Toggle
+                  label="File attachments"
+                  checked={config.chat.attachments}
+                  onChange={(v) => updateChat("attachments", v)}
+                />
+
+                {/* Chat Page section */}
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-800">
+                  <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Chat Page</h3>
+                  <Toggle
+                    label="Enabled"
+                    checked={config.chat.enabled}
+                    onChange={(v) => updateChat("enabled", v)}
+                  />
+                </div>
+
+                {/* Widget section */}
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-800 space-y-4">
+                  <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Widget</h3>
+                  <Toggle
+                    label="Enabled"
+                    checked={config.widget.enabled}
+                    onChange={(v) => updateWidget("enabled", v)}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Position">
+                      <div className="relative">
+                        <select
+                          value={config.widget.position}
+                          onChange={(e) => updateWidget("position", e.target.value)}
+                          className={selectClass}
+                        >
+                          <option value="bottom-right">Bottom right</option>
+                          <option value="bottom-left">Bottom left</option>
+                        </select>
+                        <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    </Field>
+                    <div />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Width">
+                      <input type="text" value={config.widget.width} onChange={(e) => updateWidget("width", e.target.value)} className={inputClass} />
+                    </Field>
+                    <Field label="Height">
+                      <input type="text" value={config.widget.height} onChange={(e) => updateWidget("height", e.target.value)} className={inputClass} />
+                    </Field>
+                  </div>
+                  <Toggle
+                    label="Auto-open on page load"
+                    checked={config.widget.auto_open}
+                    onChange={(v) => updateWidget("auto_open", v)}
+                  />
+                  <Field label="Embed snippet">
+                    <div className="relative">
+                      <pre className="bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-600 dark:text-gray-400 font-mono overflow-x-auto">
+                        {widgetSnippet}
+                      </pre>
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(widgetSnippet); onToast("Snippet copied to clipboard"); }}
+                        className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                        title="Copy"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+                        </svg>
+                      </button>
+                    </div>
+                  </Field>
+                </div>
               </>
             )}
 
@@ -652,12 +652,29 @@ export default function DeploySettings({
 
       {/* Right: Live Preview */}
       <div className="flex-1 min-w-0 bg-gray-50 dark:bg-gray-950 flex flex-col">
-        <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+        <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-800 flex-shrink-0 flex items-center justify-between">
           <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">Preview</span>
+          {activeTab === "interfaces" && (
+            <div className="flex items-center bg-gray-200 dark:bg-gray-800 rounded-lg p-0.5">
+              {(["chat", "widget"] as PreviewMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setPreviewMode(mode)}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                    previewMode === mode
+                      ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  }`}
+                >
+                  {mode === "chat" ? "Chat Page" : "Widget"}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex-1 min-h-0">
-          {activeTab === "chat" && <ChatPreview config={config} projectName={projectName} />}
-          {activeTab === "widget" && <WidgetPreview config={config} />}
+          {activeTab === "interfaces" && previewMode === "chat" && <ChatPreview config={config} projectName={projectName} />}
+          {activeTab === "interfaces" && previewMode === "widget" && <WidgetPreview config={config} />}
           {activeTab === "api" && <ApiPreview config={config} />}
         </div>
       </div>
