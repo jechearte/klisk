@@ -1,4 +1,4 @@
-"""Background worker process for klisk dev server.
+"""Background worker process for klisk studio server.
 
 Run as: python -m klisk.cli._dev_worker --port PORT [--project-path PATH]
 

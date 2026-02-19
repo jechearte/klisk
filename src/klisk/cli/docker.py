@@ -36,7 +36,7 @@ COPY . .
 
 EXPOSE 8080
 
-CMD ["klisk", "serve", ".", "--port", "8080"]
+CMD ["klisk", "start", ".", "--port", "8080"]
 """
 
 DOCKERIGNORE_TEMPLATE = """\

@@ -1,4 +1,4 @@
-"""Daemon lifecycle management for klisk dev server."""
+"""Daemon lifecycle management for klisk studio server."""
 
 from __future__ import annotations
 

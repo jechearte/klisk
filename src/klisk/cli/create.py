@@ -95,4 +95,4 @@ def create(
     typer.echo()
     typer.echo("Next steps:")
     typer.echo(f"  1. Add your API key in {env_file}")
-    typer.echo(f"  2. klisk dev {name}          # start the Studio")
+    typer.echo(f"  2. klisk studio              # start the Studio")

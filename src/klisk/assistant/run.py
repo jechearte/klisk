@@ -218,7 +218,7 @@ async def _run_loop(cwd: Path, model: str) -> None:
             return PermissionResultDeny(
                 message="Access to .env files is blocked — they contain secrets. "
                 "Tell the user they can manage environment variables from the Studio: "
-                "run `klisk dev <project>` and go to the Environment tab."
+                "run `klisk studio` and go to the Environment tab."
             )
 
         # Present clarifying questions to the user and collect answers.

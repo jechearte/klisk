@@ -1,4 +1,4 @@
-"""klisk serve — start the production server."""
+"""klisk start — start the production server."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import typer
 from klisk.core.paths import resolve_project
 
 
-def serve(
+def start(
     name_or_path: str = typer.Argument(".", help="Project name or path"),
     port: Optional[int] = typer.Option(None, "--port", "-p", help="Port (default: $PORT or 8080)"),
     host: str = typer.Option("0.0.0.0", "--host", "-h", help="Host to bind to"),
