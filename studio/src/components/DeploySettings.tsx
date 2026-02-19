@@ -94,6 +94,11 @@ const selectClass =
 
 // ---- Preview Components ----
 
+type ChatMessage = { role: "user" | "assistant"; text: string };
+
+const MOCK_RESPONSE =
+  "Hello! I'm here to help. Feel free to ask me anything and I'll do my best to assist you.";
+
 function ChatPreview({
   config,
   projectName,
@@ -103,6 +108,27 @@ function ChatPreview({
 }) {
   const title = config.chat.title || projectName || "My Agent";
   const welcome = config.chat.welcome_message || "Send a message to start chatting";
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const messagesEndRef = useCallback((node: HTMLDivElement | null) => {
+    node?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  const handleSend = () => {
+    const text = input.trim();
+    if (!text) return;
+    setInput("");
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", text },
+      { role: "assistant", text: MOCK_RESPONSE },
+    ]);
+  };
+
+  const handleClear = () => {
+    setMessages([]);
+    setInput("");
+  };
 
   if (!config.chat.enabled) {
     return (
@@ -121,7 +147,7 @@ function ChatPreview({
         backgroundSize: "24px 24px",
       }}
     >
-      <div className="w-full max-w-[340px] h-[440px] bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_16px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden">
+      <div className="w-full max-w-[520px] h-[580px] bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_16px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
           <span className="text-[15px] font-semibold text-gray-900 dark:text-white flex-1 truncate">{title}</span>
@@ -133,20 +159,49 @@ function ChatPreview({
               </svg>
             </div>
             {/* Clear button */}
-            <div className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 text-gray-400">
+            <button
+              onClick={handleClear}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
               </svg>
-            </div>
+            </button>
           </div>
         </div>
         {/* Messages area */}
-        <div className="flex-1 flex items-start justify-center px-4 pt-20">
-          <p className="text-[15px] text-gray-400 dark:text-gray-500 text-center">{welcome}</p>
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 min-h-0">
+          {messages.length === 0 ? (
+            <div className="flex items-start justify-center pt-20">
+              <p className="text-[15px] text-gray-400 dark:text-gray-500 text-center">{welcome}</p>
+            </div>
+          ) : (
+            messages.map((msg, i) => (
+              <div
+                key={i}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className="max-w-[85%] px-3.5 py-2 rounded-xl text-sm leading-relaxed break-words"
+                  style={
+                    msg.role === "user"
+                      ? { background: "#2563eb", color: "#ffffff" }
+                      : { background: "#f3f4f6", color: "#1f2937" }
+                  }
+                >
+                  {msg.text}
+                </div>
+              </div>
+            ))
+          )}
+          <div ref={messagesEndRef} />
         </div>
         {/* Input area */}
         <div className="px-4 pb-3 flex-shrink-0">
-          <div className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-3xl px-4 py-2">
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+            className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-3xl px-4 py-2"
+          >
             {config.chat.attachments && (
               <div className="w-8 h-8 flex items-center justify-center flex-shrink-0 text-gray-400">
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -154,13 +209,22 @@ function ChatPreview({
                 </svg>
               </div>
             )}
-            <span className="text-sm text-gray-400 dark:text-gray-500 flex-1 py-1">Type a message...</span>
-            <div className="w-8 h-8 rounded-full bg-gray-800 dark:bg-white flex items-center justify-center flex-shrink-0">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Type a message..."
+              className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none py-1"
+            />
+            <button
+              type="submit"
+              className="w-8 h-8 rounded-full bg-gray-800 dark:bg-white flex items-center justify-center flex-shrink-0"
+            >
               <svg className="w-4 h-4 text-white dark:text-gray-800" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
               </svg>
-            </div>
-          </div>
+            </button>
+          </form>
         </div>
       </div>
     </div>
