@@ -1,4 +1,4 @@
-const ITEMS = [
+const LISTING_ITEMS = [
   {
     id: "agents" as const,
     label: "Agents",
@@ -20,25 +20,66 @@ const ITEMS = [
   },
 ] as const;
 
-type NavItem = (typeof ITEMS)[number]["id"];
+const DETAIL_ITEMS = [
+  {
+    id: "playground" as const,
+    label: "Playground",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+        <path fillRule="evenodd" d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z" clipRule="evenodd" />
+      </svg>
+    ),
+  },
+  {
+    id: "env" as const,
+    label: ".env",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+        <path fillRule="evenodd" d="M15.75 1.5a6.75 6.75 0 0 0-6.651 7.906c.067.39-.032.717-.221.906l-6.5 6.499a3 3 0 0 0-.878 2.121v2.818c0 .414.336.75.75.75H6a.75.75 0 0 0 .75-.75v-1.5h1.5A.75.75 0 0 0 9 19.5V18h1.5a.75.75 0 0 0 .53-.22l2.658-2.658c.19-.189.517-.288.906-.22A6.75 6.75 0 1 0 15.75 1.5Zm0 3a.75.75 0 0 0 0 1.5A2.25 2.25 0 0 1 18 8.25a.75.75 0 0 0 1.5 0 3.75 3.75 0 0 0-3.75-3.75Z" clipRule="evenodd" />
+      </svg>
+    ),
+  },
+  {
+    id: "deploy" as const,
+    label: "Deploy",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+        <path fillRule="evenodd" d="M9.315 7.584C12.195 3.883 16.695 1.5 21.75 1.5a.75.75 0 0 1 .75.75c0 5.056-2.383 9.555-6.084 12.436A6.75 6.75 0 0 1 9.75 22.5a.75.75 0 0 1-.75-.75v-4.131A15.838 15.838 0 0 1 6.382 15H2.25a.75.75 0 0 1-.75-.75 6.75 6.75 0 0 1 7.815-6.666ZM15 6.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" clipRule="evenodd" />
+        <path d="M5.26 17.242a.75.75 0 1 0-.897-1.203 5.243 5.243 0 0 0-2.05 5.022.75.75 0 0 0 .625.627 5.243 5.243 0 0 0 5.022-2.051.75.75 0 1 0-1.202-.897 3.744 3.744 0 0 1-3.008 1.51c0-1.23.592-2.323 1.51-3.008Z" />
+      </svg>
+    ),
+  },
+] as const;
+
+export type ListingNavItem = (typeof LISTING_ITEMS)[number]["id"];
+export type DetailNavItem = (typeof DETAIL_ITEMS)[number]["id"];
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
-  activeItem: NavItem;
-  onNavigate: (item: NavItem) => void;
   dark: boolean;
   onToggleDark: () => void;
+  mode: "listing" | "detail";
+  activeListingItem?: ListingNavItem;
+  activeDetailItem?: DetailNavItem;
+  onListingNavigate?: (item: ListingNavItem) => void;
+  onDetailNavigate?: (item: DetailNavItem) => void;
 }
 
 export default function Sidebar({
   collapsed,
   onToggle,
-  activeItem,
-  onNavigate,
   dark,
   onToggleDark,
+  mode,
+  activeListingItem,
+  activeDetailItem,
+  onListingNavigate,
+  onDetailNavigate,
 }: SidebarProps) {
+  const items = mode === "detail" ? DETAIL_ITEMS : LISTING_ITEMS;
+  const activeId = mode === "detail" ? activeDetailItem : activeListingItem;
+
   return (
     <aside
       className={`flex flex-col flex-shrink-0 bg-gray-50 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 transition-[width] duration-200 ease-in-out overflow-hidden ${
@@ -104,12 +145,18 @@ export default function Sidebar({
 
       {/* Nav items */}
       <nav className={`flex flex-col gap-0.5 mt-2 ${collapsed ? "px-1.5" : "px-2"}`}>
-        {ITEMS.map((item) => {
-          const isActive = activeItem === item.id;
+        {items.map((item) => {
+          const isActive = activeId === item.id;
           return (
             <button
               key={item.id}
-              onClick={() => onNavigate(item.id)}
+              onClick={() => {
+                if (mode === "detail" && onDetailNavigate) {
+                  onDetailNavigate(item.id as DetailNavItem);
+                } else if (mode === "listing" && onListingNavigate) {
+                  onListingNavigate(item.id as ListingNavItem);
+                }
+              }}
               title={collapsed ? item.label : undefined}
               className={`flex items-center gap-2.5 rounded-lg transition-colors ${
                 collapsed ? "justify-center p-2.5" : "px-3 py-2"
