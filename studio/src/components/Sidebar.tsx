@@ -64,6 +64,7 @@ interface SidebarProps {
   activeDetailItem?: DetailNavItem;
   onListingNavigate?: (item: ListingNavItem) => void;
   onDetailNavigate?: (item: DetailNavItem) => void;
+  onLogoClick?: () => void;
 }
 
 export default function Sidebar({
@@ -76,6 +77,7 @@ export default function Sidebar({
   activeDetailItem,
   onListingNavigate,
   onDetailNavigate,
+  onLogoClick,
 }: SidebarProps) {
   const items = mode === "detail" ? DETAIL_ITEMS : LISTING_ITEMS;
   const activeId = mode === "detail" ? activeDetailItem : activeListingItem;
@@ -115,10 +117,16 @@ export default function Sidebar({
           </button>
         ) : (
           <>
-            <img src="/favicon.png" alt="Klisk" className="w-5 h-5 flex-shrink-0" />
-            <span className="text-sm font-semibold text-gray-900 dark:text-white truncate flex-1">
-              Klisk Studio
-            </span>
+            <button
+              onClick={onLogoClick}
+              className="flex items-center gap-2 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+              title="Go to agents"
+            >
+              <img src="/favicon.png" alt="Klisk" className="w-5 h-5 flex-shrink-0" />
+              <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                Klisk Studio
+              </span>
+            </button>
             <button
               onClick={onToggle}
               className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors flex-shrink-0"

@@ -553,6 +553,10 @@ export default function App() {
         activeDetailItem={activeTab}
         onListingNavigate={handleListingNavigate}
         onDetailNavigate={handleDetailNavigate}
+        onLogoClick={() => {
+          setShowAssistant(false);
+          setCurrentView({ page: "listing" });
+        }}
       />
 
       {/* Main column */}
