@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import shutil
 import sys
 from pathlib import Path
 
@@ -18,8 +19,62 @@ def _check_sdk_installed() -> bool:
         return False
 
 
+def _patch_sdk_message_parser() -> None:
+    """Patch SDK parser to tolerate new CLI event message types."""
+    try:
+        from claude_agent_sdk._errors import MessageParseError
+        from claude_agent_sdk._internal import client as internal_client
+        from claude_agent_sdk._internal import message_parser as parser_module
+        from claude_agent_sdk.types import SystemMessage
+    except Exception:
+        return
+
+    if getattr(internal_client, "_klisk_parser_patched", False):
+        return
+
+    original_parse_message = internal_client.parse_message
+
+    def _parse_message_with_fallback(data):  # type: ignore[no-untyped-def]
+        try:
+            return original_parse_message(data)
+        except MessageParseError:
+            if isinstance(data, dict):
+                message_type = data.get("type")
+                if isinstance(message_type, str) and message_type.endswith("_event"):
+                    return SystemMessage(subtype=message_type, data=data)
+            raise
+
+    internal_client.parse_message = _parse_message_with_fallback
+    parser_module.parse_message = _parse_message_with_fallback
+    internal_client._klisk_parser_patched = True
+
+
+def _has_claude_auth_session() -> bool:
+    import json
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["claude", "auth", "status"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except Exception:
+        return False
+
+    try:
+        payload = json.loads(result.stdout.strip() or "{}")
+    except json.JSONDecodeError:
+        return False
+
+    return bool(payload.get("loggedIn"))
+
+
 def _ensure_auth() -> None:
     import os
+    import subprocess
 
     # Limpiar CLAUDECODE para evitar detección de sesión anidada
     os.environ.pop("CLAUDECODE", None)
@@ -28,25 +83,42 @@ def _ensure_auth() -> None:
     if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
         return
 
-    # Pedir token al usuario
+    # Ya autenticado en Claude Code via `claude auth login`
+    if _has_claude_auth_session():
+        return
+
+    # Pedir login o token al usuario
     print()
     print("  No authentication found.")
     print()
-    print("  To get your token, run in another terminal:")
+    print("  Sign in with Claude Code:")
     print()
-    print("    claude setup-token")
+    print("    claude auth login")
     print()
-    print("  Copy the token and paste it below.")
+    print("  Press Enter to run that command now, or paste a token instead.")
     print()
 
     try:
-        token = input("  Token: ").strip()
+        token = input("  Token (or Enter to login): ").strip()
     except (EOFError, KeyboardInterrupt):
         print()
         raise SystemExit(1)
 
     if not token:
-        print("\nError: No token provided.", file=sys.stderr)
+        print()
+        try:
+            subprocess.run(["claude", "auth", "login"], check=False)
+        except Exception as e:
+            print(f"\nError: Could not run 'claude auth login': {e}", file=sys.stderr)
+            raise SystemExit(1)
+
+        if _has_claude_auth_session():
+            return
+
+        print(
+            "\nError: Login did not complete. Run 'claude auth login' and retry.",
+            file=sys.stderr,
+        )
         raise SystemExit(1)
 
     os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
@@ -90,6 +162,9 @@ async def _run_loop(cwd: Path, model: str) -> None:
     console.print("  [dim]Type 'exit' or Ctrl+C to quit.[/dim]")
     console.print()
 
+    # Use the same Claude binary available in the user's PATH so auth state matches.
+    cli_path = shutil.which("claude")
+
     def _on_stderr(line: str) -> None:
         console.print(f"  [dim red]{line.rstrip()}[/dim red]")
 
@@ -119,10 +194,12 @@ async def _run_loop(cwd: Path, model: str) -> None:
             if val:
                 sdk_env[key] = val
 
-        # Debug: show which auth keys are being passed
+        # Debug: show which auth source is being used
         if sdk_env:
             auth_keys = ", ".join(sdk_env.keys())
             console.print(f"  [dim]Auth: {auth_keys}[/dim]")
+        elif _has_claude_auth_session():
+            console.print("  [dim]Auth: claude auth session[/dim]")
         else:
             console.print("  [bold red]Warning: No auth tokens found in env![/bold red]")
 
@@ -130,11 +207,13 @@ async def _run_loop(cwd: Path, model: str) -> None:
             model=model,
             system_prompt=SYSTEM_PROMPT,
             include_partial_messages=True,
-            allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+            allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Skill"],
+            setting_sources=["user", "project"],
             permission_mode="acceptEdits",
             cwd=str(cwd),
             max_turns=50,
             env=sdk_env,
+            cli_path=cli_path,
             stderr=_on_stderr,
         )
 
@@ -235,6 +314,7 @@ def run_assistant(cwd: Path, *, model: str = "opus") -> None:
         )
         raise SystemExit(1)
 
+    _patch_sdk_message_parser()
     _ensure_auth()
 
     asyncio.run(_run_loop(cwd, model))

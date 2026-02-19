@@ -26,8 +26,10 @@ def main(ctx: typer.Context) -> None:
         return
 
     from klisk.core.paths import get_projects_dir, KLISK_HOME
+    from klisk.core.skill_installer import install_skill
 
     get_projects_dir()  # creates ~/klisk/ and ~/klisk/projects/
+    install_skill(KLISK_HOME)  # downloads klisk-guide skill from GitHub
 
     home_display = f"~/{KLISK_HOME.relative_to(KLISK_HOME.parent)}"
 
