@@ -19,6 +19,7 @@ import type {
   Attachment,
   AgentInfo,
   ToolInfo,
+  LocalServerStatus,
 } from "./types";
 
 const STORAGE_KEY_THEME = "klisk-theme";
@@ -88,6 +89,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>({ page: "listing" });
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connected, setConnected] = useState(false);
+  const [localServerRunning, setLocalServerRunning] = useState(false);
   const chatWsRef = useRef<WebSocket | null>(null);
   const reloadWsRef = useRef<WebSocket | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -380,6 +382,31 @@ export default function App() {
     }
   }, [snapshot, currentView]);
 
+  // Poll local server status when viewing an agent detail
+  useEffect(() => {
+    if (currentView.page !== "detail" || !snapshot) {
+      setLocalServerRunning(false);
+      return;
+    }
+    const project = snapshot.agents[currentView.agentName]?.project;
+    const qs = project ? `?project=${encodeURIComponent(project)}` : "";
+
+    let active = true;
+    const check = async () => {
+      try {
+        const res = await fetch(`/api/local-server/status${qs}`);
+        if (!res.ok || !active) return;
+        const data: LocalServerStatus = await res.json();
+        if (active) setLocalServerRunning(data.running);
+      } catch {
+        // ignore
+      }
+    };
+    check();
+    const interval = setInterval(check, 5000);
+    return () => { active = false; clearInterval(interval); };
+  }, [currentView, snapshot]);
+
   const sendMessage = useCallback(
     (text: string, attachments?: Attachment[]) => {
       if (!chatWsRef.current || chatWsRef.current.readyState !== WebSocket.OPEN)
@@ -588,11 +615,12 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <span
                   className={`w-2 h-2 rounded-full ${
-                    connected ? "bg-green-400" : "bg-red-400"
+                    localServerRunning ? "bg-green-400" : "bg-gray-300 dark:bg-gray-600"
                   }`}
+                  title={localServerRunning ? "Local server running" : "Local server not running"}
                 />
                 <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                  {connected ? "Connected" : "Disconnected"}
+                  {localServerRunning ? "Deployed" : "Not deployed"}
                 </span>
                 {typeof config.name === "string" && !config.workspace && (
                   <>
