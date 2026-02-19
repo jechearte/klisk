@@ -149,7 +149,11 @@ def _format_tool_detail(name: str, raw_json: str) -> str:
 
 async def _run_loop(cwd: Path, model: str) -> None:
     from claude_agent_sdk import ClaudeAgentOptions, HookMatcher, ResultMessage, query
-    from claude_agent_sdk.types import StreamEvent
+    from claude_agent_sdk.types import (
+        PermissionResultAllow,
+        PermissionResultDeny,
+        StreamEvent,
+    )
     from rich.console import Console
     from rich.live import Live
     from rich.markdown import Markdown
@@ -165,20 +169,85 @@ async def _run_loop(cwd: Path, model: str) -> None:
     # Use the same Claude binary available in the user's PATH so auth state matches.
     cli_path = shutil.which("claude")
 
-    async def _bash_guard(input_data, tool_use_id, context):  # type: ignore[no-untyped-def]
-        """Allow klisk CLI commands automatically; ask the user for anything else."""
+    async def _auto_approve_klisk(input_data, tool_use_id, context):  # type: ignore[no-untyped-def]
+        """Auto-approve klisk CLI commands; defer to permission mode for others."""
         command = input_data.get("tool_input", {}).get("command", "").strip()
         if command.startswith("klisk"):
-            return {}
-        return {
-            "hookSpecificOutput": {
-                "hookEventName": input_data["hook_event_name"],
-                "permissionDecision": "ask",
+            return {
+                "hookSpecificOutput": {
+                    "hookEventName": input_data["hook_event_name"],
+                    "permissionDecision": "allow",
+                }
             }
-        }
+        return {}
+
+    # Read-only system commands that are safe to auto-approve.
+    safe_commands = {
+        "ls", "find", "tree", "du", "df",
+        "cat", "head", "tail", "wc", "file", "stat",
+        "echo", "printf", "pwd", "which", "whoami", "hostname",
+        "env", "printenv", "date", "uname",
+    }
+
+    async def _can_use_tool(tool_name, input_data, context):  # type: ignore[no-untyped-def]
+        """Handle AskUserQuestion, auto-approve safe Bash, prompt for the rest."""
+        # Present clarifying questions to the user and collect answers.
+        if tool_name == "AskUserQuestion":
+            questions = input_data.get("questions", [])
+            answers: dict[str, str] = {}
+            for q in questions:
+                console.print(f"\n  [bold]{q.get('question', '')}[/bold]")
+                options = q.get("options", [])
+                for i, opt in enumerate(options, 1):
+                    label = opt.get("label", "")
+                    desc = opt.get("description", "")
+                    console.print(f"    [cyan]{i}.[/cyan] {label}" + (f" [dim]— {desc}[/dim]" if desc else ""))
+                console.print(f"    [cyan]{len(options) + 1}.[/cyan] Other")
+                try:
+                    choice = console.input("\n  [yellow]Choice:[/yellow] ").strip()
+                except (EOFError, KeyboardInterrupt):
+                    return PermissionResultDeny(message="User cancelled")
+                # Map number to label, or use raw input as custom answer.
+                try:
+                    idx = int(choice) - 1
+                    if 0 <= idx < len(options):
+                        answers[q["question"]] = options[idx]["label"]
+                    else:
+                        custom = console.input("  [yellow]Your answer:[/yellow] ").strip()
+                        answers[q["question"]] = custom
+                except ValueError:
+                    answers[q["question"]] = choice
+            return PermissionResultAllow(
+                updated_input={**input_data, "answers": answers},
+            )
+
+        if tool_name != "Bash":
+            return PermissionResultAllow(updated_input=input_data)
+
+        command = input_data.get("command", "").strip()
+        first_word = command.split()[0] if command.split() else ""
+        base_cmd = os.path.basename(first_word)
+
+        if base_cmd in safe_commands:
+            return PermissionResultAllow(updated_input=input_data)
+
+        # Ask the user
+        try:
+            answer = console.input(
+                f"  [yellow]Allow:[/yellow] [dim]{command}[/dim] [yellow][y/N][/yellow] "
+            )
+        except (EOFError, KeyboardInterrupt):
+            return PermissionResultDeny(message="User denied")
+
+        if answer.strip().lower() in ("y", "yes"):
+            return PermissionResultAllow(updated_input=input_data)
+        return PermissionResultDeny(message="User denied this command")
 
     def _on_stderr(line: str) -> None:
-        console.print(f"  [dim red]{line.rstrip()}[/dim red]")
+        stripped = line.rstrip()
+        if not stripped or "Error in hook callback" in stripped:
+            return
+        console.print(f"  [dim red]{stripped}[/dim red]")
 
     session_id: str | None = None
 
@@ -201,6 +270,10 @@ async def _run_loop(cwd: Path, model: str) -> None:
         os.environ.pop("CLAUDECODE", None)
 
         sdk_env: dict[str, str] = {}
+        # Include PATH so the subprocess can find klisk and other CLI tools
+        path = os.environ.get("PATH")
+        if path:
+            sdk_env["PATH"] = path
         for key in ("ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN"):
             val = os.environ.get(key)
             if val:
@@ -220,13 +293,14 @@ async def _run_loop(cwd: Path, model: str) -> None:
             system_prompt=SYSTEM_PROMPT,
             include_partial_messages=True,
             allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Skill"],
-            setting_sources=["user", "project"],
-            permission_mode="bypassPermissions",
+            setting_sources=["user"],
+            permission_mode="acceptEdits",
             hooks={
                 "PreToolUse": [
-                    HookMatcher(matcher="Bash", hooks=[_bash_guard]),
+                    HookMatcher(matcher="Bash", hooks=[_auto_approve_klisk]),
                 ],
             },
+            can_use_tool=_can_use_tool,
             cwd=str(cwd),
             max_turns=50,
             env=sdk_env,
@@ -244,7 +318,10 @@ async def _run_loop(cwd: Path, model: str) -> None:
         in_tool = False
         live: Live | None = None
         try:
-            async for message in query(prompt=stripped, options=options):
+            async def _prompt():  # type: ignore[no-untyped-def]
+                yield {"type": "user", "message": {"role": "user", "content": stripped}}
+
+            async for message in query(prompt=_prompt(), options=options):
                 # Capture session ID from init message
                 if (
                     hasattr(message, "subtype")

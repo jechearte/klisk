@@ -14,11 +14,11 @@ GITHUB_API_URL = f"https://api.github.com/repos/{SKILL_REPO}/contents/{SKILL_PAT
 
 
 def install_skill(klisk_home: Path) -> None:
-    """Download the klisk-guide skill to klisk_home/.claude/skills/klisk-guide/.
+    """Download the klisk-guide skill to ~/.claude/skills/klisk-guide/ (global).
 
     Skips if the skill directory already exists. Silently fails on network errors.
     """
-    skill_dir = klisk_home / ".claude" / "skills" / "klisk-guide"
+    skill_dir = Path.home() / ".claude" / "skills" / "klisk-guide"
 
     if skill_dir.exists():
         return
