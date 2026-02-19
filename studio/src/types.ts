@@ -39,6 +39,34 @@ export interface ModelsResponse {
   providers: Record<string, string[]>;
 }
 
+export interface ChatDeployConfig {
+  enabled: boolean;
+  title: string;
+  welcome_message: string;
+  attachments: boolean;
+}
+
+export interface WidgetDeployConfig {
+  enabled: boolean;
+  color: string;
+  position: string;
+  width: string;
+  height: string;
+  welcome_message: string;
+  placeholder: string;
+  auto_open: boolean;
+}
+
+export interface ApiDeployConfig {
+  cors_origins: string[];
+}
+
+export interface DeployConfig {
+  chat: ChatDeployConfig;
+  widget: WidgetDeployConfig;
+  api: ApiDeployConfig;
+}
+
 export type ChatMessage =
   | { role: "user"; content: string; attachments?: Attachment[] }
   | { role: "assistant"; content: string }
