@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import AgentCanvas from "./components/AgentCanvas";
 import AgentListing from "./components/AgentListing";
-import AssistantPanel from "./components/AssistantPanel";
+import AssistantPanel, { type AssistantPanelHandle } from "./components/AssistantPanel";
 import Chat from "./components/Chat";
 import Sidebar from "./components/Sidebar";
 import AgentModal from "./components/AgentModal";
@@ -131,14 +131,18 @@ export default function App() {
   const [selectedTool, setSelectedTool] = useState<ToolInfo | null>(null);
   const [showEnvModal, setShowEnvModal] = useState(false);
   const [showAssistant, setShowAssistant] = useState(false);
+  const assistantRef = useRef<AssistantPanelHandle>(null);
+  const [assistantHasMessages, setAssistantHasMessages] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem(STORAGE_KEY_SIDEBAR) === "true"
   );
 
-  // Sync dark class on <html>
+  // Sync dark class on <html> and PWA theme-color
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem(STORAGE_KEY_THEME, dark ? "dark" : "light");
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", dark ? "#030712" : "#f9fafb");
   }, [dark]);
 
   const toggleSidebar = useCallback(() => {
@@ -605,9 +609,30 @@ export default function App() {
         {/* Main Content */}
         {currentView.page === "listing" ? (
           showAssistant ? (
-            <div className="flex-1 flex items-stretch justify-center min-h-0 p-4 pt-6">
-              <div className="w-full max-w-[700px] flex flex-col min-h-0">
-                <AssistantPanel active={showAssistant} />
+            <div className="flex-1 relative min-h-0">
+              {/* Clear button at page top-right */}
+              {assistantHasMessages && (
+                <button
+                  onClick={() => assistantRef.current?.clearChat()}
+                  className="absolute top-3 right-5 z-10 p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                  title="Clear conversation"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                </button>
+              )}
+              {/* Scrollable content */}
+              <div className="h-full overflow-y-auto flex flex-col">
+                <div className="flex-1 flex flex-col items-center px-4 pt-6 pb-4">
+                  <div className="w-full max-w-[700px] flex-1 flex flex-col">
+                    <AssistantPanel
+                      ref={assistantRef}
+                      active={showAssistant}
+                      onMessagesChange={setAssistantHasMessages}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           ) : (

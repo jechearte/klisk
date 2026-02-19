@@ -12,6 +12,7 @@
     <script>
       if (localStorage.getItem("klisk-theme") === "light") {
         document.documentElement.classList.remove("dark");
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f9fafb");
       }
     </script>
   </head>

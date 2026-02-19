@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { AssistantMessage, AssistantQuestion } from "../types";
@@ -14,11 +14,17 @@ function loadMessages(): AssistantMessage[] {
   }
 }
 
-interface AssistantPanelProps {
-  active: boolean;
+export interface AssistantPanelHandle {
+  clearChat: () => void;
 }
 
-export default function AssistantPanel({ active }: AssistantPanelProps) {
+interface AssistantPanelProps {
+  active: boolean;
+  onMessagesChange?: (hasMessages: boolean) => void;
+}
+
+const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
+  ({ active, onMessagesChange }, ref) => {
   const [messages, setMessages] = useState<AssistantMessage[]>(loadMessages);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -203,6 +209,12 @@ export default function AssistantPanel({ active }: AssistantPanelProps) {
     }
   }, []);
 
+  useImperativeHandle(ref, () => ({ clearChat }), [clearChat]);
+
+  useEffect(() => {
+    onMessagesChange?.(messages.length > 0);
+  }, [messages.length, onMessagesChange]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
@@ -223,24 +235,13 @@ export default function AssistantPanel({ active }: AssistantPanelProps) {
     }
   };
 
-  return (
-    <div className="flex-1 flex flex-col min-h-0 relative">
-      {/* Clear button */}
-      {messages.length > 0 && (
-        <button
-          onClick={clearChat}
-          className="absolute top-3 right-3 z-10 p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          title="Clear conversation"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-          </svg>
-        </button>
-      )}
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {available === false && (
-          <div className="text-center mt-8 px-4">
+  const isEmpty = messages.length === 0;
+
+  if (isEmpty) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center px-4">
+        {available === false ? (
+          <div className="text-center">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-3">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -264,30 +265,73 @@ export default function AssistantPanel({ active }: AssistantPanelProps) {
               {unavailableReason}
             </p>
           </div>
-        )}
-
-        {available !== false && messages.length === 0 && (
-          <div className="text-center text-gray-400 dark:text-gray-500 mt-12">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-violet-100 dark:bg-violet-900/30 mb-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-6 h-6 text-violet-500"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z"
-                  clipRule="evenodd"
-                />
-              </svg>
+        ) : (
+          <>
+            <div className="text-center text-gray-400 dark:text-gray-500 mb-6">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-violet-100 dark:bg-violet-900/30 mb-3">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="w-6 h-6 text-violet-500"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <p className="text-sm">Ask the assistant to help build your agent</p>
+              <p className="text-xs mt-1 text-gray-400 dark:text-gray-500">
+                It can create projects, write tools, fix errors, and more
+              </p>
             </div>
-            <p className="text-sm">Ask the assistant to help build your agent</p>
-            <p className="text-xs mt-1 text-gray-400 dark:text-gray-500">
-              It can create projects, write tools, fix errors, and more
-            </p>
-          </div>
+            <div className="w-full max-w-[700px] px-3 pb-3">
+              <form
+                onSubmit={handleSubmit}
+                className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-3xl px-4 py-2 focus-within:border-violet-400 dark:focus-within:border-violet-500 transition-colors"
+              >
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    const ta = e.target;
+                    ta.style.height = "auto";
+                    ta.style.height = `${ta.scrollHeight}px`;
+                  }}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask the assistant..."
+                  disabled={streaming}
+                  rows={1}
+                  className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none max-h-40 leading-6 py-1 disabled:opacity-50"
+                />
+                <button
+                  type="submit"
+                  disabled={!input.trim() || streaming}
+                  className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
+                    input.trim() && !streaming
+                      ? "bg-violet-600 text-white hover:bg-violet-700"
+                      : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-default"
+                  }`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                    <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" />
+                  </svg>
+                </button>
+              </form>
+            </div>
+          </>
         )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex flex-col">
+      {/* Messages */}
+      <div className="flex-1 p-4 pb-2 space-y-3">
 
         {messages.map((msg, i) => {
           if (msg.role === "tool_use") {
@@ -451,10 +495,10 @@ export default function AssistantPanel({ active }: AssistantPanelProps) {
 
       {/* Input */}
       {available !== false && (
-        <div className="p-3 flex-shrink-0">
+        <div className="sticky bottom-0 pb-3 px-3 bg-gray-50 dark:bg-gray-950">
           <form
             onSubmit={handleSubmit}
-            className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-2xl px-3 py-2 focus-within:border-violet-400 dark:focus-within:border-violet-500 transition-colors"
+            className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-3xl px-4 py-2 focus-within:border-violet-400 dark:focus-within:border-violet-500 transition-colors"
           >
             <textarea
               ref={textareaRef}
@@ -469,12 +513,12 @@ export default function AssistantPanel({ active }: AssistantPanelProps) {
               placeholder={streaming ? "Waiting for response..." : "Ask the assistant..."}
               disabled={streaming}
               rows={1}
-              className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none max-h-32 leading-6 py-0.5 disabled:opacity-50"
+              className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none max-h-40 leading-6 py-1 disabled:opacity-50"
             />
             <button
               type="submit"
               disabled={!input.trim() || streaming}
-              className={`flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
+              className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
                 input.trim() && !streaming
                   ? "bg-violet-600 text-white hover:bg-violet-700"
                   : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-default"
@@ -489,7 +533,10 @@ export default function AssistantPanel({ active }: AssistantPanelProps) {
       )}
     </div>
   );
-}
+  }
+);
+
+export default AssistantPanel;
 
 function QuestionCard({
   question,
