@@ -44,7 +44,6 @@ def list_projects() -> list[dict[str, Any]]:
                 "name": entry.name,
                 "path": str(entry),
                 "entry": "?",
-                "model": "?",
             })
     return results
 

@@ -22,6 +22,6 @@ def list_cmd() -> None:
     typer.echo()
     for p in projects:
         typer.echo(f"  {p['name']}")
-        typer.echo(f"    Model: {p['model']}  |  Entry: {p['entry']}")
+        typer.echo(f"    Entry: {p['entry']}")
         typer.echo(f"    Path:  {p['path']}")
         typer.echo()
