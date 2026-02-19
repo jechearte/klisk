@@ -680,17 +680,15 @@ export default function App() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <div className="px-4 py-6">
-              <DeploySettings
-                isWorkspace={!!config.workspace}
-                project={
-                  snapshot?.agents[currentView.agentName]?.project ?? undefined
-                }
-                projectName={typeof config.name === "string" ? config.name : undefined}
-                onToast={showToast}
-              />
-            </div>
+          <div className="flex-1 min-h-0">
+            <DeploySettings
+              isWorkspace={!!config.workspace}
+              project={
+                snapshot?.agents[currentView.agentName]?.project ?? undefined
+              }
+              projectName={typeof config.name === "string" ? config.name : undefined}
+              onToast={showToast}
+            />
           </div>
         )}
 
