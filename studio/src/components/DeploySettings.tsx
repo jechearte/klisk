@@ -113,33 +113,53 @@ function ChatPreview({
   }
 
   return (
-    <div className="flex items-center justify-center h-full p-6">
-      <div className="w-full max-w-[320px] h-[420px] bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg flex flex-col overflow-hidden">
+    <div
+      className="h-full flex items-center justify-center p-5"
+      style={{
+        background: "var(--tw-bg, #f3f4f6)",
+        backgroundImage: "radial-gradient(circle, #d1d5db 1px, transparent 1px)",
+        backgroundSize: "24px 24px",
+      }}
+    >
+      <div className="w-full max-w-[340px] h-[440px] bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_16px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-          <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center">
-            <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
+        <div className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+          <span className="text-[15px] font-semibold text-gray-900 dark:text-white flex-1 truncate">{title}</span>
+          <div className="flex items-center gap-1">
+            {/* Theme button */}
+            <div className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 text-gray-400">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path fillRule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clipRule="evenodd" />
+              </svg>
+            </div>
+            {/* Clear button */}
+            <div className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 text-gray-400">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+            </div>
           </div>
-          <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">{title}</span>
         </div>
         {/* Messages area */}
-        <div className="flex-1 flex items-center justify-center px-4">
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center">{welcome}</p>
+        <div className="flex-1 flex items-start justify-center px-4 pt-20">
+          <p className="text-[15px] text-gray-400 dark:text-gray-500 text-center">{welcome}</p>
         </div>
-        {/* Input */}
-        <div className="px-3 pb-3">
-          <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-xl px-3 py-2">
+        {/* Input area */}
+        <div className="px-4 pb-3 flex-shrink-0">
+          <div className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-3xl px-4 py-2">
             {config.chat.attachments && (
-              <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
-              </svg>
+              <div className="w-8 h-8 flex items-center justify-center flex-shrink-0 text-gray-400">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+              </div>
             )}
-            <span className="text-xs text-gray-400 flex-1">Message...</span>
-            <svg className="w-4 h-4 text-gray-300 dark:text-gray-600 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
-            </svg>
+            <span className="text-sm text-gray-400 dark:text-gray-500 flex-1 py-1">Type a message...</span>
+            <div className="w-8 h-8 rounded-full bg-gray-800 dark:bg-white flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-white dark:text-gray-800" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+              </svg>
+            </div>
           </div>
         </div>
       </div>
