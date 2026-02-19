@@ -27,7 +27,11 @@ def main(ctx: typer.Context) -> None:
     if ctx.invoked_subcommand is not None:
         return
 
-    from klisk.core.paths import get_projects_dir, KLISK_HOME
+    from klisk.core.paths import KLISK_HOME, PROJECTS_DIR
+
+    first_run = not KLISK_HOME.exists()
+
+    from klisk.core.paths import get_projects_dir
     from klisk.core.skill_installer import install_skill
 
     get_projects_dir()  # creates ~/klisk/ and ~/klisk/projects/
@@ -35,21 +39,74 @@ def main(ctx: typer.Context) -> None:
 
     home_display = f"~/{KLISK_HOME.relative_to(KLISK_HOME.parent)}"
 
-    typer.echo(
-        f"""
+    if first_run:
+        _welcome_first_run(home_display)
+        return
+
+    # Count projects (dirs with klisk.config.yaml)
+    projects = [
+        d for d in PROJECTS_DIR.iterdir()
+        if d.is_dir() and (d / "klisk.config.yaml").exists()
+    ] if PROJECTS_DIR.exists() else []
+
+    # Check if studio is running
+    from klisk.core.daemon import read_pid_info
+
+    studio_info = read_pid_info(None)  # workspace mode
+
+    if not projects:
+        _welcome_no_projects(home_display)
+    elif studio_info:
+        _welcome_studio_running(studio_info, len(projects))
+    else:
+        _welcome_studio_off(len(projects))
+
+
+def _welcome_first_run(home_display: str) -> None:
+    typer.echo(f"""
   Welcome to Klisk!
 
   Your workspace is ready at {home_display}
 
-  Next steps:
+  Get started:
+    klisk studio             # open the Studio
     cd {home_display}
-    claude               # or your preferred AI agent
+    claude                   # or your preferred AI agent
     > "Create an agent that ..."
+""")
 
-  Or create a project manually:
-    klisk create my-agent
-"""
-    )
+
+def _welcome_no_projects(home_display: str) -> None:
+    typer.echo(f"""
+  Klisk — no projects yet.
+
+  Option 1 — Open the Studio:
+    klisk studio
+
+  Option 2 — Use an AI agent:
+    cd {home_display}
+    claude                   # or your preferred AI agent
+    > "Create an agent that ..."
+""")
+
+
+def _welcome_studio_running(studio_info: object, project_count: int) -> None:
+    label = "project" if project_count == 1 else "projects"
+    typer.echo(f"""
+  Klisk Studio is running ({project_count} {label}).
+
+  Open in browser: http://localhost:{studio_info.port}
+""")
+
+
+def _welcome_studio_off(project_count: int) -> None:
+    label = "project" if project_count == 1 else "projects"
+    typer.echo(f"""
+  Klisk — {project_count} {label} in workspace.
+
+  Start the Studio to configure and test your agents:
+    klisk studio
+""")
 
 
 app.command()(assistant)
