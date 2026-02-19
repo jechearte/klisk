@@ -236,7 +236,8 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
 
   if (isEmpty) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center px-4">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 relative">
+        {status === "ready" && <UsageBadge />}
         {status === "not_installed" ? (
           <div className="text-center max-w-sm">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 mb-3">
@@ -351,9 +352,6 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
               <p className="text-xs mt-1 text-gray-400 dark:text-gray-500">
                 It can create projects, write tools, fix errors, and more
               </p>
-              <p className="text-xs mt-2 text-gray-400 dark:text-gray-600">
-                Using the assistant will consume your Claude account usage
-              </p>
             </div>
             <div className="w-full max-w-[700px] px-3 pb-3">
               <form
@@ -397,7 +395,8 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
   }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col relative">
+      {status === "ready" && <UsageBadge />}
       {/* Messages */}
       <div className="flex-1 p-4 pb-2 space-y-3">
 
@@ -639,6 +638,34 @@ function ToolUseChip({ tool, detail }: { tool: string; detail: string }) {
           </svg>
         )}
       </button>
+    </div>
+  );
+}
+
+function UsageBadge() {
+  return (
+    <div className="absolute top-2 right-2 z-10 group">
+      <div className="p-1.5 rounded-full text-amber-500 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors cursor-default">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth="1.5"
+          stroke="currentColor"
+          className="w-4 h-4"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+          />
+        </svg>
+      </div>
+      <div className="absolute right-0 top-full mt-1 hidden group-hover:block">
+        <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+          Using the assistant consumes your Claude account usage
+        </div>
+      </div>
     </div>
   );
 }
