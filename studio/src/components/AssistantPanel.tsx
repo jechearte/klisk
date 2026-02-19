@@ -439,30 +439,7 @@ export default function AssistantPanel({ active }: AssistantPanelProps) {
 
       {/* Input */}
       {available !== false && (
-        <div className="p-3 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-gray-400 dark:text-gray-500">Assistant</span>
-            <button
-              onClick={clearChat}
-              className="p-1 rounded text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              title="Clear conversation"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth="1.5"
-                stroke="currentColor"
-                className="w-3.5 h-3.5"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
-                />
-              </svg>
-            </button>
-          </div>
+        <div className="p-3 flex-shrink-0">
           <form
             onSubmit={handleSubmit}
             className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-2xl px-3 py-2 focus-within:border-violet-400 dark:focus-within:border-violet-500 transition-colors"
@@ -482,6 +459,18 @@ export default function AssistantPanel({ active }: AssistantPanelProps) {
               rows={1}
               className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none max-h-32 leading-6 py-0.5 disabled:opacity-50"
             />
+            {messages.length > 0 && (
+              <button
+                type="button"
+                onClick={clearChat}
+                className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                title="Clear conversation"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-3.5 h-3.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+              </button>
+            )}
             <button
               type="submit"
               disabled={!input.trim() || streaming}
@@ -491,12 +480,7 @@ export default function AssistantPanel({ active }: AssistantPanelProps) {
                   : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-default"
               }`}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-3.5 h-3.5"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
                 <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" />
               </svg>
             </button>
