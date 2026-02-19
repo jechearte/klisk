@@ -57,7 +57,7 @@ export default function SettingsPage({ onToast }: SettingsPageProps) {
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
-      <div className="px-4 py-6">
+      <div className="px-4 pt-10 pb-6">
         <div className="w-full max-w-2xl mx-auto">
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
             {/* Header */}
