@@ -234,10 +234,26 @@ function ChatPreview({
 
 function WidgetPreview({ config }: { config: DeployConfig }) {
   const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
   const isLeft = config.widget.position === "bottom-left";
   const color = config.widget.color || "#2563eb";
   const placeholder = config.widget.placeholder || "Type a message...";
   const welcome = config.widget.welcome_message;
+  const messagesEndRef = useCallback((node: HTMLDivElement | null) => {
+    node?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  const handleSend = () => {
+    const text = input.trim();
+    if (!text) return;
+    setInput("");
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", text },
+      { role: "assistant", text: MOCK_RESPONSE },
+    ]);
+  };
 
   if (!config.widget.enabled) {
     return (
@@ -273,7 +289,7 @@ function WidgetPreview({ config }: { config: DeployConfig }) {
             className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
             style={{ width: "380px", height: "500px" }}
           >
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
               <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: color }}>
                 <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -281,18 +297,54 @@ function WidgetPreview({ config }: { config: DeployConfig }) {
               </div>
               <span className="text-sm font-semibold text-gray-900 dark:text-white">Chat</span>
             </div>
-            <div className="flex-1 flex items-center justify-center px-5">
-              <p className="text-sm text-gray-400 dark:text-gray-500 text-center">
-                {welcome || "How can we help you?"}
-              </p>
+            {/* Messages area */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5 min-h-0">
+              {messages.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-sm text-gray-400 dark:text-gray-500 text-center">
+                    {welcome || "How can we help you?"}
+                  </p>
+                </div>
+              ) : (
+                messages.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className="max-w-[85%] px-3 py-1.5 rounded-xl text-sm leading-relaxed break-words"
+                      style={
+                        msg.role === "user"
+                          ? { background: color, color: "#ffffff" }
+                          : { background: "#f3f4f6", color: "#1f2937" }
+                      }
+                    >
+                      {msg.text}
+                    </div>
+                  </div>
+                ))
+              )}
+              <div ref={messagesEndRef} />
             </div>
-            <div className="px-4 pb-4">
-              <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-3">
-                <span className="text-sm text-gray-400 flex-1 truncate">{placeholder}</span>
-                <svg className="w-5 h-5 text-gray-300 dark:text-gray-600 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
-                </svg>
-              </div>
+            {/* Input */}
+            <div className="px-4 pb-4 flex-shrink-0">
+              <form
+                onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+                className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-2"
+              >
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={placeholder}
+                  className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none"
+                />
+                <button type="submit" className="flex-shrink-0 ml-2">
+                  <svg className="w-5 h-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+                  </svg>
+                </button>
+              </form>
             </div>
           </div>
         )}
