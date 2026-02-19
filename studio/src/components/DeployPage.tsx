@@ -270,21 +270,18 @@ export default function DeployPage({ project, agentName, isWorkspace, onToast, o
 
               {/* Deploy action */}
               {onDeployWithAssistant && (
-                <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    The assistant will guide you through the process.
+                  </span>
                   <button
                     onClick={() => onDeployWithAssistant(
                       `Help me deploy the agent "${agentName || "my agent"}" to Google Cloud`
                     )}
-                    className="w-full px-4 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="px-4 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex-shrink-0"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                      <path fillRule="evenodd" d="M9.315 7.584C12.195 3.883 16.695 1.5 21.75 1.5a.75.75 0 0 1 .75.75c0 5.056-2.383 9.555-6.084 12.436A6.75 6.75 0 0 1 9.75 22.5a.75.75 0 0 1-.75-.75v-4.131A15.838 15.838 0 0 1 6.382 15H2.25a.75.75 0 0 1-.75-.75 6.75 6.75 0 0 1 7.815-6.666ZM15 6.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" clipRule="evenodd" />
-                    </svg>
-                    Deploy agent
+                    Deploy Agent
                   </button>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">
-                    The assistant will guide you through the deployment process.
-                  </p>
                 </div>
               )}
 
