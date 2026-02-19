@@ -263,11 +263,7 @@ export default function DeployPage({ project, agentName, isWorkspace, onToast, o
                 <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                   <li className="flex items-start gap-2.5">
                     <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
-                    <span>A <a href="https://cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Google Cloud</a> account</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
-                    <span>A GCP project with billing enabled</span>
+                    <span>A <a href="https://cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Google Cloud</a> account with billing enabled</span>
                   </li>
                 </ul>
               </div>
