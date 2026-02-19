@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import type { LocalServerStatus, CloudDeployStatus } from "../types";
+import type { LocalServerStatus } from "../types";
 
 interface DeployPageProps {
   project?: string;
@@ -9,7 +9,7 @@ interface DeployPageProps {
   onDeployWithAssistant?: (message: string) => void;
 }
 
-export default function DeployPage({ project, agentName, isWorkspace, onToast, onDeployWithAssistant }: DeployPageProps) {
+export default function DeployPage({ project, agentName, onToast, onDeployWithAssistant }: DeployPageProps) {
   // --- Local server state ---
   const [localStatus, setLocalStatus] = useState<LocalServerStatus>({
     running: false,
@@ -19,10 +19,6 @@ export default function DeployPage({ project, agentName, isWorkspace, onToast, o
   });
   const [localLoading, setLocalLoading] = useState(true);
   const [localActing, setLocalActing] = useState(false);
-
-  // --- Cloud state ---
-  const [cloudStatus, setCloudStatus] = useState<CloudDeployStatus | null>(null);
-  const [cloudChecking, setCloudChecking] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const qs = project ? `?project=${encodeURIComponent(project)}` : "";
@@ -88,33 +84,16 @@ export default function DeployPage({ project, agentName, isWorkspace, onToast, o
     }
   };
 
-  const handleCheckCloud = async () => {
-    setCloudChecking(true);
-    try {
-      const res = await fetch(`/api/deploy/cloud-status${qs}`);
-      if (!res.ok) {
-        onToast("Failed to check cloud status");
-        return;
-      }
-      const data = await res.json();
-      setCloudStatus(data);
-    } catch (err) {
-      onToast(`Error: ${String(err)}`);
-    } finally {
-      setCloudChecking(false);
-    }
-  };
-
   const handleCopy = (key: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 1500);
   };
 
-  const CopyBtn = ({ id, text, className = "" }: { id: string; text: string; className?: string }) => (
+  const CopyBtn = ({ id, text }: { id: string; text: string }) => (
     <button
       onClick={() => handleCopy(id, text)}
-      className={`p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0 ${className}`}
+      className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0"
       title="Copy"
     >
       {copiedKey === id ? (
@@ -254,7 +233,7 @@ export default function DeployPage({ project, agentName, isWorkspace, onToast, o
             </div>
 
             {/* Body */}
-            <div className="px-6 py-5 space-y-6">
+            <div className="px-6 py-5 space-y-5">
               {/* Requirements */}
               <div>
                 <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
@@ -284,66 +263,6 @@ export default function DeployPage({ project, agentName, isWorkspace, onToast, o
                   </button>
                 </div>
               )}
-
-              {/* Deployment status */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                    Deployment
-                  </h3>
-                  <button
-                    onClick={handleCheckCloud}
-                    disabled={cloudChecking}
-                    className="px-3 py-1.5 text-xs font-medium border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 rounded-lg transition-colors"
-                  >
-                    {cloudChecking ? "Checking..." : "Check Status"}
-                  </button>
-                </div>
-
-                {cloudStatus === null ? (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Click "Check Status" to query your deployment.
-                  </p>
-                ) : cloudStatus.deployed ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-green-500 flex-shrink-0">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clipRule="evenodd" />
-                      </svg>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        Deployed
-                      </span>
-                    </div>
-                    <div className="space-y-1 pl-6">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 dark:text-gray-400 w-8">URL</span>
-                        <code className="text-sm text-blue-600 dark:text-blue-400 font-mono truncate">
-                          {cloudStatus.url}
-                        </code>
-                        <CopyBtn id="cloud-url" text={cloudStatus.url!} />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500 dark:text-gray-400 w-8">API</span>
-                        <code className="text-xs text-gray-600 dark:text-gray-400 font-mono truncate">
-                          {cloudStatus.url}/api/chat
-                        </code>
-                        <CopyBtn id="cloud-api" text={`${cloudStatus.url}/api/chat`} />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {cloudStatus.message || "Not deployed yet"}
-                    </p>
-                    {cloudStatus.message !== "Service not deployed yet" && cloudStatus.message && (
-                      <p className="text-xs text-gray-400 dark:text-gray-500">
-                        Run <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded font-mono">klisk deploy</code> from your terminal to deploy.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 

@@ -11,7 +11,6 @@ import ToolModal from "./components/ToolModal";
 import EnvPage from "./components/EnvPage";
 import DeploySettings from "./components/DeploySettings";
 import DeployPage from "./components/DeployPage";
-import SettingsPage from "./components/SettingsPage";
 import OfflineScreen from "./components/OfflineScreen";
 import type {
   ProjectSnapshot,
@@ -138,7 +137,6 @@ export default function App() {
   const [selectedAgent, setSelectedAgent] = useState<AgentInfo | null>(null);
   const [selectedTool, setSelectedTool] = useState<ToolInfo | null>(null);
   const [showAssistant, setShowAssistant] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const assistantRef = useRef<AssistantPanelHandle>(null);
   const [assistantHasMessages, setAssistantHasMessages] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
@@ -539,7 +537,6 @@ export default function App() {
   const openAssistantWith = useCallback((message: string) => {
     setCurrentView({ page: "listing" });
     setShowAssistant(true);
-    setShowSettings(false);
     // Small delay to let the panel mount/connect before sending
     setTimeout(() => {
       assistantRef.current?.clearChat();
@@ -574,15 +571,9 @@ export default function App() {
   const handleListingNavigate = (item: ListingNavItem) => {
     if (item === "agents") {
       setShowAssistant(false);
-      setShowSettings(false);
       setCurrentView({ page: "listing" });
     } else if (item === "assistant") {
       setShowAssistant(true);
-      setShowSettings(false);
-      setCurrentView({ page: "listing" });
-    } else if (item === "settings") {
-      setShowAssistant(false);
-      setShowSettings(true);
       setCurrentView({ page: "listing" });
     }
   };
@@ -603,7 +594,7 @@ export default function App() {
         dark={dark}
         onToggleDark={() => setDark((d) => !d)}
         mode={isDetail ? "detail" : "listing"}
-        activeListingItem={showSettings ? "settings" : showAssistant ? "assistant" : "agents"}
+        activeListingItem={showAssistant ? "assistant" : "agents"}
         activeDetailItem={activeTab}
         onListingNavigate={handleListingNavigate}
         onDetailNavigate={handleDetailNavigate}
@@ -705,8 +696,6 @@ export default function App() {
                 </div>
               </div>
             </div>
-          ) : showSettings ? (
-            <SettingsPage onToast={showToast} />
           ) : (
             <div className="flex-1 min-h-0 pt-2">
               <AgentListing snapshot={snapshot} onSelect={navigateToAgent} localServerMap={localServerMap} />
