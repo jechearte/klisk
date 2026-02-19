@@ -66,13 +66,16 @@ def _welcome_first_run(home_display: str) -> None:
     typer.echo(f"""
   Welcome to Klisk!
 
-  Your workspace is ready at {home_display}
+  Your workspace has been created at {home_display}
 
-  Get started:
-    klisk studio             # open the Studio
-    cd {home_display}
-    claude                   # or your preferred AI agent
-    > "Create an agent that ..."
+  To create your first agent you have two options:
+
+  1. Open the Studio and ask the Klisk assistant for help:
+     klisk studio
+
+  2. Use any AI coding agent from your workspace:
+     cd {home_display}
+     claude                  # or cursor, windsurf, etc.
 """)
 
 
