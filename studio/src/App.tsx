@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import AgentCanvas from "./components/AgentCanvas";
 import AgentListing from "./components/AgentListing";
+import AssistantPanel from "./components/AssistantPanel";
 import Chat from "./components/Chat";
 import AgentModal from "./components/AgentModal";
 import ToolModal from "./components/ToolModal";
@@ -127,6 +128,7 @@ export default function App() {
   const [selectedAgent, setSelectedAgent] = useState<AgentInfo | null>(null);
   const [selectedTool, setSelectedTool] = useState<ToolInfo | null>(null);
   const [showEnvModal, setShowEnvModal] = useState(false);
+  const [showAssistant, setShowAssistant] = useState(false);
 
   // Sync dark class on <html>
   useEffect(() => {
@@ -535,6 +537,20 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Assistant */}
+          <button
+            onClick={() => setShowAssistant((v) => !v)}
+            className={`p-2 border rounded-lg transition-colors ${
+              showAssistant
+                ? "border-violet-400 dark:border-violet-500 text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30"
+                : "border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+            }`}
+            title="Assistant"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z" clipRule="evenodd" />
+            </svg>
+          </button>
           {/* Env settings */}
           <button
             onClick={() => setShowEnvModal(true)}
@@ -663,6 +679,12 @@ export default function App() {
           Juan Echeverria
         </a>
       </div>
+
+      {/* Assistant Panel */}
+      <AssistantPanel
+        open={showAssistant}
+        onClose={() => setShowAssistant(false)}
+      />
 
       {/* Toast */}
       {toast && (

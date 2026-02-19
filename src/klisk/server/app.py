@@ -22,6 +22,7 @@ from klisk.core.config import ProjectConfig
 from klisk.core.discovery import discover_all_projects, discover_project
 from klisk.core.paths import PROJECTS_DIR
 from klisk.core.registry import AgentRegistry, ProjectSnapshot
+from klisk.server.assistant_chat import check_assistant_available, handle_assistant_websocket
 from klisk.server.chat import handle_websocket_chat
 from klisk.server.file_editor import (
     update_agent_in_source,
@@ -211,6 +212,11 @@ def create_app(project_dir: Path | None) -> FastAPI:
     async def ws_chat(websocket: WebSocket):
         await _handle_chat(websocket)
 
+    @app.websocket("/ws/assistant")
+    async def ws_assistant(websocket: WebSocket):
+        project_dir = _project_path or PROJECTS_DIR
+        await handle_assistant_websocket(websocket, project_dir)
+
     @app.websocket("/ws/reload")
     async def ws_reload(websocket: WebSocket):
         await _handle_reload(websocket)
@@ -362,6 +368,10 @@ def _build_api_router():
             return {"error": str(e)}
 
         return {"ok": True}
+
+    @router.get("/assistant/status")
+    async def assistant_status():
+        return check_assistant_available()
 
     @router.get("/env")
     async def get_env(project: str | None = Query(None)):

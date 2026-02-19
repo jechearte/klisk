@@ -45,3 +45,23 @@ export type ChatMessage =
   | { role: "system"; content: string }
   | { role: "tool_call"; tool: string; arguments: string; output: string; status: "running" | "done" }
   | { role: "thinking"; content: string };
+
+// Assistant panel types (Claude Agent SDK powered)
+
+export interface AssistantQuestionOption {
+  label: string;
+  description?: string;
+}
+
+export interface AssistantQuestion {
+  question: string;
+  options: AssistantQuestionOption[];
+}
+
+export type AssistantMessage =
+  | { role: "user"; content: string }
+  | { role: "assistant"; content: string }
+  | { role: "system"; content: string }
+  | { role: "tool_use"; tool: string; detail: string }
+  | { role: "permission_request"; tool: string; command: string; status: "pending" | "allowed" | "denied" }
+  | { role: "question"; questions: AssistantQuestion[]; status: "pending" | "answered" };
