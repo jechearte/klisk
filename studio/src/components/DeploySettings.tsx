@@ -264,32 +264,32 @@ function WidgetPreview({ config }: { config: DeployConfig }) {
 
       {/* Widget container */}
       <div
-        className="absolute bottom-4 flex flex-col items-end gap-3"
-        style={{ [isLeft ? "left" : "right"]: "16px" }}
+        className="absolute bottom-6 flex flex-col items-end gap-4"
+        style={{ [isLeft ? "left" : "right"]: "24px" }}
       >
         {/* Panel */}
         {open && (
           <div
-            className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
-            style={{ width: "240px", height: "320px" }}
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
+            style={{ width: "380px", height: "500px" }}
           >
-            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 dark:border-gray-800">
-              <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: color }}>
-                <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: color }}>
+                <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
               </div>
-              <span className="text-xs font-semibold text-gray-900 dark:text-white">Chat</span>
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">Chat</span>
             </div>
-            <div className="flex-1 flex items-center justify-center px-3">
-              <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center">
+            <div className="flex-1 flex items-center justify-center px-5">
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center">
                 {welcome || "How can we help you?"}
               </p>
             </div>
-            <div className="px-2.5 pb-2.5">
-              <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg px-2.5 py-1.5">
-                <span className="text-[10px] text-gray-400 flex-1 truncate">{placeholder}</span>
-                <svg className="w-3 h-3 text-gray-300 dark:text-gray-600 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+            <div className="px-4 pb-4">
+              <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-3">
+                <span className="text-sm text-gray-400 flex-1 truncate">{placeholder}</span>
+                <svg className="w-5 h-5 text-gray-300 dark:text-gray-600 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
                 </svg>
               </div>
@@ -300,18 +300,18 @@ function WidgetPreview({ config }: { config: DeployConfig }) {
         {/* Floating button */}
         <button
           onClick={() => setOpen(!open)}
-          className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-white transition-transform hover:scale-105"
+          className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white transition-transform hover:scale-105"
           style={{
             background: color,
             alignSelf: isLeft ? "flex-start" : "flex-end",
           }}
         >
           {open ? (
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           ) : (
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
           )}
