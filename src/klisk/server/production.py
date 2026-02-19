@@ -54,7 +54,7 @@ def create_production_app(project_dir: Path) -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=config.deploy.api.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -71,6 +71,7 @@ def create_production_app(project_dir: Path) -> FastAPI:
             "name": config.name,
             "agent": agent_name,
             "auth_required": api_keys is not None,
+            "deploy": config.deploy.model_dump(),
         }
 
     @app.get("/health")
@@ -133,10 +134,21 @@ def create_production_app(project_dir: Path) -> FastAPI:
                 return
         await handle_websocket_chat(websocket, lambda: snapshot)
 
+    # Conditionally serve widget.js
+    if not config.deploy.widget.enabled:
+        @app.get("/widget.js")
+        async def widget_disabled():
+            return JSONResponse({"error": "Widget is disabled"}, status_code=404)
+
     # Serve chat_dist as static files (must be last — catches all routes)
-    chat_dist = _find_chat_dist()
-    if chat_dist and chat_dist.exists():
-        app.mount("/", StaticFiles(directory=str(chat_dist), html=True), name="chat")
+    if config.deploy.chat.enabled:
+        chat_dist = _find_chat_dist()
+        if chat_dist and chat_dist.exists():
+            app.mount("/", StaticFiles(directory=str(chat_dist), html=True), name="chat")
+    else:
+        @app.get("/")
+        async def chat_disabled():
+            return JSONResponse({"message": "Chat interface is disabled", "api": "/api/chat"})
 
     return app
 
