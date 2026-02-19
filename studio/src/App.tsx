@@ -142,7 +142,7 @@ export default function App() {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem(STORAGE_KEY_THEME, dark ? "dark" : "light");
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", dark ? "#111827" : "#f3f4f6");
+    if (meta) meta.setAttribute("content", dark ? "#111827" : "#2563eb");
   }, [dark]);
 
   const toggleSidebar = useCallback(() => {
@@ -532,7 +532,7 @@ export default function App() {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* PWA Window Controls Overlay drag region */}
-      <div className="wco-titlebar hidden bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800" />
+      <div className="wco-titlebar hidden bg-blue-600 dark:bg-gray-950 border-b border-blue-700 dark:border-gray-800" />
       {/* Sidebar */}
       <Sidebar
         collapsed={sidebarCollapsed}
