@@ -27,6 +27,8 @@ interface SidebarProps {
   onToggle: () => void;
   activeItem: NavItem;
   onNavigate: (item: NavItem) => void;
+  dark: boolean;
+  onToggleDark: () => void;
 }
 
 export default function Sidebar({
@@ -34,6 +36,8 @@ export default function Sidebar({
   onToggle,
   activeItem,
   onNavigate,
+  dark,
+  onToggleDark,
 }: SidebarProps) {
   return (
     <aside
@@ -43,7 +47,7 @@ export default function Sidebar({
     >
       {/* Header */}
       <div
-        className={`flex items-center h-[57px] flex-shrink-0 border-b border-gray-200 dark:border-gray-800 ${
+        className={`flex items-center h-[57px] flex-shrink-0 ${
           collapsed ? "justify-center" : "px-3 gap-2"
         }`}
       >
@@ -125,6 +129,33 @@ export default function Sidebar({
           );
         })}
       </nav>
+
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Theme toggle */}
+      <div className={`flex-shrink-0 mb-3 ${collapsed ? "px-1.5" : "px-2"}`}>
+        <button
+          onClick={onToggleDark}
+          title={dark ? "Switch to light mode" : "Switch to dark mode"}
+          className={`flex items-center gap-2.5 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-gray-200 ${
+            collapsed ? "justify-center p-2.5" : "px-3 py-2 w-full"
+          }`}
+        >
+          {dark ? (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+              <path d="M12 2.25a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75ZM7.5 12a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0Zm11.394-5.834a.75.75 0 0 0-1.06-1.06l-1.591 1.59a.75.75 0 1 0 1.06 1.061l1.591-1.59Zm-12.728.53a.75.75 0 1 0 1.06-1.06l-1.59-1.591a.75.75 0 0 0-1.061 1.06l1.59 1.591ZM12 18a.75.75 0 0 1 .75.75V21a.75.75 0 0 1-1.5 0v-2.25A.75.75 0 0 1 12 18ZM7.758 17.303a.75.75 0 0 0-1.061-1.06l-1.591 1.59a.75.75 0 0 0 1.06 1.061l1.591-1.59Zm9.544-1.06a.75.75 0 0 0-1.06 1.06l1.59 1.591a.75.75 0 1 0 1.061-1.06l-1.59-1.591ZM21.75 12a.75.75 0 0 1-.75.75h-2.25a.75.75 0 0 1 0-1.5H21a.75.75 0 0 1 .75.75ZM5.25 12a.75.75 0 0 1-.75.75H2.25a.75.75 0 0 1 0-1.5H4.5a.75.75 0 0 1 .75.75Z" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+              <path fillRule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clipRule="evenodd" />
+            </svg>
+          )}
+          {!collapsed && (
+            <span className="text-sm font-medium">{dark ? "Light mode" : "Dark mode"}</span>
+          )}
+        </button>
+      </div>
     </aside>
   );
 }
