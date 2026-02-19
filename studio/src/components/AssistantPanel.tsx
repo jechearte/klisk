@@ -29,8 +29,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
   const [messages, setMessages] = useState<AssistantMessage[]>(loadMessages);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-  const [available, setAvailable] = useState<boolean | null>(null);
-  const [unavailableReason, setUnavailableReason] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -51,19 +50,16 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
     fetch("/api/assistant/status")
       .then((r) => r.json())
       .then((data) => {
-        setAvailable(data.available);
-        setUnavailableReason(data.reason || null);
+        setStatus(data.status ?? (data.available ? "ready" : "not_installed"));
       })
       .catch(() => {
-        setAvailable(false);
-        setUnavailableReason("Could not check assistant status");
+        setStatus("not_installed");
       });
   }, [active]);
 
-  // Connect WebSocket when active
+  // Connect WebSocket only when ready
   useEffect(() => {
-    if (!active || available === false) return;
-    if (available === null) return; // still checking
+    if (!active || status !== "ready") return;
 
     const ws = new WebSocket(`ws://${window.location.host}/ws/assistant`);
     wsRef.current = ws;
@@ -143,7 +139,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
       ws.close();
       wsRef.current = null;
     };
-  }, [active, available]);
+  }, [active, status]);
 
   const sendMessage = useCallback(
     (text: string) => {
@@ -241,8 +237,45 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
   if (isEmpty) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-4">
-        {available === false ? (
-          <div className="text-center">
+        {status === "not_installed" ? (
+          <div className="text-center max-w-sm">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 mb-3">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="w-6 h-6 text-gray-500 dark:text-gray-400"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                />
+              </svg>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 font-medium mb-1">
+              Claude Code required
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              The assistant requires Claude Code to be installed on your machine.
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              You can use any AI coding agent to build your Klisk agent.{" "}
+              <a
+                href="https://github.com/jechearte/skills/tree/main/skills/klisk-guide"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline"
+              >
+                Install the Klisk skill
+              </a>{" "}
+              to get started.
+            </p>
+          </div>
+        ) : status === "sdk_missing" ? (
+          <div className="text-center max-w-sm">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-3">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -260,13 +293,44 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
               </svg>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-300 font-medium mb-1">
-              Assistant unavailable
+              Missing dependency
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {unavailableReason}
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              The assistant SDK is not installed. Run:
             </p>
+            <code className="block text-xs bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg px-3 py-2 font-mono">
+              pip install 'klisk[assistant]'
+            </code>
           </div>
-        ) : (
+        ) : status === "not_authenticated" ? (
+          <div className="text-center max-w-sm">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 mb-3">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="currentColor"
+                className="w-6 h-6 text-amber-600 dark:text-amber-400"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+                />
+              </svg>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 font-medium mb-1">
+              Sign in to Claude
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              You need to authenticate with Claude Code first. Run:
+            </p>
+            <code className="block text-xs bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-lg px-3 py-2 font-mono">
+              claude auth login
+            </code>
+          </div>
+        ) : status === "ready" ? (
           <>
             <div className="text-center text-gray-400 dark:text-gray-500 mb-6">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-3">
@@ -286,6 +350,9 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
               <p className="text-sm">Ask the assistant to help build your agent</p>
               <p className="text-xs mt-1 text-gray-400 dark:text-gray-500">
                 It can create projects, write tools, fix errors, and more
+              </p>
+              <p className="text-xs mt-2 text-gray-400 dark:text-gray-600">
+                Using the assistant will consume your Claude account usage
               </p>
             </div>
             <div className="w-full max-w-[700px] px-3 pb-3">
@@ -324,7 +391,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
               </form>
             </div>
           </>
-        )}
+        ) : null}
       </div>
     );
   }
@@ -474,7 +541,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
       </div>
 
       {/* Input */}
-      {available !== false && (
+      {status === "ready" && (
         <div className="sticky bottom-0 pb-3 px-3 bg-gray-50 dark:bg-gray-950">
           <form
             onSubmit={handleSubmit}

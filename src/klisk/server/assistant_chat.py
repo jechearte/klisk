@@ -44,19 +44,25 @@ def _has_claude_auth() -> bool:
         return False
 
 
+def _check_claude_cli_installed() -> bool:
+    """Check if the Claude CLI is available in PATH."""
+    return shutil.which("claude") is not None
+
+
 def check_assistant_available() -> dict:
-    """Return availability status for the assistant."""
+    """Return granular availability status for the assistant.
+
+    Returns a dict with:
+    - ``status``: one of "not_installed", "sdk_missing", "not_authenticated", "ready"
+    - ``available``: bool (kept for backwards compatibility)
+    """
+    if not _check_claude_cli_installed():
+        return {"status": "not_installed", "available": False}
     if not _check_sdk_installed():
-        return {
-            "available": False,
-            "reason": "claude-agent-sdk is not installed. Run: pip install 'klisk[assistant]'",
-        }
+        return {"status": "sdk_missing", "available": False}
     if not _has_claude_auth():
-        return {
-            "available": False,
-            "reason": "No Claude authentication found. Run: claude auth login",
-        }
-    return {"available": True, "reason": None}
+        return {"status": "not_authenticated", "available": False}
+    return {"status": "ready", "available": True}
 
 
 def _format_tool_detail(name: str, raw_json: str) -> str:
