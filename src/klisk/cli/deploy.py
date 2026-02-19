@@ -284,7 +284,6 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY *.whl .
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -312,7 +311,7 @@ node_modules/
 def deploy_init(
     project: str = typer.Argument(".", help="Project name or path"),
 ) -> None:
-    """Generate deployment files (Dockerfile, .dockerignore, requirements.txt)."""
+    """Generate deployment files (Dockerfile, .dockerignore)."""
     project_path = resolve_project(project)
 
     config_file = project_path / "klisk.config.yaml"
@@ -333,37 +332,31 @@ def deploy_init(
     if use_litellm:
         typer.echo("  Detected LiteLLM models — will include klisk[litellm]")
 
-    # --- Build klisk wheel ---
-    typer.echo("  Building klisk wheel...")
-    # Walk up from this file to find the repo root (where pyproject.toml lives)
-    klisk_src = Path(__file__).resolve().parent
-    while klisk_src != klisk_src.parent:
-        if (klisk_src / "pyproject.toml").exists():
-            break
-        klisk_src = klisk_src.parent
-    else:
-        typer.echo("Error: Could not find klisk source to build wheel.", err=True)
-        raise typer.Exit(1)
+    # --- Ensure requirements.txt has klisk with correct extras ---
+    req_path = project_path / "requirements.txt"
+    klisk_dep = "klisk[litellm]" if use_litellm else "klisk"
 
-    # Remove old wheels
-    for old_whl in project_path.glob("klisk-*.whl"):
-        old_whl.unlink()
+    user_deps: list[str] = []
+    if req_path.exists():
+        for line in req_path.read_text().splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            # Skip existing klisk entries (will be re-added with correct extras)
+            if stripped.lower().startswith("klisk"):
+                continue
+            # Skip any old wheel references
+            if stripped.startswith("./klisk-") and stripped.endswith(".whl"):
+                continue
+            user_deps.append(stripped)
 
-    wheel_result = subprocess.run(
-        ["pip", "wheel", "--no-deps", "-w", str(project_path), str(klisk_src)],
-        capture_output=True, text=True, timeout=60,
-    )
-    if wheel_result.returncode != 0:
-        typer.echo(f"Error: Failed to build klisk wheel.\n{wheel_result.stderr}", err=True)
-        raise typer.Exit(1)
+    req_lines = [klisk_dep] + user_deps
+    req_path.write_text("\n".join(req_lines) + "\n")
 
-    # Find the generated wheel filename
-    wheels = list(project_path.glob("klisk-*.whl"))
-    if not wheels:
-        typer.echo("Error: Wheel was built but not found.", err=True)
-        raise typer.Exit(1)
-    wheel_name = wheels[0].name
-    typer.echo(f"  Created {wheel_name}")
+    dep_info = klisk_dep
+    if user_deps:
+        dep_info += f" + {len(user_deps)} user dep(s)"
+    typer.echo(f"  Updated requirements.txt ({dep_info})")
 
     # --- Dockerfile ---
     dockerfile_path = project_path / "Dockerfile"
@@ -385,36 +378,6 @@ def deploy_init(
         typer.echo("  Created .dockerignore")
     else:
         typer.echo("  Skipped .dockerignore (already exists)")
-
-    # --- requirements.txt (klisk wheel + user dependencies) ---
-    req_path = project_path / "requirements.txt"
-    if use_litellm:
-        wheel_line = f"./{wheel_name}[litellm]"
-    else:
-        wheel_line = f"./{wheel_name}"
-
-    # Read user dependencies from existing requirements.txt, filtering klisk
-    user_deps: list[str] = []
-    if req_path.exists():
-        for line in req_path.read_text().splitlines():
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
-                continue
-            # Skip klisk itself (replaced by the wheel)
-            if stripped.lower().startswith("klisk"):
-                continue
-            # Skip any previous wheel references
-            if stripped.startswith("./klisk-") and stripped.endswith(".whl"):
-                continue
-            user_deps.append(stripped)
-
-    req_lines = [wheel_line] + user_deps
-    req_path.write_text("\n".join(req_lines) + "\n")
-
-    dep_info = wheel_name + ("[litellm]" if use_litellm else "")
-    if user_deps:
-        dep_info += f" + {len(user_deps)} user dep(s)"
-    typer.echo(f"  Created requirements.txt ({dep_info})")
 
     typer.echo()
     typer.echo("  Done! Next steps:")
