@@ -73,7 +73,7 @@ klisk run -i  # Interactive chat mode
 Launch the interactive development environment:
 
 ```bash
-klisk dev my-agent
+klisk studio
 ```
 
 A visual Studio opens in your browser with:
@@ -119,7 +119,7 @@ Available: `web_search`, `code_interpreter`, `file_search`, `image_generation`.
 Serve your agent with a chat UI and REST API:
 
 ```bash
-klisk serve my-agent
+klisk start my-agent
 ```
 
 This starts a production server with:
@@ -145,11 +145,11 @@ klisk deploy         # Deploy to Cloud Run
 |---------|-------------|
 | `klisk` | Initialize workspace and show welcome |
 | `klisk create <name>` | Scaffold a new project |
-| `klisk dev [name]` | Start Studio with hot reload |
+| `klisk studio` | Start Studio with hot reload |
 | `klisk run [message]` | Run agent from terminal |
 | `klisk check [name]` | Validate project configuration |
 | `klisk list` | List workspace projects |
-| `klisk serve [name]` | Start production server |
+| `klisk start [name]` | Start production server |
 | `klisk deploy` | Deploy to Google Cloud Run |
 
 ## License

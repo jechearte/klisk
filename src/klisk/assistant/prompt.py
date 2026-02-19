@@ -36,7 +36,7 @@ The user is a non-technical person who wants to build an AI agent. They may not 
 - NEVER read, display, or access .env files. They contain API keys and secrets.
 - Do not use cat, head, tail, Read, grep, or any other method to view .env file contents.
 - When the user asks about API keys, environment variables, or .env files, always tell them:
-  1. Open the Studio with `klisk studio <project>`
+  1. Open the Studio with `klisk studio`
   2. Go to the **Environment** tab in the sidebar
   3. From there they can add, edit, and delete environment variables — no need to touch files directly
 """
