@@ -284,10 +284,10 @@ function ChatPreview({
           </form>
         </div>
         {/* Footer */}
-        <div className="py-1.5 text-center flex-shrink-0">
+        <div className="pb-1.5 text-center flex-shrink-0">
           <span className="text-[10px] text-gray-400 dark:text-gray-500">
             Built with{" "}
-            <a href="https://klisk.productomania.io" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-500 dark:hover:text-gray-400">Klisk</a>
+            <a href="https://klisk.productomania.io" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-medium no-underline hover:opacity-80">Klisk</a>
           </span>
         </div>
       </div>
