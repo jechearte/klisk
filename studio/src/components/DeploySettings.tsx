@@ -686,22 +686,6 @@ export default function DeploySettings({
                     className={inputClass}
                   />
                 </Field>
-                <Field label="Bubble color">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={config.widget.color}
-                      onChange={(e) => updateWidget("color", e.target.value)}
-                      className="w-8 h-8 rounded border border-gray-300 dark:border-gray-700 cursor-pointer p-0"
-                    />
-                    <input
-                      type="text"
-                      value={config.widget.color}
-                      onChange={(e) => updateWidget("color", e.target.value)}
-                      className={inputClass + " flex-1"}
-                    />
-                  </div>
-                </Field>
                 <Field label="User message color">
                   <div className="flex items-center gap-2">
                     <input
@@ -735,25 +719,6 @@ export default function DeploySettings({
                     />
                   </div>
                 </Field>
-                <Field label="Bubble icon">
-                  <div className="flex gap-2">
-                    {(["chat", "sparkle", "help", "headset"] as const).map((icon) => (
-                      <button
-                        key={icon}
-                        type="button"
-                        onClick={() => updateWidget("bubble_icon", icon)}
-                        className={`w-10 h-10 rounded-lg border flex items-center justify-center transition-colors ${
-                          config.widget.bubble_icon === icon
-                            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                            : "border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
-                        }`}
-                        title={icon.charAt(0).toUpperCase() + icon.slice(1)}
-                      >
-                        <BubbleIcon icon={icon} className="w-5 h-5" />
-                      </button>
-                    ))}
-                  </div>
-                </Field>
                 <Toggle
                   label="File attachments"
                   checked={config.chat.attachments}
@@ -778,6 +743,41 @@ export default function DeploySettings({
                     checked={config.widget.enabled}
                     onChange={(v) => updateWidget("enabled", v)}
                   />
+                  <Field label="Bubble color">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={config.widget.color}
+                        onChange={(e) => updateWidget("color", e.target.value)}
+                        className="w-8 h-8 rounded border border-gray-300 dark:border-gray-700 cursor-pointer p-0"
+                      />
+                      <input
+                        type="text"
+                        value={config.widget.color}
+                        onChange={(e) => updateWidget("color", e.target.value)}
+                        className={inputClass + " flex-1"}
+                      />
+                    </div>
+                  </Field>
+                  <Field label="Bubble icon">
+                    <div className="flex gap-2">
+                      {(["chat", "sparkle", "help", "headset"] as const).map((icon) => (
+                        <button
+                          key={icon}
+                          type="button"
+                          onClick={() => updateWidget("bubble_icon", icon)}
+                          className={`w-10 h-10 rounded-lg border flex items-center justify-center transition-colors ${
+                            config.widget.bubble_icon === icon
+                              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                              : "border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500"
+                          }`}
+                          title={icon.charAt(0).toUpperCase() + icon.slice(1)}
+                        >
+                          <BubbleIcon icon={icon} className="w-5 h-5" />
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
                   <div className="grid grid-cols-2 gap-4">
                     <Field label="Position">
                       <div className="relative">
