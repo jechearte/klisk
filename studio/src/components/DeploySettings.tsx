@@ -97,7 +97,7 @@ const selectClass =
 type ChatMessage = { role: "user" | "assistant"; text: string };
 
 const MOCK_RESPONSE =
-  "Hello! I'm here to help. Feel free to ask me anything and I'll do my best to assist you.";
+  "This is a preview response so you can see the style of the chat. To interact with your agent, go to Playground.";
 
 function ChatPreview({
   config,
@@ -171,14 +171,8 @@ function ChatPreview({
         </div>
         {/* Messages area */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 min-h-0">
-          <div className="flex items-center justify-center gap-1.5 py-2 text-[11px] text-gray-400 dark:text-gray-500">
-            <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-            </svg>
-            <span>This is a style preview. Go to <strong className="font-medium text-gray-500 dark:text-gray-400">Playground</strong> to chat with your agent.</span>
-          </div>
           {messages.length === 0 ? (
-            <div className="flex items-start justify-center pt-16">
+            <div className="flex items-start justify-center pt-20">
               <p className="text-[15px] text-gray-400 dark:text-gray-500 text-center">{welcome}</p>
             </div>
           ) : (
