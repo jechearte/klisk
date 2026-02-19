@@ -16,6 +16,7 @@ function loadMessages(): AssistantMessage[] {
 
 export interface AssistantPanelHandle {
   clearChat: () => void;
+  sendMessage: (text: string) => void;
 }
 
 interface AssistantPanelProps {
@@ -209,7 +210,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
     }
   }, []);
 
-  useImperativeHandle(ref, () => ({ clearChat }), [clearChat]);
+  useImperativeHandle(ref, () => ({ clearChat, sendMessage }), [clearChat, sendMessage]);
 
   useEffect(() => {
     onMessagesChange?.(messages.length > 0);

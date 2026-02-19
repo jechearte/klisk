@@ -3,11 +3,13 @@ import type { LocalServerStatus, CloudDeployStatus } from "../types";
 
 interface DeployPageProps {
   project?: string;
+  agentName?: string;
   isWorkspace?: boolean;
   onToast: (msg: string) => void;
+  onDeployWithAssistant?: (message: string) => void;
 }
 
-export default function DeployPage({ project, isWorkspace, onToast }: DeployPageProps) {
+export default function DeployPage({ project, agentName, isWorkspace, onToast, onDeployWithAssistant }: DeployPageProps) {
   // --- Local server state ---
   const [localStatus, setLocalStatus] = useState<LocalServerStatus>({
     running: false,
@@ -261,38 +263,34 @@ export default function DeployPage({ project, isWorkspace, onToast }: DeployPage
                 <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                   <li className="flex items-start gap-2.5">
                     <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
-                    <span>
-                      <a href="https://cloud.google.com/sdk/docs/install" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Google Cloud CLI</a> installed and authenticated
-                    </span>
+                    <span>A <a href="https://cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Google Cloud</a> account</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
-                    <span>
-                      A GCP project with billing enabled
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
-                    <span>
-                      GCP project ID and region configured in <strong className="text-gray-700 dark:text-gray-300">Settings</strong>
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
-                    <span>
-                      LLM API keys set in <strong className="text-gray-700 dark:text-gray-300">Environment</strong>
-                    </span>
+                    <span>A GCP project with billing enabled</span>
                   </li>
                 </ul>
-                <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Deploy from terminal:
-                  </p>
-                  <code className="text-sm font-mono text-gray-900 dark:text-gray-100 mt-1 block">
-                    klisk deploy{isWorkspace && project ? ` ${project}` : ""}
-                  </code>
-                </div>
               </div>
+
+              {/* Deploy action */}
+              {onDeployWithAssistant && (
+                <div>
+                  <button
+                    onClick={() => onDeployWithAssistant(
+                      `Help me deploy the agent "${agentName || "my agent"}" to Google Cloud`
+                    )}
+                    className="w-full px-4 py-2.5 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path fillRule="evenodd" d="M9.315 7.584C12.195 3.883 16.695 1.5 21.75 1.5a.75.75 0 0 1 .75.75c0 5.056-2.383 9.555-6.084 12.436A6.75 6.75 0 0 1 9.75 22.5a.75.75 0 0 1-.75-.75v-4.131A15.838 15.838 0 0 1 6.382 15H2.25a.75.75 0 0 1-.75-.75 6.75 6.75 0 0 1 7.815-6.666ZM15 6.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" clipRule="evenodd" />
+                    </svg>
+                    Deploy agent
+                  </button>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">
+                    The assistant will guide you through the deployment process.
+                  </p>
+                </div>
+              )}
 
               {/* Deployment status */}
               <div>

@@ -536,6 +536,20 @@ export default function App() {
     setTimeout(() => setToast(null), 2000);
   }, []);
 
+  const openAssistantWith = useCallback((message: string) => {
+    setCurrentView({ page: "listing" });
+    setShowAssistant(true);
+    setShowSettings(false);
+    // Small delay to let the panel mount/connect before sending
+    setTimeout(() => {
+      assistantRef.current?.clearChat();
+      // Another small delay after clear so the WS is ready
+      setTimeout(() => {
+        assistantRef.current?.sendMessage(message);
+      }, 300);
+    }, 100);
+  }, []);
+
   const config = snapshot?.config ?? {};
   const isDetail = currentView.page === "detail";
   const activeTab = isDetail ? currentView.tab : "playground";
@@ -750,8 +764,10 @@ export default function App() {
             project={
               snapshot?.agents[currentView.agentName]?.project ?? undefined
             }
+            agentName={currentView.agentName}
             isWorkspace={!!config.workspace}
             onToast={showToast}
+            onDeployWithAssistant={(msg) => openAssistantWith(msg)}
           />
         )}
 
