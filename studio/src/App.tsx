@@ -5,9 +5,11 @@ import AgentListing from "./components/AgentListing";
 import AssistantPanel, { type AssistantPanelHandle } from "./components/AssistantPanel";
 import Chat from "./components/Chat";
 import Sidebar from "./components/Sidebar";
+import type { DetailNavItem, ListingNavItem } from "./components/Sidebar";
 import AgentModal from "./components/AgentModal";
 import ToolModal from "./components/ToolModal";
-import EnvModal from "./components/EnvModal";
+import EnvPage from "./components/EnvPage";
+import DeploySettings from "./components/DeploySettings";
 import OfflineScreen from "./components/OfflineScreen";
 import type {
   ProjectSnapshot,
@@ -74,7 +76,9 @@ function migrateLegacyStorage(firstAgentName: string) {
   }
 }
 
-type ViewState = { page: "listing" } | { page: "detail"; agentName: string };
+type ViewState =
+  | { page: "listing" }
+  | { page: "detail"; agentName: string; tab: "playground" | "env" | "deploy" };
 
 export default function App() {
   const [serverOnline, setServerOnline] = useState<boolean | null>(null);
@@ -129,7 +133,6 @@ export default function App() {
   // Modal state
   const [selectedAgent, setSelectedAgent] = useState<AgentInfo | null>(null);
   const [selectedTool, setSelectedTool] = useState<ToolInfo | null>(null);
-  const [showEnvModal, setShowEnvModal] = useState(false);
   const [showAssistant, setShowAssistant] = useState(false);
   const assistantRef = useRef<AssistantPanelHandle>(null);
   const [assistantHasMessages, setAssistantHasMessages] = useState(false);
@@ -420,7 +423,7 @@ export default function App() {
   }, []);
 
   const navigateToAgent = useCallback((agentName: string) => {
-    setCurrentView({ page: "detail", agentName });
+    setCurrentView({ page: "detail", agentName, tab: "playground" });
   }, []);
 
   const navigateToListing = useCallback(() => {
@@ -493,8 +496,14 @@ export default function App() {
     []
   );
 
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2000);
+  }, []);
+
   const config = snapshot?.config ?? {};
   const isDetail = currentView.page === "detail";
+  const activeTab = isDetail ? currentView.tab : "playground";
 
   // Show offline screen while loading or when server is unavailable
   if (serverOnline === false) {
@@ -513,21 +522,21 @@ export default function App() {
     );
   }
 
-  const sidebarActive = showAssistant && !isDetail ? "assistant" : "agents";
+  const handleListingNavigate = (item: ListingNavItem) => {
+    if (item === "agents") {
+      setShowAssistant(false);
+      if (showAssistant && currentView.page === "listing") return;
+      setCurrentView({ page: "listing" });
+    } else {
+      setShowAssistant(true);
+      setCurrentView({ page: "listing" });
+    }
+  };
 
-  const handleSidebarNavigate = useCallback(
-    (item: "agents" | "assistant") => {
-      if (item === "agents") {
-        setShowAssistant(false);
-        if (showAssistant && currentView.page === "listing") return; // already on agents listing
-        setCurrentView({ page: "listing" });
-      } else {
-        setShowAssistant(true);
-        setCurrentView({ page: "listing" });
-      }
-    },
-    [showAssistant, currentView]
-  );
+  const handleDetailNavigate = (item: DetailNavItem) => {
+    if (currentView.page !== "detail") return;
+    setCurrentView({ ...currentView, tab: item === "playground" ? "playground" : item === "env" ? "env" : "deploy" });
+  };
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -537,10 +546,13 @@ export default function App() {
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={toggleSidebar}
-        activeItem={sidebarActive}
-        onNavigate={handleSidebarNavigate}
         dark={dark}
         onToggleDark={() => setDark((d) => !d)}
+        mode={isDetail ? "detail" : "listing"}
+        activeListingItem={showAssistant ? "assistant" : "agents"}
+        activeDetailItem={activeTab}
+        onListingNavigate={handleListingNavigate}
+        onDetailNavigate={handleDetailNavigate}
       />
 
       {/* Main column */}
@@ -581,19 +593,8 @@ export default function App() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {/* Env settings */}
-              <button
-                onClick={() => setShowEnvModal(true)}
-                className="p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                title="Environment Variables"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                </svg>
-              </button>
-              {/* Reset conversation — only when on Chat tab */}
-              {!showAssistant && (
+              {/* Reset conversation — only on playground tab */}
+              {activeTab === "playground" && (
                 <button
                   onClick={clearChat}
                   className="p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -642,7 +643,7 @@ export default function App() {
               <AgentListing snapshot={snapshot} onSelect={navigateToAgent} />
             </div>
           )
-        ) : (
+        ) : activeTab === "playground" ? (
           <div ref={containerRef} className="flex flex-1 min-h-0">
             {/* Left column — Agent Canvas */}
             <div style={{ width: `${splitPercent}%` }} className="flex-shrink-0 min-w-0">
@@ -665,6 +666,31 @@ export default function App() {
             {/* Right column — Chat */}
             <div style={{ width: `${100 - splitPercent}%` }} className="flex flex-col min-h-0 min-w-0">
               <Chat messages={messages} onSend={sendMessage} />
+            </div>
+          </div>
+        ) : activeTab === "env" ? (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="px-4 py-6">
+              <EnvPage
+                isWorkspace={!!config.workspace}
+                initialProject={
+                  snapshot?.agents[currentView.agentName]?.project ?? undefined
+                }
+                onToast={showToast}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="px-4 py-6">
+              <DeploySettings
+                isWorkspace={!!config.workspace}
+                project={
+                  snapshot?.agents[currentView.agentName]?.project ?? undefined
+                }
+                projectName={typeof config.name === "string" ? config.name : undefined}
+                onToast={showToast}
+              />
             </div>
           </div>
         )}
@@ -700,23 +726,6 @@ export default function App() {
           tool={selectedTool}
           onClose={() => setSelectedTool(null)}
           onSave={saveTool}
-        />
-      )}
-
-      {/* Env Modal */}
-      {showEnvModal && (
-        <EnvModal
-          isWorkspace={!!config.workspace}
-          initialProject={
-            currentView.page === "detail"
-              ? snapshot?.agents[currentView.agentName]?.project ?? undefined
-              : undefined
-          }
-          onClose={() => setShowEnvModal(false)}
-          onToast={(msg) => {
-            setToast(msg);
-            setTimeout(() => setToast(null), 2000);
-          }}
         />
       )}
 
