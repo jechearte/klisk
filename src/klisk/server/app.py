@@ -410,7 +410,12 @@ def _build_api_router():
 
         try:
             _write_env_file(env_path, variables)
-            load_dotenv(env_path, override=True)
+            if _workspace_mode and project:
+                # Update the per-project env cache (no global os.environ pollution)
+                from klisk.core.env import load_project_env
+                load_project_env(PROJECTS_DIR / project)
+            else:
+                load_dotenv(env_path, override=True)
         except Exception as e:
             logger.exception("Failed to write .env file")
             return {"error": str(e)}

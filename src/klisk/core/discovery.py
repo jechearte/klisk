@@ -145,7 +145,11 @@ def discover_all_projects() -> ProjectSnapshot:
     Each agent/tool entry is tagged with its project name.
     If two projects define an agent/tool with the same name, the entries are
     prefixed with ``project_name/`` to avoid collisions.
+
+    Environment variables are loaded per-project (not globally) so that each
+    project's API keys stay isolated.
     """
+    from klisk.core.env import clear_project_envs, load_project_env, project_env_context
     from klisk.core.paths import PROJECTS_DIR
 
     merged = ProjectSnapshot()
@@ -153,6 +157,8 @@ def discover_all_projects() -> ProjectSnapshot:
 
     if not PROJECTS_DIR.exists():
         return merged
+
+    clear_project_envs()
 
     # Collect snapshots per project, tracking name collisions
     project_snapshots: list[tuple[str, ProjectSnapshot]] = []
@@ -167,7 +173,9 @@ def discover_all_projects() -> ProjectSnapshot:
             continue
         project_name = entry.name
         try:
-            snap = discover_project(entry)
+            load_project_env(entry)
+            with project_env_context(project_name):
+                snap = discover_project(entry)
         except Exception as exc:
             logger.warning("Failed to load project '%s': %s", project_name, exc)
             continue
@@ -198,19 +206,3 @@ def discover_all_projects() -> ProjectSnapshot:
             merged.tools[key] = te
 
     return merged
-
-
-def load_all_project_envs() -> None:
-    """Load .env files from all projects in ~/klisk/projects/ (no override)."""
-    from dotenv import load_dotenv
-    from klisk.core.paths import PROJECTS_DIR
-
-    if not PROJECTS_DIR.exists():
-        return
-
-    for entry in sorted(PROJECTS_DIR.iterdir()):
-        if not entry.is_dir():
-            continue
-        env_file = entry / ".env"
-        if env_file.exists():
-            load_dotenv(env_file, override=False)

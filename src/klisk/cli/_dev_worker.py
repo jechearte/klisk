@@ -9,9 +9,7 @@ directly by end-users.
 from __future__ import annotations
 
 import argparse
-import os
 import signal
-import sys
 from pathlib import Path
 
 
@@ -40,14 +38,11 @@ def main() -> None:
 
     project_path: Path | None = Path(args.project_path) if args.project_path else None
 
-    # Load environment variables
+    # Load environment variables (single-project mode only;
+    # workspace mode loads env per-project during discovery)
     if project_path is not None:
         from dotenv import load_dotenv
         load_dotenv(project_path / ".env")
-    else:
-        # Workspace mode: load all project envs
-        from klisk.core.discovery import load_all_project_envs
-        load_all_project_envs()
 
     # Create and run the app
     from klisk.server.app import create_app, run_server

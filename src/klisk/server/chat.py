@@ -261,7 +261,9 @@ async def handle_websocket_chat(
                     previous_response_id = None
 
             try:
-                from agents import ModelSettings, RunConfig, Runner
+                from agents import ModelSettings, MultiProvider, RunConfig, Runner
+
+                from klisk.core.env import get_project_env
 
                 attachments = msg.get("attachments")
                 content = _build_content_parts(user_message, attachments, litellm=use_litellm)
@@ -284,6 +286,16 @@ async def handle_websocket_chat(
                     run_config_kwargs["model_settings"] = ModelSettings(
                         response_include=["web_search_call.action.sources"],
                     )
+
+                # Per-project API key isolation (concurrency-safe: each request
+                # creates its own MultiProvider without touching os.environ)
+                project_env = get_project_env(agent_entry.project)
+                openai_key = project_env.get("OPENAI_API_KEY")
+                if openai_key:
+                    run_config_kwargs["model_provider"] = MultiProvider(
+                        openai_api_key=openai_key,
+                    )
+
                 run_config = RunConfig(**run_config_kwargs)
 
                 result = Runner.run_streamed(
@@ -456,7 +468,9 @@ async def handle_streaming_chat(
         previous_response_id = None
 
     try:
-        from agents import ModelSettings, RunConfig, Runner
+        from agents import ModelSettings, MultiProvider, RunConfig, Runner
+
+        from klisk.core.env import get_project_env
 
         content = _build_content_parts(message, attachments, litellm=use_litellm)
 
@@ -477,6 +491,15 @@ async def handle_streaming_chat(
             run_config_kwargs["model_settings"] = ModelSettings(
                 response_include=["web_search_call.action.sources"],
             )
+
+        # Per-project API key isolation
+        project_env = get_project_env(agent_entry.project)
+        openai_key = project_env.get("OPENAI_API_KEY")
+        if openai_key:
+            run_config_kwargs["model_provider"] = MultiProvider(
+                openai_api_key=openai_key,
+            )
+
         run_config = RunConfig(**run_config_kwargs)
 
         result = Runner.run_streamed(
