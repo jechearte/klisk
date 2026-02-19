@@ -232,14 +232,15 @@ function ChatPreview({
   );
 }
 
-function WidgetPreview({ config }: { config: DeployConfig }) {
+function WidgetPreview({ config, projectName }: { config: DeployConfig; projectName?: string }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const isLeft = config.widget.position === "bottom-left";
   const color = config.widget.color || "#2563eb";
   const placeholder = config.widget.placeholder || "Type a message...";
-  const welcome = config.widget.welcome_message;
+  const welcome = config.chat.welcome_message || "Send a message to start chatting";
+  const title = config.chat.title || projectName || "My Agent";
   const messagesEndRef = useCallback((node: HTMLDivElement | null) => {
     node?.scrollIntoView({ behavior: "smooth" });
   }, []);
@@ -253,6 +254,11 @@ function WidgetPreview({ config }: { config: DeployConfig }) {
       { role: "user", text },
       { role: "assistant", text: MOCK_RESPONSE },
     ]);
+  };
+
+  const handleClear = () => {
+    setMessages([]);
+    setInput("");
   };
 
   if (!config.widget.enabled) {
@@ -280,30 +286,43 @@ function WidgetPreview({ config }: { config: DeployConfig }) {
 
       {/* Widget container */}
       <div
-        className="absolute bottom-6 flex flex-col items-end gap-4"
+        className="absolute bottom-6 flex flex-col items-end gap-3"
         style={{ [isLeft ? "left" : "right"]: "24px" }}
       >
-        {/* Panel */}
+        {/* Panel — embeds the same chat page UI */}
         {open && (
           <div
-            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
-            style={{ width: "380px", height: "500px" }}
+            className="bg-white dark:bg-gray-900 rounded-xl flex flex-col overflow-hidden"
+            style={{
+              width: "380px",
+              height: "500px",
+              boxShadow: "0 8px 30px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)",
+            }}
           >
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: color }}>
-                <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
+            {/* Header — same as chat page */}
+            <div className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
+              <span className="text-[15px] font-semibold text-gray-900 dark:text-white flex-1 truncate">{title}</span>
+              <div className="flex items-center gap-1">
+                <div className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 text-gray-400">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path fillRule="evenodd" d="M9.528 1.718a.75.75 0 0 1 .162.819A8.97 8.97 0 0 0 9 6a9 9 0 0 0 9 9 8.97 8.97 0 0 0 3.463-.69.75.75 0 0 1 .981.98 10.503 10.503 0 0 1-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 0 1 .818.162Z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <button
+                  onClick={handleClear}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                </button>
               </div>
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">Chat</span>
             </div>
-            {/* Messages area */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5 min-h-0">
+            {/* Messages area — same as chat page */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 min-h-0">
               {messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-sm text-gray-400 dark:text-gray-500 text-center">
-                    {welcome || "How can we help you?"}
-                  </p>
+                <div className="flex items-start justify-center pt-16">
+                  <p className="text-[15px] text-gray-400 dark:text-gray-500 text-center">{welcome}</p>
                 </div>
               ) : (
                 messages.map((msg, i) => (
@@ -312,10 +331,10 @@ function WidgetPreview({ config }: { config: DeployConfig }) {
                     className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className="max-w-[85%] px-3 py-1.5 rounded-xl text-sm leading-relaxed break-words"
+                      className="max-w-[85%] px-3.5 py-2 rounded-xl text-sm leading-relaxed break-words"
                       style={
                         msg.role === "user"
-                          ? { background: color, color: "#ffffff" }
+                          ? { background: "#2563eb", color: "#ffffff" }
                           : { background: "#f3f4f6", color: "#1f2937" }
                       }
                     >
@@ -326,22 +345,32 @@ function WidgetPreview({ config }: { config: DeployConfig }) {
               )}
               <div ref={messagesEndRef} />
             </div>
-            {/* Input */}
-            <div className="px-4 pb-4 flex-shrink-0">
+            {/* Input area — same as chat page */}
+            <div className="px-4 pb-3 flex-shrink-0">
               <form
                 onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-xl px-4 py-2"
+                className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-3xl px-4 py-2"
               >
+                {config.chat.attachments && (
+                  <div className="w-8 h-8 flex items-center justify-center flex-shrink-0 text-gray-400">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                    </svg>
+                  </div>
+                )}
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={placeholder}
-                  className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none"
+                  className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none py-1"
                 />
-                <button type="submit" className="flex-shrink-0 ml-2">
-                  <svg className="w-5 h-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+                <button
+                  type="submit"
+                  className="w-8 h-8 rounded-full bg-gray-800 dark:bg-white flex items-center justify-center flex-shrink-0"
+                >
+                  <svg className="w-4 h-4 text-white dark:text-gray-800" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
                   </svg>
                 </button>
               </form>
@@ -349,13 +378,14 @@ function WidgetPreview({ config }: { config: DeployConfig }) {
           </div>
         )}
 
-        {/* Floating button */}
+        {/* Floating button — matches real widget: 56px, same shadow */}
         <button
           onClick={() => setOpen(!open)}
-          className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white transition-transform hover:scale-105"
+          className="w-14 h-14 rounded-full flex items-center justify-center text-white transition-transform hover:scale-105"
           style={{
             background: color,
             alignSelf: isLeft ? "flex-start" : "flex-end",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
           }}
         >
           {open ? (
@@ -740,7 +770,7 @@ export default function DeploySettings({
         </div>
         <div className="flex-1 min-h-0">
           {activeTab === "interfaces" && previewMode === "chat" && <ChatPreview config={config} projectName={projectName} />}
-          {activeTab === "interfaces" && previewMode === "widget" && <WidgetPreview config={config} />}
+          {activeTab === "interfaces" && previewMode === "widget" && <WidgetPreview config={config} projectName={projectName} />}
           {activeTab === "api" && <ApiPreview config={config} />}
         </div>
       </div>
