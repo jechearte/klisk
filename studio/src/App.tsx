@@ -89,7 +89,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>({ page: "listing" });
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connected, setConnected] = useState(false);
-  const [localServerRunning, setLocalServerRunning] = useState(false);
+  const [localServerMap, setLocalServerMap] = useState<Record<string, boolean>>({});
   const chatWsRef = useRef<WebSocket | null>(null);
   const reloadWsRef = useRef<WebSocket | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -382,30 +382,35 @@ export default function App() {
     }
   }, [snapshot, currentView]);
 
-  // Poll local server status when viewing an agent detail
+  // Poll local server status for every unique project
   useEffect(() => {
-    if (currentView.page !== "detail" || !snapshot) {
-      setLocalServerRunning(false);
-      return;
+    if (!snapshot) return;
+    const projects = new Set<string>();
+    for (const a of Object.values(snapshot.agents)) {
+      projects.add(a.project ?? "");
     }
-    const project = snapshot.agents[currentView.agentName]?.project;
-    const qs = project ? `?project=${encodeURIComponent(project)}` : "";
 
     let active = true;
     const check = async () => {
-      try {
-        const res = await fetch(`/api/local-server/status${qs}`);
-        if (!res.ok || !active) return;
-        const data: LocalServerStatus = await res.json();
-        if (active) setLocalServerRunning(data.running);
-      } catch {
-        // ignore
-      }
+      const entries = await Promise.all(
+        [...projects].map(async (p) => {
+          const qs = p ? `?project=${encodeURIComponent(p)}` : "";
+          try {
+            const res = await fetch(`/api/local-server/status${qs}`);
+            if (!res.ok) return [p, false] as const;
+            const data: LocalServerStatus = await res.json();
+            return [p, data.running] as const;
+          } catch {
+            return [p, false] as const;
+          }
+        })
+      );
+      if (active) setLocalServerMap(Object.fromEntries(entries));
     };
     check();
     const interval = setInterval(check, 5000);
     return () => { active = false; clearInterval(interval); };
-  }, [currentView, snapshot]);
+  }, [snapshot]);
 
   const sendMessage = useCallback(
     (text: string, attachments?: Attachment[]) => {
@@ -613,15 +618,23 @@ export default function App() {
                 {currentView.agentName}
               </h1>
               <div className="flex items-center gap-2">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    localServerRunning ? "bg-green-400" : "bg-gray-300 dark:bg-gray-600"
-                  }`}
-                  title={localServerRunning ? "Local server running" : "Local server not running"}
-                />
-                <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                  {localServerRunning ? "Deployed" : "Not deployed"}
-                </span>
+                {(() => {
+                  const proj = snapshot?.agents[currentView.agentName]?.project ?? "";
+                  const running = localServerMap[proj] ?? false;
+                  return (
+                    <>
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          running ? "bg-green-400" : "bg-gray-300 dark:bg-gray-600"
+                        }`}
+                        title={running ? "Local server running" : "Local server not running"}
+                      />
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                        {running ? "Deployed" : "Not deployed"}
+                      </span>
+                    </>
+                  );
+                })()}
                 {typeof config.name === "string" && !config.workspace && (
                   <>
                     <span className="text-gray-300 dark:text-gray-600">|</span>
@@ -682,7 +695,7 @@ export default function App() {
             <SettingsPage onToast={showToast} />
           ) : (
             <div className="flex-1 min-h-0 pt-2">
-              <AgentListing snapshot={snapshot} onSelect={navigateToAgent} />
+              <AgentListing snapshot={snapshot} onSelect={navigateToAgent} localServerMap={localServerMap} />
             </div>
           )
         ) : activeTab === "playground" ? (

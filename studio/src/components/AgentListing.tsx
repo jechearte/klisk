@@ -4,9 +4,10 @@ import type { ProjectSnapshot } from "../types";
 interface AgentListingProps {
   snapshot: ProjectSnapshot | null;
   onSelect: (agentName: string) => void;
+  localServerMap: Record<string, boolean>;
 }
 
-export default function AgentListing({ snapshot, onSelect }: AgentListingProps) {
+export default function AgentListing({ snapshot, onSelect, localServerMap }: AgentListingProps) {
   const [search, setSearch] = useState("");
 
   if (!snapshot || Object.keys(snapshot.agents).length === 0) {
@@ -94,7 +95,7 @@ export default function AgentListing({ snapshot, onSelect }: AgentListingProps) 
               className="text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-5 py-4 shadow-sm hover:border-blue-500 hover:shadow-md transition-all duration-150 cursor-pointer"
             >
               <div className="flex items-center gap-2 mb-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${localServerMap[agent.project ?? ""] ? "bg-green-400" : "bg-gray-300 dark:bg-gray-600"}`} />
                 <span className="font-semibold text-sm text-blue-600 dark:text-blue-400 truncate">
                   {agent.name}
                 </span>
