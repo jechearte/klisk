@@ -7,6 +7,43 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel
 
+from klisk.core.paths import KLISK_HOME
+
+
+# ---------------------------------------------------------------------------
+# Global config (~~/klisk/config.yaml)
+# ---------------------------------------------------------------------------
+
+
+class GCloudConfig(BaseModel):
+    project: str = ""
+    region: str = ""
+
+
+class GlobalConfig(BaseModel):
+    gcloud: GCloudConfig = GCloudConfig()
+
+    @classmethod
+    def load(cls) -> GlobalConfig:
+        path = KLISK_HOME / "config.yaml"
+        if not path.exists():
+            return cls()
+        with open(path) as f:
+            data = yaml.safe_load(f) or {}
+        return cls.model_validate(data)
+
+    def save(self) -> None:
+        KLISK_HOME.mkdir(parents=True, exist_ok=True)
+        path = KLISK_HOME / "config.yaml"
+        data = self.model_dump()
+        with open(path, "w") as f:
+            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+
+
+# ---------------------------------------------------------------------------
+# Project config (klisk.config.yaml per project)
+# ---------------------------------------------------------------------------
+
 
 class StudioConfig(BaseModel):
     port: int = 3000

@@ -67,6 +67,15 @@ export interface DeployConfig {
   api: ApiDeployConfig;
 }
 
+export interface GCloudConfig {
+  project: string;
+  region: string;
+}
+
+export interface GlobalConfig {
+  gcloud: GCloudConfig;
+}
+
 export type ChatMessage =
   | { role: "user"; content: string; attachments?: Attachment[] }
   | { role: "assistant"; content: string }

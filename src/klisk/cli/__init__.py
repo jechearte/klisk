@@ -10,6 +10,7 @@ from klisk.cli.run import run
 from klisk.cli.check import check
 from klisk.cli.list_projects import list_cmd
 from klisk.cli.serve import serve
+from klisk.cli.config import config
 from klisk.cli.deploy import deploy
 from klisk.cli.docker import docker
 
@@ -59,5 +60,6 @@ app.command()(run)
 app.command()(check)
 app.command("list")(list_cmd)
 app.command()(serve)
+app.command()(config)
 app.command()(docker)
 app.command()(deploy)

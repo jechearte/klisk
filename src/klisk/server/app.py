@@ -394,6 +394,24 @@ def _build_api_router():
         cfg.save(project_dir)
         return {"ok": True}
 
+    @router.get("/global-config")
+    async def get_global_config():
+        from klisk.core.config import GlobalConfig
+        cfg = GlobalConfig.load()
+        return cfg.model_dump()
+
+    @router.put("/global-config")
+    async def put_global_config(request: Request):
+        from klisk.core.config import GlobalConfig, GCloudConfig
+        body = await request.json()
+        cfg = GlobalConfig.load()
+        if "gcloud" in body and isinstance(body["gcloud"], dict):
+            merged = cfg.gcloud.model_dump()
+            merged.update(body["gcloud"])
+            cfg.gcloud = GCloudConfig.model_validate(merged)
+        cfg.save()
+        return {"ok": True}
+
     @router.get("/assistant/status")
     async def assistant_status():
         return check_assistant_available()

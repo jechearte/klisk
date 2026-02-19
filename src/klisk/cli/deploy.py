@@ -54,10 +54,16 @@ def _check_gcloud_auth() -> None:
         raise typer.Exit(1)
 
 
-def _check_gcloud_project(gcp_project: str | None) -> str:
-    """Resolve and validate the GCP project ID."""
+def _check_gcloud_project(gcp_project: str | None, config_project: str = "") -> str:
+    """Resolve and validate the GCP project ID.
+
+    Resolution order: CLI flag → global config → gcloud default.
+    """
     if gcp_project:
         return gcp_project
+
+    if config_project:
+        return config_project
 
     try:
         result = _run_gcloud(["config", "get-value", "project"])
@@ -273,12 +279,19 @@ def deploy(
         typer.echo("    klisk docker", err=True)
         raise typer.Exit(1)
 
+    # --- Load global config for defaults ---
+    from klisk.core.config import GlobalConfig
+
+    global_cfg = GlobalConfig.load()
+    if not region and global_cfg.gcloud.region:
+        region = global_cfg.gcloud.region
+
     # --- Check prerequisites with helpful messages ---
     typer.echo("  Checking prerequisites...\n")
 
     _check_gcloud_installed()
     _check_gcloud_auth()
-    gcp_project = _check_gcloud_project(gcp_project)
+    gcp_project = _check_gcloud_project(gcp_project, global_cfg.gcloud.project)
     _check_billing(gcp_project)
     _ensure_apis(gcp_project)
     _ensure_build_permissions(gcp_project)
