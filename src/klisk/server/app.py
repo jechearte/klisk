@@ -416,6 +416,61 @@ def _build_api_router():
     async def assistant_status():
         return check_assistant_available()
 
+    # --- Local server endpoints ---
+
+    @router.get("/local-server/status")
+    async def local_server_status(project: str | None = Query(None)):
+        project_dir = _resolve_project_dir(project)
+        if project_dir is None:
+            return {"running": False, "port": None, "pid": None, "url": None}
+        from klisk.core.local_server import get_status
+        project_name = project or (
+            _config.name if _config else project_dir.name
+        )
+        return await asyncio.to_thread(get_status, project_name)
+
+    @router.post("/local-server/start")
+    async def local_server_start(request: Request, project: str | None = Query(None)):
+        project_dir = _resolve_project_dir(project)
+        if project_dir is None:
+            return {"ok": False, "error": "Cannot resolve project path"}
+        body = await request.json()
+        port = body.get("port", 8080)
+        from klisk.core.local_server import start_server
+        project_name = project or (
+            _config.name if _config else project_dir.name
+        )
+        return await asyncio.to_thread(start_server, project_dir, project_name, port)
+
+    @router.post("/local-server/stop")
+    async def local_server_stop(request: Request, project: str | None = Query(None)):
+        project_dir = _resolve_project_dir(project)
+        if project_dir is None:
+            return {"ok": True, "message": "No project to stop"}
+        from klisk.core.local_server import stop_server
+        project_name = project or (
+            _config.name if _config else project_dir.name
+        )
+        return await asyncio.to_thread(stop_server, project_name)
+
+    # --- Cloud deploy endpoints ---
+
+    @router.get("/deploy/cloud-status")
+    async def deploy_cloud_status(project: str | None = Query(None)):
+        project_dir = _resolve_project_dir(project)
+        if project_dir is None:
+            return {"deployed": False, "url": None, "service_name": "", "message": "Cannot resolve project path"}
+        from klisk.core.config import GlobalConfig, ProjectConfig as ProjCfg
+        from klisk.core.cloud_status import get_cloud_run_url, _slugify
+        proj_cfg = ProjCfg.load(project_dir)
+        global_cfg = GlobalConfig.load()
+        service_name = _slugify(proj_cfg.name)
+        gcp_project = global_cfg.gcloud.project
+        region = global_cfg.gcloud.region
+        return await asyncio.to_thread(get_cloud_run_url, service_name, gcp_project, region)
+
+    # --- Env endpoints ---
+
     @router.get("/env")
     async def get_env(project: str | None = Query(None)):
         env_path = _resolve_env_path(project)

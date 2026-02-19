@@ -79,6 +79,20 @@ export interface GlobalConfig {
   gcloud: GCloudConfig;
 }
 
+export interface LocalServerStatus {
+  running: boolean;
+  port: number | null;
+  pid: number | null;
+  url: string | null;
+}
+
+export interface CloudDeployStatus {
+  deployed: boolean;
+  url: string | null;
+  service_name: string;
+  message: string;
+}
+
 export type ChatMessage =
   | { role: "user"; content: string; attachments?: Attachment[] }
   | { role: "assistant"; content: string }
