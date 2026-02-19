@@ -63,6 +63,20 @@ def _is_port_in_use(port: int) -> bool:
         return s.connect_ex(("127.0.0.1", port)) == 0
 
 
+def _find_free_port(start: int = 8080) -> int:
+    """Find a free port starting from *start*."""
+    import socket
+
+    for port in range(start, start + 100):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(("127.0.0.1", port)) != 0:
+                return port
+    # Last resort: let the OS pick
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
 def _wait_for_port(port: int, pid: int, timeout: float = 10.0) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -143,14 +157,14 @@ def get_status(project: str, port: int = 8080, config_name: str = "") -> dict:
     return {"running": False, "port": None, "pid": None, "url": None}
 
 
-def start_server(project_path: Path, project: str, port: int = 8080) -> dict:
-    """Start the production server as a background process."""
-    if _is_port_in_use(port):
-        # Check if it's already our server
-        info = _read_pid_info(project)
-        if info is not None:
-            return {"ok": True, "port": info.port, "pid": info.pid, "url": f"http://localhost:{info.port}"}
-        return {"ok": False, "error": f"Port {port} is already in use"}
+def start_server(project_path: Path, project: str) -> dict:
+    """Start the production server as a background process on a free port."""
+    # Already running via PID file?
+    info = _read_pid_info(project)
+    if info is not None:
+        return {"ok": True, "port": info.port, "pid": info.pid, "url": f"http://localhost:{info.port}"}
+
+    port = _find_free_port()
 
     RUN_DIR.mkdir(parents=True, exist_ok=True)
     LOG_DIR.mkdir(parents=True, exist_ok=True)

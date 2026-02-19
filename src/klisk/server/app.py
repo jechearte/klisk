@@ -431,17 +431,15 @@ def _build_api_router():
         return await asyncio.to_thread(get_status, project_name, 8080, proj_cfg.name)
 
     @router.post("/local-server/start")
-    async def local_server_start(request: Request, project: str | None = Query(None)):
+    async def local_server_start(project: str | None = Query(None)):
         project_dir = _resolve_project_dir(project)
         if project_dir is None:
             return {"ok": False, "error": "Cannot resolve project path"}
-        body = await request.json()
-        port = body.get("port", 8080)
         from klisk.core.local_server import start_server
         project_name = project or (
             _config.name if _config else project_dir.name
         )
-        return await asyncio.to_thread(start_server, project_dir, project_name, port)
+        return await asyncio.to_thread(start_server, project_dir, project_name)
 
     @router.post("/local-server/stop")
     async def local_server_stop(request: Request, project: str | None = Query(None)):

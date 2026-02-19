@@ -17,7 +17,6 @@ export default function DeployPage({ project, isWorkspace, onToast }: DeployPage
   });
   const [localLoading, setLocalLoading] = useState(true);
   const [localActing, setLocalActing] = useState(false);
-  const [portInput, setPortInput] = useState("8080");
 
   // --- Cloud state ---
   const [cloudStatus, setCloudStatus] = useState<CloudDeployStatus | null>(null);
@@ -34,7 +33,6 @@ export default function DeployPage({ project, isWorkspace, onToast }: DeployPage
       if (!res.ok) return;
       const data = await res.json();
       setLocalStatus(data);
-      if (data.port) setPortInput(String(data.port));
     } catch {
       // Server may not support this endpoint yet
     } finally {
@@ -51,8 +49,6 @@ export default function DeployPage({ project, isWorkspace, onToast }: DeployPage
     try {
       const res = await fetch(`/api/local-server/start${qs}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ port: parseInt(portInput) || 8080 }),
       });
       const data = await res.json();
       if (data.ok) {
@@ -170,33 +166,20 @@ export default function DeployPage({ project, isWorkspace, onToast }: DeployPage
                 </div>
               ) : (
                 /* Not running state */
-                <div className="space-y-3">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600" />
                     <span className="text-sm text-gray-500 dark:text-gray-400">
                       Not running
                     </span>
                   </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                        Port:
-                      </label>
-                      <input
-                        type="text"
-                        value={portInput}
-                        onChange={(e) => setPortInput(e.target.value)}
-                        className="w-20 font-mono bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-                    <button
-                      onClick={handleStartServer}
-                      disabled={localActing}
-                      className="px-4 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition-colors"
-                    >
-                      {localActing ? "Starting..." : "Start Server"}
-                    </button>
-                  </div>
+                  <button
+                    onClick={handleStartServer}
+                    disabled={localActing}
+                    className="px-4 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+                  >
+                    {localActing ? "Starting..." : "Start Server"}
+                  </button>
                 </div>
               )}
             </div>
