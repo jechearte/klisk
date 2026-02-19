@@ -21,7 +21,7 @@ export default function DeployPage({ project, isWorkspace, onToast }: DeployPage
   // --- Cloud state ---
   const [cloudStatus, setCloudStatus] = useState<CloudDeployStatus | null>(null);
   const [cloudChecking, setCloudChecking] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const qs = project ? `?project=${encodeURIComponent(project)}` : "";
 
@@ -103,11 +103,30 @@ export default function DeployPage({ project, isWorkspace, onToast }: DeployPage
     }
   };
 
-  const handleCopy = (text: string) => {
+  const handleCopy = (key: string, text: string) => {
     navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 1500);
   };
+
+  const CopyBtn = ({ id, text, className = "" }: { id: string; text: string; className?: string }) => (
+    <button
+      onClick={() => handleCopy(id, text)}
+      className={`p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0 ${className}`}
+      title="Copy"
+    >
+      {copiedKey === id ? (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-green-500">
+          <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+        </svg>
+      ) : (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+          <path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h3.879a1.5 1.5 0 0 1 1.06.44l3.122 3.12A1.5 1.5 0 0 1 17 6.622V12.5a1.5 1.5 0 0 1-1.5 1.5h-1v-3.379a3 3 0 0 0-.879-2.121L10.5 5.379A3 3 0 0 0 8.379 4.5H7v-1Z" />
+          <path d="M4.5 6A1.5 1.5 0 0 0 3 7.5v9A1.5 1.5 0 0 0 4.5 18h7a1.5 1.5 0 0 0 1.5-1.5v-5.879a1.5 1.5 0 0 0-.44-1.06L9.44 6.439A1.5 1.5 0 0 0 8.378 6H4.5Z" />
+        </svg>
+      )}
+    </button>
+  );
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
@@ -134,33 +153,68 @@ export default function DeployPage({ project, isWorkspace, onToast }: DeployPage
                 </div>
               ) : localStatus.running ? (
                 /* Running state */
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      Running on port {localStatus.port}
-                    </span>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        Running on port {localStatus.port}
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleStopServer}
+                      disabled={localActing}
+                      className="px-3 py-1.5 text-xs font-medium border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 disabled:opacity-50 rounded-lg transition-colors"
+                    >
+                      {localActing ? "Stopping..." : "Stop"}
+                    </button>
                   </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <code className="text-sm text-blue-600 dark:text-blue-400 font-mono">
-                      {localStatus.url}
-                    </code>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <a
-                        href={localStatus.url!}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1.5 text-xs font-medium border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                      >
-                        Open
-                      </a>
-                      <button
-                        onClick={handleStopServer}
-                        disabled={localActing}
-                        className="px-3 py-1.5 text-xs font-medium border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 disabled:opacity-50 rounded-lg transition-colors"
-                      >
-                        {localActing ? "Stopping..." : "Stop"}
-                      </button>
+
+                  {/* Endpoints */}
+                  <div className="space-y-2">
+                    {/* Chat */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-12 flex-shrink-0">Chat</span>
+                      <code className="text-sm text-blue-600 dark:text-blue-400 font-mono truncate min-w-0">
+                        {localStatus.url}
+                      </code>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <a
+                          href={localStatus.url!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          title="Open in browser"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                            <path fillRule="evenodd" d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5h-5Z" clipRule="evenodd" />
+                            <path fillRule="evenodd" d="M6.194 12.753a.75.75 0 0 0 1.06.053L16.5 4.44v2.81a.75.75 0 0 0 1.5 0v-4.5a.75.75 0 0 0-.75-.75h-4.5a.75.75 0 0 0 0 1.5h2.553l-9.056 8.194a.75.75 0 0 0-.053 1.06Z" clipRule="evenodd" />
+                          </svg>
+                        </a>
+                        <CopyBtn id="local-chat" text={localStatus.url!} />
+                      </div>
+                    </div>
+
+                    {/* API */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-12 flex-shrink-0">API</span>
+                      <code className="text-sm text-gray-700 dark:text-gray-300 font-mono truncate min-w-0">
+                        {localStatus.url}/api/chat
+                      </code>
+                      <CopyBtn id="local-api" text={`${localStatus.url}/api/chat`} />
+                    </div>
+                  </div>
+
+                  {/* Widget embed */}
+                  <div>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Widget</span>
+                    <div className="mt-1.5 relative group">
+                      <pre className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-xs font-mono text-gray-700 dark:text-gray-300 overflow-x-auto">
+{`<script src="${localStatus.url}/widget.js"></script>`}
+                      </pre>
+                      <div className="absolute top-1.5 right-1.5">
+                        <CopyBtn id="local-widget" text={`<script src="${localStatus.url}/widget.js"></script>`} />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -273,28 +327,14 @@ export default function DeployPage({ project, isWorkspace, onToast }: DeployPage
                         <code className="text-sm text-blue-600 dark:text-blue-400 font-mono truncate">
                           {cloudStatus.url}
                         </code>
-                        <button
-                          onClick={() => handleCopy(cloudStatus.url!)}
-                          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0"
-                          title="Copy URL"
-                        >
-                          {copied ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-green-500">
-                              <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
-                            </svg>
-                          ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                              <path d="M7 3.5A1.5 1.5 0 0 1 8.5 2h3.879a1.5 1.5 0 0 1 1.06.44l3.122 3.12A1.5 1.5 0 0 1 17 6.622V12.5a1.5 1.5 0 0 1-1.5 1.5h-1v-3.379a3 3 0 0 0-.879-2.121L10.5 5.379A3 3 0 0 0 8.379 4.5H7v-1Z" />
-                              <path d="M4.5 6A1.5 1.5 0 0 0 3 7.5v9A1.5 1.5 0 0 0 4.5 18h7a1.5 1.5 0 0 0 1.5-1.5v-5.879a1.5 1.5 0 0 0-.44-1.06L9.44 6.439A1.5 1.5 0 0 0 8.378 6H4.5Z" />
-                            </svg>
-                          )}
-                        </button>
+                        <CopyBtn id="cloud-url" text={cloudStatus.url!} />
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-500 dark:text-gray-400 w-8">API</span>
                         <code className="text-xs text-gray-600 dark:text-gray-400 font-mono truncate">
                           {cloudStatus.url}/api/chat
                         </code>
+                        <CopyBtn id="cloud-api" text={`${cloudStatus.url}/api/chat`} />
                       </div>
                     </div>
                   </div>
