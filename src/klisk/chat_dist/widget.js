@@ -68,10 +68,44 @@
       : '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   }
 
+  function applyServerConfig() {
+    // Fetch server config and apply defaults for settings not overridden by data-* attributes
+    fetch(baseUrl + '/api/info')
+      .then(function(r) { return r.json(); })
+      .then(function(info) {
+        var deploy = info.deploy || {};
+        var wc = deploy.widget || {};
+        // Only apply server value if no data-* attribute was set
+        if (!script.hasAttribute('data-color') && wc.color) {
+          btn.style.background = wc.color;
+        }
+        if (!script.hasAttribute('data-position') && wc.position) {
+          var serverLeft = wc.position === 'bottom-left';
+          container.style.left = serverLeft ? '20px' : '';
+          container.style.right = serverLeft ? '' : '20px';
+          btn.style.marginLeft = serverLeft ? '' : 'auto';
+        }
+        if (!script.hasAttribute('data-width') && wc.width) {
+          panel.style.width = wc.width;
+        }
+        if (!script.hasAttribute('data-height') && wc.height) {
+          panel.style.height = wc.height;
+        }
+        if (wc.auto_open && !isOpen) {
+          toggle();
+        }
+      })
+      .catch(function() { /* ignore */ });
+  }
+
   // Init when DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createWidget);
+    document.addEventListener('DOMContentLoaded', function() {
+      createWidget();
+      applyServerConfig();
+    });
   } else {
     createWidget();
+    applyServerConfig();
   }
 })();

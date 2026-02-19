@@ -980,9 +980,21 @@
   fetch('/api/info')
     .then(function(r) { return r.json(); })
     .then(function(info) {
-      if (info.name) {
-        agentNameEl.textContent = info.name;
-        document.title = info.name + ' — Chat';
+      var deploy = info.deploy || {};
+      var chatConfig = deploy.chat || {};
+      // Title
+      var title = chatConfig.title || info.name;
+      if (title) {
+        agentNameEl.textContent = title;
+        document.title = title + ' — Chat';
+      }
+      // Welcome message
+      if (chatConfig.welcome_message) {
+        emptyState.textContent = chatConfig.welcome_message;
+      }
+      // Hide attach button if attachments disabled
+      if (chatConfig.attachments === false) {
+        attachBtn.style.display = 'none';
       }
       authRequired = !!info.auth_required;
       if (authRequired && !authKey) {
