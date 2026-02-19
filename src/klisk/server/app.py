@@ -369,6 +369,31 @@ def _build_api_router():
 
         return {"ok": True}
 
+    @router.get("/deploy-config")
+    async def get_deploy_config(project: str | None = Query(None)):
+        project_dir = _resolve_project_dir(project)
+        if project_dir is None:
+            return {"error": "Cannot resolve project path"}
+        cfg = ProjectConfig.load(project_dir)
+        return cfg.deploy.model_dump()
+
+    @router.put("/deploy-config")
+    async def put_deploy_config(request: Request, project: str | None = Query(None)):
+        project_dir = _resolve_project_dir(project)
+        if project_dir is None:
+            return {"error": "Cannot resolve project path"}
+        cfg = ProjectConfig.load(project_dir)
+        body = await request.json()
+        # Merge incoming fields into deploy config
+        updated = cfg.deploy.model_dump()
+        for section in ("chat", "widget", "api"):
+            if section in body and isinstance(body[section], dict):
+                updated[section].update(body[section])
+        from klisk.core.config import DeployConfig
+        cfg.deploy = DeployConfig.model_validate(updated)
+        cfg.save(project_dir)
+        return {"ok": True}
+
     @router.get("/assistant/status")
     async def assistant_status():
         return check_assistant_available()
@@ -477,6 +502,15 @@ def _get_project_dir_for_source(source_file: str) -> Path | None:
 
 
 _ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _resolve_project_dir(project: str | None) -> Path | None:
+    """Resolve the project directory for the given project name."""
+    if _workspace_mode:
+        if not project:
+            return None
+        return PROJECTS_DIR / project
+    return _project_path
 
 
 def _resolve_env_path(project: str | None) -> Path | None:
