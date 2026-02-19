@@ -268,12 +268,12 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
         ) : (
           <>
             <div className="text-center text-gray-400 dark:text-gray-500 mb-6">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-violet-100 dark:bg-violet-900/30 mb-3">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-3">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
                   fill="currentColor"
-                  className="w-6 h-6 text-violet-500"
+                  className="w-6 h-6 text-blue-500"
                 >
                   <path
                     fillRule="evenodd"
@@ -290,7 +290,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
             <div className="w-full max-w-[700px] px-3 pb-3">
               <form
                 onSubmit={handleSubmit}
-                className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-3xl px-4 py-2 focus-within:border-violet-400 dark:focus-within:border-violet-500 transition-colors"
+                className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-3xl px-4 py-2 focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
               >
                 <textarea
                   ref={textareaRef}
@@ -312,7 +312,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                   disabled={!input.trim() || streaming}
                   className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
                     input.trim() && !streaming
-                      ? "bg-violet-600 text-white hover:bg-violet-700"
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
                       : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-default"
                   }`}
                 >
@@ -425,7 +425,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
             const isPending = msg.status === "pending";
             return (
               <div key={i} className="flex justify-start">
-                <div className="max-w-[90%] rounded-lg text-sm border border-violet-300 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/20 overflow-hidden">
+                <div className="max-w-[90%] rounded-lg text-sm border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 overflow-hidden">
                   <div className="px-3 py-2 space-y-3">
                     {msg.questions.map((q, qi) => (
                       <QuestionCard
@@ -440,7 +440,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                       />
                     ))}
                     {!isPending && (
-                      <span className="text-xs font-medium text-violet-600 dark:text-violet-400">
+                      <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
                         Answered
                       </span>
                     )}
@@ -460,7 +460,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
               <div
                 className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                   msg.role === "user"
-                    ? "bg-violet-600 text-white"
+                    ? "bg-blue-600 text-white"
                     : msg.role === "system"
                     ? "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800"
                     : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
@@ -483,9 +483,9 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
         {streaming && (
           <div className="flex justify-start">
             <div className="flex items-center gap-1 px-3 py-2">
-              <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+              <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
             </div>
           </div>
         )}
@@ -498,7 +498,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
         <div className="sticky bottom-0 pb-3 px-3 bg-gray-50 dark:bg-gray-950">
           <form
             onSubmit={handleSubmit}
-            className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-3xl px-4 py-2 focus-within:border-violet-400 dark:focus-within:border-violet-500 transition-colors"
+            className="flex items-end gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-3xl px-4 py-2 focus-within:border-blue-400 dark:focus-within:border-blue-500 transition-colors"
           >
             <textarea
               ref={textareaRef}
@@ -520,7 +520,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
               disabled={!input.trim() || streaming}
               className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
                 input.trim() && !streaming
-                  ? "bg-violet-600 text-white hover:bg-violet-700"
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
                   : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-default"
               }`}
             >
@@ -549,7 +549,7 @@ function QuestionCard({
 }) {
   return (
     <div>
-      <p className="font-medium text-violet-800 dark:text-violet-300 mb-1.5">
+      <p className="font-medium text-blue-800 dark:text-blue-300 mb-1.5">
         {question.question}
       </p>
       <div className="flex flex-wrap gap-1.5">
@@ -558,7 +558,7 @@ function QuestionCard({
             key={oi}
             disabled={!enabled}
             onClick={() => onAnswer(opt.label)}
-            className="px-2.5 py-1 rounded-md text-xs font-medium border border-violet-300 dark:border-violet-600 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-800/50 disabled:opacity-50 disabled:cursor-default transition-colors"
+            className="px-2.5 py-1 rounded-md text-xs font-medium border border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/50 disabled:opacity-50 disabled:cursor-default transition-colors"
             title={opt.description}
           >
             {opt.label}
