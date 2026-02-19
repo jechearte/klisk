@@ -131,12 +131,6 @@ const BUBBLE_ICONS: Record<string, React.ReactNode> = {
       <line x1="12" y1="17" x2="12.01" y2="17"/>
     </svg>
   ),
-  headset: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
-      <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
-    </svg>
-  ),
 };
 
 function BubbleIcon({ icon, className }: { icon: string; className?: string }) {
@@ -288,6 +282,13 @@ function ChatPreview({
               </svg>
             </button>
           </form>
+        </div>
+        {/* Footer */}
+        <div className="py-1.5 text-center flex-shrink-0">
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">
+            Built with{" "}
+            <a href="https://klisk.productomania.io" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-500 dark:hover:text-gray-400">Klisk</a>
+          </span>
         </div>
       </div>
     </div>
@@ -448,6 +449,13 @@ function WidgetPreview({ config, projectName }: { config: DeployConfig; projectN
                   </svg>
                 </button>
               </form>
+            </div>
+            {/* Footer */}
+            <div className="py-1.5 text-center flex-shrink-0">
+              <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                Built with{" "}
+                <a href="https://klisk.productomania.io" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-500 dark:hover:text-gray-400">Klisk</a>
+              </span>
             </div>
           </div>
         )}
@@ -761,7 +769,7 @@ export default function DeploySettings({
                   </Field>
                   <Field label="Bubble icon">
                     <div className="flex gap-2">
-                      {(["chat", "sparkle", "help", "headset"] as const).map((icon) => (
+                      {(["chat", "sparkle", "help"] as const).map((icon) => (
                         <button
                           key={icon}
                           type="button"
