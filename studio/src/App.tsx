@@ -671,18 +671,34 @@ export default function App() {
         {currentView.page === "listing" ? (
           showAssistant ? (
             <div className="flex-1 relative min-h-0">
-              {/* Clear button at page top-right */}
-              {assistantHasMessages && (
-                <button
-                  onClick={() => assistantRef.current?.clearChat()}
-                  className="absolute top-3 right-5 z-10 p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
-                  title="Clear conversation"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                  </svg>
-                </button>
-              )}
+              {/* Top-right actions */}
+              <div className="absolute top-3 right-5 z-10 flex items-center gap-1">
+                {/* Usage warning */}
+                <div className="group relative">
+                  <div className="p-2 rounded-lg text-amber-500 dark:text-amber-400 cursor-default">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                    </svg>
+                  </div>
+                  <div className="absolute right-0 top-full mt-1 hidden group-hover:block pointer-events-none">
+                    <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                      Using the assistant consumes your Claude account usage
+                    </div>
+                  </div>
+                </div>
+                {/* Clear conversation */}
+                {assistantHasMessages && (
+                  <button
+                    onClick={() => assistantRef.current?.clearChat()}
+                    className="p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                    title="Clear conversation"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                  </button>
+                )}
+              </div>
               {/* Scrollable content */}
               <div className="h-full overflow-y-auto flex flex-col">
                 <div className="flex-1 flex flex-col items-center px-4 pt-6 pb-4">
