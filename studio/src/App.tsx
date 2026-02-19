@@ -605,13 +605,15 @@ export default function App() {
         {/* Main Content */}
         {currentView.page === "listing" ? (
           showAssistant ? (
-            <div className="flex-1 flex items-stretch justify-center min-h-0 p-4">
+            <div className="flex-1 flex items-stretch justify-center min-h-0 p-4 pt-6">
               <div className="w-full max-w-[700px] flex flex-col min-h-0">
                 <AssistantPanel active={showAssistant} />
               </div>
             </div>
           ) : (
-            <AgentListing snapshot={snapshot} onSelect={navigateToAgent} />
+            <div className="flex-1 min-h-0 pt-2">
+              <AgentListing snapshot={snapshot} onSelect={navigateToAgent} />
+            </div>
           )
         ) : (
           <div ref={containerRef} className="flex flex-1 min-h-0">
@@ -633,44 +635,9 @@ export default function App() {
               className="splitter-divider flex-shrink-0"
             />
 
-            {/* Right column — Tabbed Chat / Assistant */}
+            {/* Right column — Chat */}
             <div style={{ width: `${100 - splitPercent}%` }} className="flex flex-col min-h-0 min-w-0">
-              {/* Tab bar */}
-              <div className="flex border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
-                <button
-                  onClick={() => setShowAssistant(false)}
-                  className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-colors border-b-2 ${
-                    !showAssistant
-                      ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                  }`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
-                    <path fillRule="evenodd" d="M4.848 2.771A49.144 49.144 0 0 1 12 2.25c2.43 0 4.817.178 7.152.52 1.978.292 3.348 2.024 3.348 3.97v6.02c0 1.946-1.37 3.678-3.348 3.97a48.901 48.901 0 0 1-3.476.383.39.39 0 0 0-.297.17l-2.755 4.133a.75.75 0 0 1-1.248 0l-2.755-4.133a.39.39 0 0 0-.297-.17 48.9 48.9 0 0 1-3.476-.384c-1.978-.29-3.348-2.024-3.348-3.97V6.741c0-1.946 1.37-3.68 3.348-3.97Z" clipRule="evenodd" />
-                  </svg>
-                  Chat
-                </button>
-                <button
-                  onClick={() => setShowAssistant(true)}
-                  className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-colors border-b-2 ${
-                    showAssistant
-                      ? "border-violet-500 text-violet-600 dark:text-violet-400"
-                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                  }`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
-                    <path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z" clipRule="evenodd" />
-                  </svg>
-                  Assistant
-                </button>
-              </div>
-              {/* Tab content */}
-              <div className={`flex-1 flex flex-col min-h-0 ${showAssistant ? "hidden" : ""}`}>
-                <Chat messages={messages} onSend={sendMessage} />
-              </div>
-              <div className={`flex-1 flex flex-col min-h-0 ${showAssistant ? "" : "hidden"}`}>
-                <AssistantPanel active={showAssistant} />
-              </div>
+              <Chat messages={messages} onSend={sendMessage} />
             </div>
           </div>
         )}
