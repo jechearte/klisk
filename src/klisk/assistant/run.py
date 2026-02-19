@@ -332,7 +332,7 @@ async def _run_loop(cwd: Path, model: str) -> None:
             },
             can_use_tool=_can_use_tool,
             cwd=str(cwd),
-            max_turns=50,
+            max_turns=None,
             env=sdk_env,
             cli_path=cli_path,
             stderr=_on_stderr,

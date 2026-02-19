@@ -301,7 +301,7 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
                 },
                 can_use_tool=_can_use_tool,
                 cwd=str(project_dir),
-                max_turns=50,
+                max_turns=None,
                 env=sdk_env,
                 cli_path=cli_path,
             )
