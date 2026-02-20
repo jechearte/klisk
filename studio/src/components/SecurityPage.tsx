@@ -218,13 +218,20 @@ export default function SecurityPage({
         <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
           {/* Interfaces */}
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                Interfaces
-              </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Control which interfaces are available for your agent.
-              </p>
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                  Interfaces
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Control which interfaces are available for your agent.
+                </p>
+              </div>
+              <a href="https://klisk.productomania.io/docs/guides/interfaces.html" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-400 flex-shrink-0 mt-0.5" title="Documentation">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                </svg>
+              </a>
             </div>
             <div className="px-6 py-4 space-y-4">
               {/* REST API — always on */}
@@ -260,13 +267,20 @@ export default function SecurityPage({
 
           {/* API Keys */}
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                API Keys
-              </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Protect your endpoints with API keys when deployed.
-              </p>
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                  API Keys
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Protect your endpoints with API keys when deployed.
+                </p>
+              </div>
+              <a href="https://klisk.productomania.io/docs/guides/interfaces.html#protecting-your-interfaces" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-400 flex-shrink-0 mt-0.5" title="Documentation">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                </svg>
+              </a>
             </div>
             <div className="px-6 py-4 space-y-4">
               <Toggle

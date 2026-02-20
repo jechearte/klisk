@@ -118,13 +118,20 @@ export default function DeployPage({ project, agentName, sourceFile, onToast, on
           {/* ---- LOCAL SERVER ---- */}
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                Local Server
-              </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Run your agent locally as a production server.
-              </p>
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                  Local Server
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Run your agent locally as a production server.
+                </p>
+              </div>
+              <a href="https://klisk.productomania.io/docs/guides/deploy.html#local-server" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-400 flex-shrink-0 mt-0.5" title="Documentation">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                </svg>
+              </a>
             </div>
 
             {/* Body */}
@@ -224,13 +231,20 @@ export default function DeployPage({ project, agentName, sourceFile, onToast, on
           {/* ---- DEPLOY TO PRODUCTION ---- */}
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                Deploy to Production
-              </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Deploy your agent to any cloud platform.
-              </p>
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                  Deploy to Production
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Deploy your agent to any cloud platform.
+                </p>
+              </div>
+              <a href="https://klisk.productomania.io/docs/guides/deploy.html" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-400 flex-shrink-0 mt-0.5" title="Documentation">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                </svg>
+              </a>
             </div>
 
             {/* Body */}
