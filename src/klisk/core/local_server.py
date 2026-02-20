@@ -218,14 +218,17 @@ def stop_server(project: str) -> dict:
     if info is None:
         return {"ok": True, "message": "Server is not running"}
 
+    port = info.port
+
     # Send SIGTERM to the entire process group (created by start_new_session=True)
     try:
         os.killpg(os.getpgid(info.pid), signal.SIGTERM)
     except (OSError, ProcessLookupError):
         pass
 
-    for _ in range(20):
-        if not _is_process_alive(info.pid):
+    # Wait for the process to die AND the port to be freed
+    for _ in range(30):
+        if not _is_process_alive(info.pid) and not _is_port_in_use(port):
             break
         time.sleep(0.1)
 
@@ -235,9 +238,15 @@ def stop_server(project: str) -> dict:
             os.killpg(os.getpgid(info.pid), signal.SIGKILL)
         except (OSError, ProcessLookupError):
             pass
-        time.sleep(0.2)
+        for _ in range(10):
+            if not _is_process_alive(info.pid) and not _is_port_in_use(port):
+                break
+            time.sleep(0.1)
 
     pid_path = _pid_file_path(project)
     pid_path.unlink(missing_ok=True)
+
+    if _is_port_in_use(port):
+        return {"ok": False, "error": f"Failed to free port {port}"}
 
     return {"ok": True, "message": "Server stopped"}
