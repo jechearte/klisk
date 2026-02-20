@@ -221,32 +221,23 @@ export default function DeployPage({ project, agentName, sourceFile, onToast, on
             </div>
           </div>
 
-          {/* ---- GOOGLE CLOUD ---- */}
+          {/* ---- DEPLOY TO PRODUCTION ---- */}
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
               <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                Google Cloud
+                Deploy to Production
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Deploy to Google Cloud Run.
+                Deploy your agent to any cloud platform.
               </p>
             </div>
 
             {/* Body */}
             <div className="px-6 py-5 space-y-5">
-              {/* Requirements */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                  Requirements
-                </h3>
-                <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                  <li className="flex items-start gap-2.5">
-                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
-                    <span>A <a href="https://cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Google Cloud</a> account with billing enabled</span>
-                  </li>
-                </ul>
-              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                The assistant will guide you step by step to deploy your agent to the platform of your choice, including Google Cloud Run, AWS, Railway, Fly.io, and more.
+              </p>
 
               {/* Deploy action */}
               {onDeployWithAssistant && (
@@ -256,7 +247,7 @@ export default function DeployPage({ project, agentName, sourceFile, onToast, on
                   </span>
                   <button
                     onClick={() => {
-                      let msg = `Help me deploy the agent "${agentName || "my agent"}" to Google Cloud.`;
+                      let msg = `Help me deploy the agent "${agentName || "my agent"}" to production.`;
                       if (project) msg += `\nThe agent belongs to the project directory: ${project}`;
                       if (sourceFile) msg += `\nThe agent is defined in: ${sourceFile}`;
                       onDeployWithAssistant(msg);
