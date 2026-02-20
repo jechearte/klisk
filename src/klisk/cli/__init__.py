@@ -36,7 +36,7 @@ def main(ctx: typer.Context) -> None:
     from klisk.core.skill_installer import install_skill
 
     get_projects_dir()  # creates ~/klisk/ and ~/klisk/projects/
-    install_skill(KLISK_HOME)  # downloads klisk-guide skill from GitHub
+    install_skill(KLISK_HOME)  # downloads skill to ~/.agents/skills/ + symlink for Claude
 
     home_display = f"~/{KLISK_HOME.relative_to(KLISK_HOME.parent)}"
 
