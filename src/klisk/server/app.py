@@ -447,10 +447,11 @@ def _build_api_router():
         if project_dir is None:
             return {"ok": True, "message": "No project to stop"}
         from klisk.core.local_server import stop_server
+        proj_cfg = ProjectConfig.load(project_dir)
         project_name = project or (
             _config.name if _config else project_dir.name
         )
-        return await asyncio.to_thread(stop_server, project_name)
+        return await asyncio.to_thread(stop_server, project_name, 8080, proj_cfg.name)
 
     # --- Cloud deploy endpoints ---
 

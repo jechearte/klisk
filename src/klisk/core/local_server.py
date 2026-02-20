@@ -63,6 +63,20 @@ def _is_port_in_use(port: int) -> bool:
         return s.connect_ex(("127.0.0.1", port)) == 0
 
 
+def _find_pid_on_port(port: int) -> int | None:
+    """Find the PID of the process listening on *port* using lsof."""
+    try:
+        out = subprocess.check_output(
+            ["lsof", "-ti", f"tcp:{port}", "-sTCP:LISTEN"],
+            text=True, timeout=5,
+        ).strip()
+        if out:
+            return int(out.splitlines()[0])
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, ValueError):
+        pass
+    return None
+
+
 def _find_free_port(start: int = 8080) -> int:
     """Find a free port starting from *start*."""
     import socket
@@ -212,41 +226,65 @@ def start_server(project_path: Path, project: str) -> dict:
     return {"ok": True, "port": port, "pid": proc.pid, "url": f"http://localhost:{port}"}
 
 
-def stop_server(project: str) -> dict:
-    """Stop a running production server."""
-    info = _read_pid_info(project)
-    if info is None:
-        return {"ok": True, "message": "Server is not running"}
-
-    port = info.port
-
-    # Send SIGTERM to the entire process group (created by start_new_session=True)
+def _kill_and_wait(pid: int, port: int) -> bool:
+    """Send SIGTERM (then SIGKILL) to *pid*'s process group and wait for *port* to free."""
+    # SIGTERM the entire process group
     try:
-        os.killpg(os.getpgid(info.pid), signal.SIGTERM)
+        os.killpg(os.getpgid(pid), signal.SIGTERM)
     except (OSError, ProcessLookupError):
-        pass
-
-    # Wait for the process to die AND the port to be freed
-    for _ in range(30):
-        if not _is_process_alive(info.pid) and not _is_port_in_use(port):
-            break
-        time.sleep(0.1)
-
-    # If still alive after SIGTERM, force kill the process group
-    if _is_process_alive(info.pid):
         try:
-            os.killpg(os.getpgid(info.pid), signal.SIGKILL)
+            os.kill(pid, signal.SIGTERM)
         except (OSError, ProcessLookupError):
             pass
-        for _ in range(10):
-            if not _is_process_alive(info.pid) and not _is_port_in_use(port):
-                break
-            time.sleep(0.1)
 
-    pid_path = _pid_file_path(project)
-    pid_path.unlink(missing_ok=True)
+    for _ in range(30):
+        if not _is_process_alive(pid) and not _is_port_in_use(port):
+            return True
+        time.sleep(0.1)
 
+    # SIGKILL as fallback
+    try:
+        os.killpg(os.getpgid(pid), signal.SIGKILL)
+    except (OSError, ProcessLookupError):
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except (OSError, ProcessLookupError):
+            pass
+
+    for _ in range(10):
+        if not _is_process_alive(pid) and not _is_port_in_use(port):
+            return True
+        time.sleep(0.1)
+
+    return not _is_port_in_use(port)
+
+
+def stop_server(project: str, port: int = 8080, config_name: str = "") -> dict:
+    """Stop a running production server.
+
+    Handles two cases:
+    1. Server started by Studio (has PID file) — kill by PID.
+    2. Server started by ``klisk start`` (no PID file) — find PID via port.
+    """
+    info = _read_pid_info(project)
+
+    if info is not None:
+        # Case 1: PID file exists
+        ok = _kill_and_wait(info.pid, info.port)
+        _pid_file_path(project).unlink(missing_ok=True)
+        if ok:
+            return {"ok": True, "message": "Server stopped"}
+        return {"ok": False, "error": f"Failed to free port {info.port}"}
+
+    # Case 2: No PID file — look for the process on the fallback port
     if _is_port_in_use(port):
-        return {"ok": False, "error": f"Failed to free port {port}"}
+        running_name = _probe_server_name(port)
+        if running_name and config_name and running_name == config_name:
+            pid = _find_pid_on_port(port)
+            if pid is not None:
+                ok = _kill_and_wait(pid, port)
+                if ok:
+                    return {"ok": True, "message": "Server stopped"}
+                return {"ok": False, "error": f"Failed to free port {port}"}
 
-    return {"ok": True, "message": "Server stopped"}
+    return {"ok": True, "message": "Server is not running"}
