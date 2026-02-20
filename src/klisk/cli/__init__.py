@@ -28,6 +28,7 @@ def main(ctx: typer.Context) -> None:
     if ctx.invoked_subcommand is not None:
         return
 
+    from klisk.cli import ui
     from klisk.core.paths import KLISK_HOME, PROJECTS_DIR
 
     first_run = not KLISK_HOME.exists()
@@ -41,7 +42,7 @@ def main(ctx: typer.Context) -> None:
     home_display = f"~/{KLISK_HOME.relative_to(KLISK_HOME.parent)}"
 
     if first_run:
-        _welcome_first_run(home_display)
+        _welcome_first_run(ui, home_display)
         return
 
     # Count projects (dirs with klisk.config.yaml)
@@ -56,61 +57,58 @@ def main(ctx: typer.Context) -> None:
     studio_info = read_pid_info(None)  # workspace mode
 
     if not projects:
-        _welcome_no_projects(home_display)
+        _welcome_no_projects(ui, home_display)
     elif studio_info:
-        _welcome_studio_running(studio_info, len(projects))
+        _welcome_studio_running(ui, studio_info, len(projects))
     else:
-        _welcome_studio_off(len(projects))
+        _welcome_studio_off(ui, len(projects))
 
 
-def _welcome_first_run(home_display: str) -> None:
-    typer.echo(f"""
-  Welcome to Klisk!
-
-  Your workspace has been created at {home_display}
-
-  To create your first agent you have two options:
-
-  1. Open the Studio and ask the Klisk assistant for help:
-     klisk studio
-
-  2. Use any AI coding agent from your workspace:
-     cd {home_display}
-     claude                  # or cursor, windsurf, etc.
-""")
-
-
-def _welcome_no_projects(home_display: str) -> None:
-    typer.echo(f"""
-  Klisk — no projects yet.
-
-  Option 1 — Open the Studio:
-    klisk studio
-
-  Option 2 — Use an AI agent:
-    cd {home_display}
-    claude                   # or your preferred AI agent
-    > "Create an agent that ..."
-""")
+def _welcome_first_run(ui, home_display: str) -> None:
+    ui.header("Welcome to Klisk!")
+    ui.plain()
+    ui.step(f"Your workspace has been created at {home_display}")
+    ui.plain()
+    ui.dim("To create your first agent you have two options:")
+    ui.plain()
+    ui.dim("1. Open the Studio and ask the Klisk assistant for help:")
+    ui.dim("   klisk studio")
+    ui.plain()
+    ui.dim("2. Use any AI coding agent from your workspace:")
+    ui.dim(f"   cd {home_display}")
+    ui.dim("   claude                  # or cursor, windsurf, etc.")
+    ui.plain()
 
 
-def _welcome_studio_running(studio_info: object, project_count: int) -> None:
+def _welcome_no_projects(ui, home_display: str) -> None:
+    ui.header("Klisk")
+    ui.info("No projects yet.")
+    ui.plain()
+    ui.dim("Option 1 — Open the Studio:")
+    ui.dim("  klisk studio")
+    ui.plain()
+    ui.dim("Option 2 — Use an AI agent:")
+    ui.dim(f"  cd {home_display}")
+    ui.dim('  claude                   # or your preferred AI agent')
+    ui.dim('  > "Create an agent that ..."')
+    ui.plain()
+
+
+def _welcome_studio_running(ui, studio_info: object, project_count: int) -> None:
     label = "project" if project_count == 1 else "projects"
-    typer.echo(f"""
-  Klisk Studio is running ({project_count} {label}).
+    ui.header(f"Klisk Studio is running ({project_count} {label}).")
+    ui.plain()
+    ui.url("Open in browser", f"http://localhost:{studio_info.port}")
+    ui.plain()
 
-  Open in browser: http://localhost:{studio_info.port}
-""")
 
-
-def _welcome_studio_off(project_count: int) -> None:
+def _welcome_studio_off(ui, project_count: int) -> None:
     label = "project" if project_count == 1 else "projects"
-    typer.echo(f"""
-  Klisk — {project_count} {label} in workspace.
-
-  Start the Studio to configure and test your agents:
-    klisk studio
-""")
+    ui.header(f"Klisk — {project_count} {label} in workspace.")
+    ui.plain()
+    ui.dim("Start the Studio to configure and test your agents:")
+    ui.dim("  klisk studio")
+    ui.plain()
 
 
 app.command()(assistant)

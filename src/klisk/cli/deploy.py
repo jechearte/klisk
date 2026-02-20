@@ -10,6 +10,7 @@ from typing import Optional
 
 import typer
 
+from klisk.cli import ui
 from klisk.core.paths import resolve_project
 
 
@@ -31,10 +32,11 @@ def _run_gcloud(args: list[str], timeout: int = 15) -> subprocess.CompletedProce
 def _check_gcloud_installed() -> None:
     """Check that gcloud CLI is installed."""
     if not shutil.which("gcloud"):
-        typer.echo("Error: Google Cloud CLI (gcloud) not found.\n", err=True)
-        typer.echo("  Install it:", err=True)
-        typer.echo("    macOS:   brew install google-cloud-sdk", err=True)
-        typer.echo("    Other:   https://cloud.google.com/sdk/docs/install", err=True)
+        ui.error("Google Cloud CLI (gcloud) not found.")
+        ui.plain()
+        ui.dim("Install it:")
+        ui.dim("  macOS:   brew install google-cloud-sdk")
+        ui.dim("  Other:   https://cloud.google.com/sdk/docs/install")
         raise typer.Exit(1)
 
 
@@ -45,12 +47,13 @@ def _check_gcloud_auth() -> None:
         if result.returncode != 0:
             stderr = result.stderr.strip()
             if "login" in stderr.lower() or "no access token" in stderr.lower() or "ERROR" in stderr:
-                typer.echo("Error: Not authenticated with Google Cloud.\n", err=True)
-                typer.echo("  Run this command and follow the browser prompt:", err=True)
-                typer.echo("    gcloud auth login", err=True)
+                ui.error("Not authenticated with Google Cloud.")
+                ui.plain()
+                ui.dim("Run this command and follow the browser prompt:")
+                ui.dim("  gcloud auth login")
                 raise typer.Exit(1)
     except subprocess.TimeoutExpired:
-        typer.echo("Error: gcloud auth check timed out.", err=True)
+        ui.error("gcloud auth check timed out.")
         raise typer.Exit(1)
 
 
@@ -72,14 +75,15 @@ def _check_gcloud_project(gcp_project: str | None, config_project: str = "") -> 
         project_id = ""
 
     if not project_id or project_id == "(unset)":
-        typer.echo("Error: No Google Cloud project configured.\n", err=True)
-        typer.echo("  If you already have a GCP project:", err=True)
-        typer.echo("    gcloud config set project YOUR_PROJECT_ID", err=True)
-        typer.echo("", err=True)
-        typer.echo("  If you don't have one yet:", err=True)
-        typer.echo("    1. Go to https://console.cloud.google.com", err=True)
-        typer.echo("    2. Create a new project", err=True)
-        typer.echo("    3. Run: gcloud config set project YOUR_PROJECT_ID", err=True)
+        ui.error("No Google Cloud project configured.")
+        ui.plain()
+        ui.dim("If you already have a GCP project:")
+        ui.dim("  gcloud config set project YOUR_PROJECT_ID")
+        ui.plain()
+        ui.dim("If you don't have one yet:")
+        ui.dim("  1. Go to https://console.cloud.google.com")
+        ui.dim("  2. Create a new project")
+        ui.dim("  3. Run: gcloud config set project YOUR_PROJECT_ID")
         raise typer.Exit(1)
 
     return project_id
@@ -94,14 +98,17 @@ def _check_billing(gcp_project: str) -> None:
         ], timeout=15)
         enabled = result.stdout.strip().lower()
         if enabled == "false":
-            typer.echo(f"Error: Billing is not enabled for project '{gcp_project}'.\n", err=True)
-            typer.echo("  Cloud Run requires billing. Enable it at:", err=True)
-            typer.echo(f"    https://console.cloud.google.com/billing?project={gcp_project}", err=True)
-            typer.echo("", err=True)
-            typer.echo("  Note: Google Cloud offers $300 in free credits for new accounts.", err=True)
+            ui.error(f"Billing is not enabled for project '{gcp_project}'.")
+            ui.plain()
+            ui.dim("Cloud Run requires billing. Enable it at:")
+            ui.dim(f"  https://console.cloud.google.com/billing?project={gcp_project}")
+            ui.plain()
+            ui.dim("Note: Google Cloud offers $300 in free credits for new accounts.")
             raise typer.Exit(1)
     except subprocess.TimeoutExpired:
         pass  # Non-critical, let the deploy fail with a clearer error if needed
+    except typer.Exit:
+        raise
     except Exception:
         pass  # billing API might not be available, skip gracefully
 
@@ -128,25 +135,26 @@ def _ensure_apis(gcp_project: str) -> None:
             return
 
         names = ", ".join(missing)
-        typer.echo(f"  Required APIs not enabled: {names}\n")
+        ui.warning(f"Required APIs not enabled: {names}")
+        ui.plain()
         enable = typer.confirm("  Enable them now?", default=True)
         if not enable:
-            typer.echo("\nError: These APIs are required for deployment.\n", err=True)
-            typer.echo("  Enable them manually:", err=True)
-            typer.echo(f"    gcloud services enable {' '.join(missing)}", err=True)
+            ui.error("These APIs are required for deployment.")
+            ui.dim("Enable them manually:")
+            ui.dim(f"  gcloud services enable {' '.join(missing)}")
             raise typer.Exit(1)
 
-        typer.echo("  Enabling APIs (this may take a moment)...")
-        enable_result = subprocess.run(
-            ["gcloud", "services", "enable", *missing, "--project", gcp_project],
-            capture_output=True, text=True, timeout=120,
-        )
+        with ui.spinner("Enabling APIs"):
+            enable_result = subprocess.run(
+                ["gcloud", "services", "enable", *missing, "--project", gcp_project],
+                capture_output=True, text=True, timeout=120,
+            )
         if enable_result.returncode != 0:
-            typer.echo(f"\nError: Could not enable APIs.\n", err=True)
-            typer.echo("  Enable them manually:", err=True)
-            typer.echo(f"    gcloud services enable {' '.join(missing)}", err=True)
+            ui.error("Could not enable APIs.")
+            ui.dim("Enable them manually:")
+            ui.dim(f"  gcloud services enable {' '.join(missing)}")
             raise typer.Exit(1)
-        typer.echo("  APIs enabled.\n")
+        ui.success("APIs enabled.")
     except subprocess.TimeoutExpired:
         pass  # Non-critical
     except typer.Exit:
@@ -198,28 +206,28 @@ def _ensure_build_permissions(gcp_project: str) -> None:
     if not missing:
         return
 
-    typer.echo("  Granting Cloud Build permissions...")
-    for role in missing:
-        try:
-            subprocess.run(
-                ["gcloud", "projects", "add-iam-policy-binding", gcp_project,
-                 f"--member=serviceAccount:{sa}",
-                 f"--role={role}",
-                 "--condition=None",
-                 "--quiet"],
-                capture_output=True, text=True, timeout=30,
-            )
-        except Exception:
-            pass  # Don't block — the deploy will give a clearer error
-    typer.echo("  Cloud Build permissions granted.\n")
+    with ui.spinner("Granting Cloud Build permissions"):
+        for role in missing:
+            try:
+                subprocess.run(
+                    ["gcloud", "projects", "add-iam-policy-binding", gcp_project,
+                     f"--member=serviceAccount:{sa}",
+                     f"--role={role}",
+                     "--condition=None",
+                     "--quiet"],
+                    capture_output=True, text=True, timeout=30,
+                )
+            except Exception:
+                pass  # Don't block — the deploy will give a clearer error
+    ui.success("Cloud Build permissions granted.")
 
 
 def _check_env_file(project_path: Path) -> None:
     """Warn if there's no .env file or it has no real keys."""
     env_file = project_path / ".env"
     if not env_file.exists():
-        typer.echo("  Warning: No .env file found. Your agent may need API keys to work.")
-        typer.echo("  The deployed service won't have any environment variables set.\n")
+        ui.warning("No .env file found. Your agent may need API keys to work.")
+        ui.dim("The deployed service won't have any environment variables set.")
         return
 
     has_real_keys = False
@@ -235,8 +243,8 @@ def _check_env_file(project_path: Path) -> None:
             break
 
     if not has_real_keys:
-        typer.echo("  Warning: .env file found but contains no real API keys.")
-        typer.echo("  Make sure to set real keys before deploying.\n")
+        ui.warning(".env file found but contains no real API keys.")
+        ui.dim("Make sure to set real keys before deploying.")
 
 
 def _read_env_vars(project_path: Path) -> dict[str, str]:
@@ -255,7 +263,7 @@ def _read_env_vars(project_path: Path) -> dict[str, str]:
         key = key.strip()
         value = value.strip().strip("'\"")
         if any(p in value.lower() for p in placeholders):
-            typer.echo(f"  Skipping placeholder: {key}")
+            ui.dim(f"Skipping placeholder: {key}")
             continue
         if value:
             env_vars[key] = value
@@ -274,9 +282,9 @@ def deploy(
     # --- Check Dockerfile exists first (fast, no network) ---
     dockerfile_path = project_path / "Dockerfile"
     if not dockerfile_path.exists():
-        typer.echo("Error: No Dockerfile found.\n", err=True)
-        typer.echo("  Generate deployment files first:", err=True)
-        typer.echo("    klisk docker", err=True)
+        ui.error("No Dockerfile found.")
+        ui.dim("Generate deployment files first:")
+        ui.dim("  klisk docker")
         raise typer.Exit(1)
 
     # --- Load global config for defaults ---
@@ -287,7 +295,8 @@ def deploy(
         region = global_cfg.gcloud.region
 
     # --- Check prerequisites with helpful messages ---
-    typer.echo("  Checking prerequisites...\n")
+    ui.step("Checking prerequisites...")
+    ui.plain()
 
     _check_gcloud_installed()
     _check_gcloud_auth()
@@ -303,12 +312,12 @@ def deploy(
     config = ProjectConfig.load(project_path)
     service_name = service or _slugify(config.name)
 
-    typer.echo(f"  Deploying to Cloud Run...")
-    typer.echo(f"  Service:  {service_name}")
-    typer.echo(f"  Project:  {gcp_project}")
+    ui.step("Deploying to Cloud Run...")
+    ui.kv("Service", service_name)
+    ui.kv("Project", gcp_project)
     if region:
-        typer.echo(f"  Region:   {region}")
-    typer.echo()
+        ui.kv("Region", region)
+    ui.plain()
 
     # --- Read .env for environment variables ---
     env_vars = _read_env_vars(project_path)
@@ -329,27 +338,27 @@ def deploy(
         env_str = ",".join(f"{k}={v}" for k, v in env_vars.items())
         cmd.extend(["--set-env-vars", env_str])
 
-    typer.echo(f"  Running: gcloud run deploy {service_name} --source ...")
-    typer.echo()
+    ui.dim(f"Running: gcloud run deploy {service_name} --source ...")
+    ui.plain()
 
     try:
         # Let all output flow to terminal so user sees build progress
         proc = subprocess.run(cmd, timeout=600)
         if proc.returncode != 0:
-            typer.echo("\nError: Deployment failed.\n", err=True)
-            typer.echo("  Common fixes:", err=True)
-            typer.echo("    - Re-run the same command (permission propagation can take a few seconds)", err=True)
-            typer.echo("    - Check that billing is enabled for the project", err=True)
-            typer.echo("    - Enable APIs: gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com", err=True)
+            ui.error("Deployment failed.")
+            ui.dim("Common fixes:")
+            ui.dim("  - Re-run the same command (permission propagation can take a few seconds)")
+            ui.dim("  - Check that billing is enabled for the project")
+            ui.dim("  - Enable APIs: gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com")
             raise typer.Exit(1)
     except subprocess.TimeoutExpired:
-        typer.echo("\nError: Deployment timed out after 10 minutes.", err=True)
-        typer.echo("  The build may still be running. Check at:", err=True)
-        typer.echo(f"    https://console.cloud.google.com/cloud-build/builds?project={gcp_project}", err=True)
+        ui.error("Deployment timed out after 10 minutes.")
+        ui.dim("The build may still be running. Check at:")
+        ui.dim(f"  https://console.cloud.google.com/cloud-build/builds?project={gcp_project}")
         raise typer.Exit(1)
 
     # --- Get deployed URL ---
-    typer.echo()
+    ui.plain()
     describe_cmd = [
         "gcloud", "run", "services", "describe", service_name,
         "--format", "value(status.url)",
@@ -359,16 +368,16 @@ def deploy(
         describe_cmd.extend(["--region", region])
 
     result = subprocess.run(describe_cmd, capture_output=True, text=True, timeout=15)
-    url = result.stdout.strip()
+    deployed_url = result.stdout.strip()
 
-    if url:
-        typer.echo(f"  Deployed successfully!")
-        typer.echo()
-        typer.echo(f"  Chat:   {url}")
-        typer.echo(f"  API:    {url}/api/chat")
-        typer.echo(f"  Health: {url}/health")
-        typer.echo()
-        typer.echo(f"  Embed widget:")
-        typer.echo(f'  <script src="{url}/widget.js"></script>')
+    if deployed_url:
+        ui.success("Deployed successfully!")
+        ui.plain()
+        ui.url("Chat", deployed_url)
+        ui.url("API", f"{deployed_url}/api/chat")
+        ui.url("Health", f"{deployed_url}/health")
+        ui.plain()
+        ui.dim("Embed widget:")
+        ui.dim(f'  <script src="{deployed_url}/widget.js"></script>')
     else:
-        typer.echo("  Deployed! Run `gcloud run services list` to see the URL.")
+        ui.success("Deployed! Run `gcloud run services list` to see the URL.")

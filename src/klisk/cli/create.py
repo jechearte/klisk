@@ -11,6 +11,7 @@ from pathlib import Path
 
 import typer
 
+from klisk.cli import ui
 from klisk.core.paths import get_project_path
 
 
@@ -35,33 +36,33 @@ def _setup_venv(project_dir: Path) -> None:
     venv_dir = project_dir / ".venv"
     req_file = project_dir / "requirements.txt"
 
-    typer.echo("  Setting up virtual environment...")
-    try:
-        subprocess.run(
-            [sys.executable, "-m", "venv", str(venv_dir)],
-            check=True, capture_output=True, text=True, timeout=60,
-        )
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-        typer.echo(f"  Warning: Could not create venv: {exc}", err=True)
-        typer.echo("  You can create it manually: python -m venv .venv", err=True)
-        return
+    with ui.spinner("Setting up virtual environment"):
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "venv", str(venv_dir)],
+                check=True, capture_output=True, text=True, timeout=60,
+            )
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            ui.warning(f"Could not create venv: {exc}")
+            ui.dim("You can create it manually: python -m venv .venv")
+            return
 
     if not req_file.exists():
         return
 
     venv_py = _venv_python(venv_dir)
-    typer.echo("  Installing dependencies...")
-    try:
-        subprocess.run(
-            [str(venv_py), "-m", "pip", "install", "-q", "-r", str(req_file)],
-            check=True, capture_output=True, text=True, timeout=120,
-        )
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-        typer.echo(f"  Warning: Could not install dependencies: {exc}", err=True)
-        typer.echo("  You can install them manually:", err=True)
-        typer.echo(f"    {venv_py} -m pip install -r requirements.txt", err=True)
+    with ui.spinner("Installing dependencies"):
+        try:
+            subprocess.run(
+                [str(venv_py), "-m", "pip", "install", "-q", "-r", str(req_file)],
+                check=True, capture_output=True, text=True, timeout=120,
+            )
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            ui.warning(f"Could not install dependencies: {exc}")
+            ui.dim("You can install them manually:")
+            ui.dim(f"  {venv_py} -m pip install -r requirements.txt")
 
-    typer.echo()
+    ui.plain()
 
 
 def create(
@@ -71,7 +72,7 @@ def create(
     target = get_project_path(name)
 
     if target.exists():
-        typer.echo(f"Error: project '{name}' already exists at {target}", err=True)
+        ui.error(f"Project '{name}' already exists at {target}")
         raise typer.Exit(1)
 
     # Copy the template
@@ -91,8 +92,8 @@ def create(
     # Create venv and install dependencies
     _setup_venv(target)
 
-    typer.echo(f"Created project '{name}' at {target}")
-    typer.echo()
-    typer.echo("Next steps:")
-    typer.echo(f"  1. Add your API key in {env_file}")
-    typer.echo(f"  2. klisk studio              # start the Studio")
+    ui.success(f"Created project '{name}' at {target}")
+    ui.next_steps([
+        f"Add your API key in {env_file}",
+        "klisk studio              # start the Studio",
+    ])

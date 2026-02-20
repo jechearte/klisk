@@ -6,6 +6,7 @@ from pathlib import Path
 
 import typer
 
+from klisk.cli import ui
 from klisk.core.config import ProjectConfig
 from klisk.core.paths import resolve_project
 
@@ -169,14 +170,14 @@ def check(
 
     # Print results
     for msg in ok:
-        typer.echo(f"  \u2713 {msg}")
+        ui.success(msg)
     for msg in warnings:
-        typer.echo(f"  \u26a0 {msg}")
+        ui.warning(msg)
     for msg in errors:
-        typer.echo(f"  \u2717 {msg}")
+        ui.error(msg)
 
     if errors:
         raise typer.Exit(1)
     else:
-        typer.echo()
-        typer.echo("All checks passed.")
+        ui.plain()
+        ui.success("All checks passed.")

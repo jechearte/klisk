@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import typer
 
+from klisk.cli import ui
+
 
 def studio(
     stop: bool = typer.Option(False, "--stop", help="Stop the running dev server"),
@@ -18,18 +20,18 @@ def studio(
     # --stop: shut down the server
     if stop:
         if stop_daemon(project_name):
-            typer.echo("  Stopped dev server (workspace).")
+            ui.success("Stopped dev server (workspace).")
         else:
-            typer.echo("  No dev server is running.")
+            ui.info("No dev server is running.")
         return
 
     # Check if already running
     existing = read_pid_info(project_name)
     if existing:
-        typer.echo(f"  Dev server already running (pid {existing.pid}).")
-        typer.echo(f"  Studio + API: http://localhost:{existing.port}")
-        typer.echo(f"  Logs:         {existing.log_file}")
-        typer.echo(f"  Stop with:    klisk studio --stop")
+        ui.info(f"Dev server already running (pid {existing.pid}).")
+        ui.url("Studio + API", f"http://localhost:{existing.port}")
+        ui.kv("Logs", existing.log_file)
+        ui.dim("Stop with: klisk studio --stop")
         return
 
     # Launch daemon
@@ -40,12 +42,12 @@ def studio(
             project_path=project_path,
         )
     except RuntimeError as exc:
-        typer.echo(f"  Error: {exc}", err=True)
+        ui.error(str(exc))
         raise typer.Exit(1)
 
     from klisk.core.paths import PROJECTS_DIR
-    typer.echo(f"  Studio + API: http://localhost:{info.port}")
-    typer.echo(f"  Workspace:    {PROJECTS_DIR}")
-    typer.echo(f"  PID:          {info.pid}")
-    typer.echo(f"  Logs:         {info.log_file}")
-    typer.echo(f"  Stop with:    klisk studio --stop")
+    ui.url("Studio + API", f"http://localhost:{info.port}")
+    ui.kv("Workspace", str(PROJECTS_DIR))
+    ui.kv("PID", str(info.pid))
+    ui.kv("Logs", info.log_file)
+    ui.dim("Stop with: klisk studio --stop")
