@@ -191,7 +191,12 @@ export default function SecurityPage({
   };
 
   const toggleAuth = (enabled: boolean) => {
-    if (!enabled) {
+    if (enabled) {
+      setConfig((prev) => ({
+        ...prev,
+        keys: { api_key: generateKey(), chat_key: "", widget_key: "" },
+      }));
+    } else {
       setConfig((prev) => ({
         ...prev,
         keys: { api_key: "", chat_key: "", widget_key: "" },
