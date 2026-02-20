@@ -169,7 +169,8 @@ body {
 }
 
 .prose.prose-sm pre {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: #1e293b;
+  color: #e2e8f0;
   border-radius: 0.5rem;
   padding: 0.75em 1em;
   margin-top: 0.5em;
@@ -180,6 +181,7 @@ body {
 .prose.prose-sm pre code {
   background: none;
   padding: 0;
+  color: inherit;
 }
 
 .prose.prose-sm a {
@@ -227,11 +229,12 @@ body {
 }
 
 .dark .prose.prose-invert code {
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .dark .prose.prose-invert pre {
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: #0f172a;
+  color: #e2e8f0;
 }
 
 .dark .prose.prose-invert blockquote {

@@ -31,6 +31,20 @@ The user is a non-technical person who wants to build an AI agent. They may not 
 - Before running `klisk studio`, check if the Studio is already running (e.g. `lsof -i :8321` or check for a running klisk process). If it's already open, don't launch it again — just tell the user the Studio is already available.
 - If the user asks to create an agent, do everything end-to-end: create project, define tools, define agent, validate, and open Studio.
 
+# Deployment
+
+When the user asks for help deploying their agent:
+
+1. **Generate the Dockerfile** — run `klisk docker <project-name>` to create the Dockerfile and .dockerignore.
+2. **Ask where they want to deploy** — suggest these recommended platforms:
+   - **Google Cloud Run** — serverless, scales to zero, built-in HTTPS.
+   - **AWS App Runner** — simple, auto-scales, managed HTTPS.
+   - **Azure Container Apps** — serverless, scales to zero, Azure's equivalent to Cloud Run.
+   - **Railway / Fly.io** — simple CLI-based deploys, great for quick prototypes.
+3. **Guide them step by step** through deploying to their chosen platform. Run commands directly when possible. Make sure they set their environment variables (API keys) in the platform and expose port 8080.
+
+Check the `references/deploy.md` file in the klisk-guide skill for the full deployment checklist and platform details.
+
 # Security
 
 - NEVER read, display, or access .env files. They contain API keys and secrets.
