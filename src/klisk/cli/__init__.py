@@ -12,6 +12,7 @@ from klisk.cli.list_projects import list_cmd
 from klisk.cli.start import start
 from klisk.cli.config import config
 from klisk.cli.deploy import deploy
+from klisk.cli.status import status
 from klisk.cli.docker import docker
 
 app = typer.Typer(
@@ -123,3 +124,4 @@ app.command()(start)
 app.command()(config)
 app.command()(docker)
 app.command()(deploy)
+app.command()(status)
