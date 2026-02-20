@@ -240,7 +240,7 @@ export default function DeployPage({ project, agentName, sourceFile, onToast, on
                   Deploy your agent to any cloud platform.
                 </p>
               </div>
-              <a href="https://klisk.productomania.io/docs/guides/deploy.html" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-400 flex-shrink-0 mt-0.5" title="Documentation">
+              <a href="https://klisk.productomania.io/docs/guides/deploy.html#deploy-to-the-cloud" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-400 flex-shrink-0 mt-0.5" title="Documentation">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
                 </svg>
