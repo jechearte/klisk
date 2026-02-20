@@ -330,7 +330,7 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
                     yield {"type": "user", "message": {"role": "user", "content": user_text}}
 
                 async for message in query(prompt=_prompt(), options=options):
-                    if shutdown.is_set():
+                    if shutdown.is_set() or cancel_query.is_set():
                         break
 
                     # Capture session ID from init message
@@ -401,8 +401,12 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
                 )
                 for p in pending:
                     p.cancel()
+                    try:
+                        await p
+                    except (asyncio.CancelledError, Exception):
+                        pass
 
-                # Re-raise exceptions from the query task if it completed
+                # Re-raise exceptions from the query task if it completed normally
                 if query_task in done:
                     query_task.result()
 
