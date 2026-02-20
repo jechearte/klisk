@@ -168,14 +168,6 @@ function ChatPreview({
     setInput("");
   };
 
-  if (!config.chat.enabled) {
-    return (
-      <div className="flex items-center justify-center h-full text-sm text-gray-400 dark:text-gray-500">
-        Chat page is disabled
-      </div>
-    );
-  }
-
   return (
     <div
       className="h-full flex items-center justify-center p-5"
@@ -316,14 +308,6 @@ function WidgetPreview({ config, projectName }: { config: DeployConfig; projectN
     setMessages([]);
     setInput("");
   };
-
-  if (!config.widget.enabled) {
-    return (
-      <div className="flex items-center justify-center h-full text-sm text-gray-400 dark:text-gray-500">
-        Widget is disabled
-      </div>
-    );
-  }
 
   return (
     <div className="relative h-full w-full overflow-hidden">
@@ -652,24 +636,9 @@ export default function DeploySettings({
                   onChange={(v) => updateChat("attachments", v)}
                 />
 
-                {/* Chat Page section */}
-                <div className="pt-2 border-t border-gray-200 dark:border-gray-800">
-                  <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Chat Page</h3>
-                  <Toggle
-                    label="Enabled"
-                    checked={config.chat.enabled}
-                    onChange={(v) => updateChat("enabled", v)}
-                  />
-                </div>
-
                 {/* Widget section */}
                 <div className="pt-2 border-t border-gray-200 dark:border-gray-800 space-y-4">
                   <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Widget</h3>
-                  <Toggle
-                    label="Enabled"
-                    checked={config.widget.enabled}
-                    onChange={(v) => updateWidget("enabled", v)}
-                  />
                   <Field label="Bubble color">
                     <div className="flex items-center gap-2">
                       <input

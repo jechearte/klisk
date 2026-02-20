@@ -11,6 +11,7 @@ import ToolModal from "./components/ToolModal";
 import EnvPage from "./components/EnvPage";
 import DeploySettings from "./components/DeploySettings";
 import DeployPage from "./components/DeployPage";
+import SecurityPage from "./components/SecurityPage";
 import OfflineScreen from "./components/OfflineScreen";
 import type {
   ProjectSnapshot,
@@ -80,7 +81,7 @@ function migrateLegacyStorage(firstAgentName: string) {
 
 type ViewState =
   | { page: "listing" }
-  | { page: "detail"; agentName: string; tab: "playground" | "env" | "customize" | "deploy" };
+  | { page: "detail"; agentName: string; tab: "playground" | "env" | "security" | "customize" | "deploy" };
 
 export default function App() {
   const [serverOnline, setServerOnline] = useState<boolean | null>(null);
@@ -670,23 +671,21 @@ export default function App() {
         {/* Main Content */}
         {currentView.page === "listing" ? (
           showAssistant ? (
-            <div className="flex-1 relative min-h-0">
-              {/* Top-right actions */}
-              <div className="absolute top-3 right-5 z-10 flex items-center gap-1">
-                {/* Usage warning */}
+            <div className="flex-1 min-h-0 flex flex-col">
+              {/* Top bar: usage warning + clear */}
+              <div className="flex-shrink-0 flex items-center justify-end px-5 pt-3 pb-1 gap-1">
                 <div className="group relative">
                   <div className="p-2 rounded-lg text-amber-500 dark:text-amber-400 cursor-default">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                     </svg>
                   </div>
-                  <div className="absolute right-0 top-full mt-1 hidden group-hover:block pointer-events-none">
+                  <div className="absolute right-0 top-full mt-1 hidden group-hover:block pointer-events-none z-20">
                     <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
                       Using the assistant consumes your Claude account usage
                     </div>
                   </div>
                 </div>
-                {/* Clear conversation */}
                 {assistantHasMessages && (
                   <button
                     onClick={() => assistantRef.current?.clearChat()}
@@ -700,8 +699,8 @@ export default function App() {
                 )}
               </div>
               {/* Scrollable content */}
-              <div className="h-full overflow-y-auto flex flex-col">
-                <div className="flex-1 flex flex-col items-center px-4 pt-6 pb-4">
+              <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
+                <div className="flex-1 flex flex-col items-center px-4 pb-4">
                   <div className="w-full max-w-[700px] flex-1 flex flex-col">
                     <AssistantPanel
                       ref={assistantRef}
@@ -752,6 +751,16 @@ export default function App() {
                 onToast={showToast}
               />
             </div>
+          </div>
+        ) : activeTab === "security" ? (
+          <div className="flex-1 min-h-0">
+            <SecurityPage
+              isWorkspace={!!config.workspace}
+              project={
+                snapshot?.agents[currentView.agentName]?.project ?? undefined
+              }
+              onToast={showToast}
+            />
           </div>
         ) : activeTab === "customize" ? (
           <div className="flex-1 min-h-0">

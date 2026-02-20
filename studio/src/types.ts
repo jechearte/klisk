@@ -70,6 +70,11 @@ export interface DeployConfig {
   api: ApiDeployConfig;
 }
 
+export interface SecurityConfig {
+  interfaces: { chat_enabled: boolean; widget_enabled: boolean };
+  keys: { api_key: string; chat_key: string; widget_key: string };
+}
+
 export interface GCloudConfig {
   project: string;
   region: string;

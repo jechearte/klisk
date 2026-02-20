@@ -519,6 +519,100 @@ def _build_api_router():
 
         return {"ok": True}
 
+    # --- Security endpoints ---
+
+    _SECURITY_KEYS = ["KLISK_API_KEY", "KLISK_CHAT_KEY", "KLISK_WIDGET_KEY"]
+
+    @router.get("/security")
+    async def get_security(project: str | None = Query(None)):
+        project_dir = _resolve_project_dir(project)
+        if project_dir is None:
+            return {"error": "Cannot resolve project path"}
+        cfg = ProjectConfig.load(project_dir)
+        env_path = _resolve_env_path(project)
+        env_vars = _read_env_file(env_path) if env_path and env_path.exists() else []
+        env_map = {v["key"]: v["value"] for v in env_vars}
+        return {
+            "interfaces": {
+                "chat_enabled": cfg.deploy.chat.enabled,
+                "widget_enabled": cfg.deploy.widget.enabled,
+            },
+            "keys": {
+                "api_key": env_map.get("KLISK_API_KEY", ""),
+                "chat_key": env_map.get("KLISK_CHAT_KEY", ""),
+                "widget_key": env_map.get("KLISK_WIDGET_KEY", ""),
+            },
+        }
+
+    @router.put("/security")
+    async def put_security(request: Request, project: str | None = Query(None)):
+        project_dir = _resolve_project_dir(project)
+        if project_dir is None:
+            return {"error": "Cannot resolve project path"}
+
+        body = await request.json()
+
+        # Update interface toggles in config
+        interfaces = body.get("interfaces", {})
+        cfg = ProjectConfig.load(project_dir)
+        if "chat_enabled" in interfaces:
+            cfg.deploy.chat.enabled = bool(interfaces["chat_enabled"])
+        if "widget_enabled" in interfaces:
+            cfg.deploy.widget.enabled = bool(interfaces["widget_enabled"])
+        cfg.save(project_dir)
+
+        # Update API keys in .env
+        keys = body.get("keys", {})
+        env_path = _resolve_env_path(project)
+        if env_path is None:
+            return {"error": "Cannot resolve env path"}
+
+        env_vars = _read_env_file(env_path) if env_path.exists() else []
+        env_map = {v["key"]: v["value"] for v in env_vars}
+
+        key_mapping = {
+            "api_key": "KLISK_API_KEY",
+            "chat_key": "KLISK_CHAT_KEY",
+            "widget_key": "KLISK_WIDGET_KEY",
+        }
+        for field, env_key in key_mapping.items():
+            if field in keys:
+                val = keys[field].strip()
+                if val:
+                    env_map[env_key] = val
+                else:
+                    env_map.pop(env_key, None)
+
+        # Rebuild env vars preserving order of non-security keys
+        new_vars: list[dict[str, str]] = []
+        seen: set[str] = set()
+        for v in env_vars:
+            k = v["key"]
+            if k in key_mapping.values():
+                if k in env_map and k not in seen:
+                    new_vars.append({"key": k, "value": env_map[k]})
+                    seen.add(k)
+            else:
+                new_vars.append(v)
+                seen.add(k)
+        # Append any new security keys not already in the file
+        for env_key in _SECURITY_KEYS:
+            if env_key in env_map and env_key not in seen:
+                new_vars.append({"key": env_key, "value": env_map[env_key]})
+
+        try:
+            _write_env_file(env_path, new_vars)
+            if _workspace_mode and project:
+                from klisk.core.env import load_project_env
+                load_project_env(PROJECTS_DIR / project)
+            else:
+                load_dotenv(env_path, override=True)
+        except Exception as e:
+            logger.exception("Failed to write .env for security config")
+            return {"error": str(e)}
+
+        return {"ok": True}
+
     return router
 
 
