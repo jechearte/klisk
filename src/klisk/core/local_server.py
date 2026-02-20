@@ -218,8 +218,9 @@ def stop_server(project: str) -> dict:
     if info is None:
         return {"ok": True, "message": "Server is not running"}
 
+    # Send SIGTERM to the entire process group (created by start_new_session=True)
     try:
-        os.kill(info.pid, signal.SIGTERM)
+        os.killpg(os.getpgid(info.pid), signal.SIGTERM)
     except (OSError, ProcessLookupError):
         pass
 
@@ -227,6 +228,14 @@ def stop_server(project: str) -> dict:
         if not _is_process_alive(info.pid):
             break
         time.sleep(0.1)
+
+    # If still alive after SIGTERM, force kill the process group
+    if _is_process_alive(info.pid):
+        try:
+            os.killpg(os.getpgid(info.pid), signal.SIGKILL)
+        except (OSError, ProcessLookupError):
+            pass
+        time.sleep(0.2)
 
     pid_path = _pid_file_path(project)
     pid_path.unlink(missing_ok=True)
