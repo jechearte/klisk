@@ -382,7 +382,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                   <button
                     type="button"
                     onClick={handleStop}
-                    className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                    className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
                       <rect x="6" y="6" width="12" height="12" rx="1" />
@@ -581,7 +581,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
               <button
                 type="button"
                 onClick={handleStop}
-                className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
                   <rect x="6" y="6" width="12" height="12" rx="1" />
