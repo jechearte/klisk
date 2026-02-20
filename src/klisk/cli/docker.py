@@ -126,4 +126,5 @@ def docker(
     typer.echo()
     typer.echo("  Done! Next steps:")
     typer.echo("    1. Make sure your .env has real API keys")
-    typer.echo("    2. Deploy with your preferred platform (e.g. klisk deploy for GCloud)")
+    typer.echo("    2. Build and deploy with your preferred platform:")
+    typer.echo("       docker build -t my-agent . && docker run -p 8080:8080 --env-file .env my-agent")
