@@ -219,6 +219,11 @@ async def handle_websocket_chat(
                 conversation_history = None
                 continue
 
+            if msg.get("type") == "restore":
+                if msg.get("previous_response_id"):
+                    previous_response_id = msg["previous_response_id"]
+                continue
+
             if msg.get("previous_response_id"):
                 previous_response_id = msg["previous_response_id"]
 
