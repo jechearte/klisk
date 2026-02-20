@@ -151,6 +151,8 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
     message_queue: asyncio.Queue[dict] = asyncio.Queue()
     # Flag to signal shutdown
     shutdown = asyncio.Event()
+    # Flag to signal cancellation of the current query
+    cancel_query = asyncio.Event()
 
     async def _reader_loop() -> None:
         """Read from WebSocket and dispatch to appropriate queues."""
@@ -165,6 +167,8 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
                     await interaction_queue.put(data)
                 elif msg_type == "question_response":
                     await interaction_queue.put(data)
+                elif msg_type == "cancel":
+                    cancel_query.set()
                 elif msg_type == "clear":
                     # Reset session
                     nonlocal session_id
@@ -319,7 +323,9 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
             current_tool = ""
             in_tool = False
 
-            try:
+            async def _run_single_query() -> None:
+                nonlocal session_id, tool_input_buffer, current_tool, in_tool
+
                 async def _prompt():
                     yield {"type": "user", "message": {"role": "user", "content": user_text}}
 
@@ -384,10 +390,29 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
                     elif isinstance(message, ResultMessage):
                         pass
 
+            try:
+                cancel_query.clear()
+                query_task = asyncio.create_task(_run_single_query())
+                cancel_waiter = asyncio.create_task(cancel_query.wait())
+
+                done, pending = await asyncio.wait(
+                    [query_task, cancel_waiter],
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                for p in pending:
+                    p.cancel()
+
+                # Re-raise exceptions from the query task if it completed
+                if query_task in done:
+                    query_task.result()
+
                 try:
                     await websocket.send_json({"type": "done"})
                 except Exception:
                     shutdown.set()
+
+                if cancel_query.is_set():
+                    cancel_query.clear()
 
             except Exception as e:
                 logger.exception("Assistant query error")

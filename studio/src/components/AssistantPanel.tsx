@@ -197,6 +197,12 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
     []
   );
 
+  const handleStop = useCallback(() => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    wsRef.current.send(JSON.stringify({ type: "cancel" }));
+    setStreaming(false);
+  }, []);
+
   const clearChat = useCallback(() => {
     setMessages([]);
     setStreaming(false);
@@ -367,24 +373,36 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                     ta.style.height = `${ta.scrollHeight}px`;
                   }}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask the assistant..."
+                  placeholder={streaming ? "Waiting for response..." : "Ask the assistant..."}
                   disabled={streaming}
                   rows={1}
                   className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none max-h-40 leading-6 py-1 disabled:opacity-50"
                 />
-                <button
-                  type="submit"
-                  disabled={!input.trim() || streaming}
-                  className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
-                    input.trim() && !streaming
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
-                      : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-default"
-                  }`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                    <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" />
-                  </svg>
-                </button>
+                {streaming ? (
+                  <button
+                    type="button"
+                    onClick={handleStop}
+                    className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+                      <rect x="6" y="6" width="12" height="12" rx="1" />
+                    </svg>
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={!input.trim()}
+                    className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
+                      input.trim()
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-default"
+                    }`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                      <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" />
+                    </svg>
+                  </button>
+                )}
               </form>
             </div>
           </>
@@ -559,19 +577,31 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
               rows={1}
               className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none max-h-40 leading-6 py-1 disabled:opacity-50"
             />
-            <button
-              type="submit"
-              disabled={!input.trim() || streaming}
-              className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
-                input.trim() && !streaming
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-default"
-              }`}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
-                <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" />
-              </svg>
-            </button>
+            {streaming ? (
+              <button
+                type="button"
+                onClick={handleStop}
+                className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+                  <rect x="6" y="6" width="12" height="12" rx="1" />
+                </svg>
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!input.trim()}
+                className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
+                  input.trim()
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-default"
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+                  <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z" />
+                </svg>
+              </button>
+            )}
           </form>
         </div>
       )}
