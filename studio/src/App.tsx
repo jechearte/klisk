@@ -779,6 +779,9 @@ export default function App() {
               snapshot?.agents[currentView.agentName]?.project ?? undefined
             }
             agentName={currentView.agentName}
+            sourceFile={
+              snapshot?.agents[currentView.agentName]?.source_file ?? undefined
+            }
             isWorkspace={!!config.workspace}
             onToast={showToast}
             onDeployWithAssistant={(msg) => openAssistantWith(msg)}

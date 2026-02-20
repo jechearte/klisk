@@ -4,12 +4,13 @@ import type { LocalServerStatus } from "../types";
 interface DeployPageProps {
   project?: string;
   agentName?: string;
+  sourceFile?: string;
   isWorkspace?: boolean;
   onToast: (msg: string) => void;
   onDeployWithAssistant?: (message: string) => void;
 }
 
-export default function DeployPage({ project, agentName, onToast, onDeployWithAssistant }: DeployPageProps) {
+export default function DeployPage({ project, agentName, sourceFile, onToast, onDeployWithAssistant }: DeployPageProps) {
   // --- Local server state ---
   const [localStatus, setLocalStatus] = useState<LocalServerStatus>({
     running: false,
@@ -254,9 +255,12 @@ export default function DeployPage({ project, agentName, onToast, onDeployWithAs
                     The assistant will guide you through the process.
                   </span>
                   <button
-                    onClick={() => onDeployWithAssistant(
-                      `Help me deploy the agent "${agentName || "my agent"}" to Google Cloud`
-                    )}
+                    onClick={() => {
+                      let msg = `Help me deploy the agent "${agentName || "my agent"}" to Google Cloud.`;
+                      if (project) msg += `\nThe agent belongs to the project directory: ${project}`;
+                      if (sourceFile) msg += `\nThe agent is defined in: ${sourceFile}`;
+                      onDeployWithAssistant(msg);
+                    }}
                     className="px-4 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex-shrink-0"
                   >
                     Deploy Agent
