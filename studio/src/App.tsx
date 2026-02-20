@@ -753,7 +753,7 @@ export default function App() {
             </div>
           </div>
         ) : activeTab === "security" ? (
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 flex flex-col">
             <SecurityPage
               isWorkspace={!!config.workspace}
               project={

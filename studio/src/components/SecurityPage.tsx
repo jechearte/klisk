@@ -201,14 +201,14 @@ export default function SecurityPage({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-gray-500 dark:text-gray-400">
+      <div className="flex-1 flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
         Loading security settings...
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
           {/* Interfaces */}
