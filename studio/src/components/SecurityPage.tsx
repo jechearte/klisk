@@ -118,9 +118,9 @@ function KeyField({
         <button
           onClick={() => onChange(generateKey())}
           className="px-3 py-2 text-xs font-medium text-blue-600 hover:text-blue-500 border border-blue-600 hover:border-blue-500 rounded-lg transition-colors flex-shrink-0"
-          title="Generate random key"
+          title={value ? "Regenerate random key" : "Generate random key"}
         >
-          Generate
+          {value ? "Regenerate" : "Generate"}
         </button>
       </div>
     </div>
@@ -317,27 +317,27 @@ export default function SecurityPage({
               )}
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Footer */}
-      <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
-        {hasChanges && (
-          <button
-            onClick={() => setConfig(savedConfig)}
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-        )}
-        <button
-          onClick={handleSave}
-          disabled={saving || !hasChanges}
-          className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition-colors"
-        >
-          {saving ? "Saving..." : "Save"}
-        </button>
+          {/* Save / Cancel */}
+          <div className="flex justify-end gap-2">
+            {hasChanges && (
+              <button
+                onClick={() => setConfig(savedConfig)}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              onClick={handleSave}
+              disabled={saving || !hasChanges}
+              className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
