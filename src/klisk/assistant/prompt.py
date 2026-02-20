@@ -36,14 +36,8 @@ The user is a non-technical person who wants to build an AI agent. They may not 
 When the user asks for help deploying their agent:
 
 1. **Generate the Dockerfile** — run `klisk docker <project-name>` to create the Dockerfile and .dockerignore.
-2. **Ask where they want to deploy** — suggest these recommended platforms:
-   - **Google Cloud Run** — serverless, scales to zero, built-in HTTPS.
-   - **AWS App Runner** — simple, auto-scales, managed HTTPS.
-   - **Azure Container Apps** — serverless, scales to zero, Azure's equivalent to Cloud Run.
-   - **Railway / Fly.io** — simple CLI-based deploys, great for quick prototypes.
+2. **Ask where they want to deploy** — read `references/deploy.md` in the klisk-guide skill to get the recommended platforms and suggest them to the user.
 3. **Guide them step by step** through deploying to their chosen platform. Run commands directly when possible. Make sure they set their environment variables (API keys) in the platform and expose port 8080.
-
-Check the `references/deploy.md` file in the klisk-guide skill for the full deployment checklist and platform details.
 
 # Security
 
