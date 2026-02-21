@@ -266,7 +266,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
               <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
                 An AI-powered coding assistant that helps you build your agent — it can create projects, write tools, fix errors, and more.{" "}
                 <a
-                  href="/docs/studio/assistant.html"
+                  href="https://klisk.productomania.io/docs/studio/assistant.html"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline"
