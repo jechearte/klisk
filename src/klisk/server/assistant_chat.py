@@ -12,6 +12,8 @@ import json
 import logging
 import os
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 from fastapi import WebSocket, WebSocketDisconnect
@@ -63,6 +65,25 @@ def check_assistant_available() -> dict:
     if not _has_claude_auth():
         return {"status": "not_authenticated", "available": False}
     return {"status": "ready", "available": True}
+
+
+async def install_assistant_sdk() -> dict:
+    """Install the assistant SDK extra via pip in the current environment."""
+    try:
+        result = await asyncio.to_thread(
+            subprocess.run,
+            [sys.executable, "-m", "pip", "install", "klisk[assistant]"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode == 0:
+            return {"ok": True}
+        return {"ok": False, "error": result.stderr.strip() or "pip install failed"}
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error": "Installation timed out"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 
 def _format_tool_detail(name: str, raw_json: str) -> str:

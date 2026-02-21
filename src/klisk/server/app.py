@@ -22,7 +22,7 @@ from klisk.core.config import ProjectConfig
 from klisk.core.discovery import discover_all_projects, discover_project
 from klisk.core.paths import PROJECTS_DIR
 from klisk.core.registry import AgentRegistry, ProjectSnapshot
-from klisk.server.assistant_chat import check_assistant_available, handle_assistant_websocket
+from klisk.server.assistant_chat import check_assistant_available, handle_assistant_websocket, install_assistant_sdk
 from klisk.server.chat import handle_websocket_chat
 from klisk.server.file_editor import (
     update_agent_in_source,
@@ -415,6 +415,10 @@ def _build_api_router():
     @router.get("/assistant/status")
     async def assistant_status():
         return check_assistant_available()
+
+    @router.post("/assistant/install")
+    async def assistant_install():
+        return await install_assistant_sdk()
 
     # --- Local server endpoints ---
 
