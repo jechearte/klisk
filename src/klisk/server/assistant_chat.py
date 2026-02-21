@@ -56,15 +56,29 @@ def check_assistant_available() -> dict:
 
     Returns a dict with:
     - ``status``: one of "not_installed", "sdk_missing", "not_authenticated", "ready"
-    - ``available``: bool (kept for backwards compatibility)
+    - ``available``: bool
+    - ``checks``: individual requirement results
     """
-    if not _check_claude_cli_installed():
-        return {"status": "not_installed", "available": False}
-    if not _check_sdk_installed():
-        return {"status": "sdk_missing", "available": False}
-    if not _has_claude_auth():
-        return {"status": "not_authenticated", "available": False}
-    return {"status": "ready", "available": True}
+    cli_ok = _check_claude_cli_installed()
+    sdk_ok = _check_sdk_installed()
+    auth_ok = _has_claude_auth() if cli_ok else False
+
+    checks = {
+        "cli_installed": cli_ok,
+        "sdk_installed": sdk_ok,
+        "authenticated": auth_ok,
+    }
+
+    if not cli_ok:
+        status = "not_installed"
+    elif not sdk_ok:
+        status = "sdk_missing"
+    elif not auth_ok:
+        status = "not_authenticated"
+    else:
+        status = "ready"
+
+    return {"status": status, "available": status == "ready", "checks": checks}
 
 
 async def install_assistant_sdk() -> dict:
