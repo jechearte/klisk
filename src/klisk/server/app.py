@@ -26,6 +26,7 @@ from klisk.server.assistant_chat import check_assistant_available, handle_assist
 from klisk.server.chat import handle_websocket_chat
 from klisk.server.file_editor import (
     update_agent_in_source,
+    delete_agent_in_source,
     update_tool_in_source,
     rename_tool_references,
     get_function_source,
@@ -330,6 +331,27 @@ def _build_api_router():
             update_agent_in_source(entry.source_file, base_name, updates)
         except Exception as e:
             logger.exception("Failed to update agent '%s'", name)
+            return {"error": str(e)}
+
+        return {"ok": True}
+
+    @router.delete("/agents/{name:path}")
+    async def delete_agent(name: str):
+        if not _snapshot or name not in _snapshot.agents:
+            logger.warning("Agent '%s' not found in snapshot", name)
+            return {"error": "Agent not found"}
+
+        entry = _snapshot.agents[name]
+        if not entry.source_file:
+            return {"error": "Source file unknown"}
+
+        base_name = name.split("/")[-1] if "/" in name else name
+        logger.info("Deleting agent '%s' from %s", base_name, entry.source_file)
+
+        try:
+            delete_agent_in_source(entry.source_file, base_name)
+        except Exception as e:
+            logger.exception("Failed to delete agent '%s'", name)
             return {"error": str(e)}
 
         return {"ok": True}

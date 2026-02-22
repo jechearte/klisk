@@ -103,6 +103,57 @@ def update_agent_in_source(
     raise ValueError(f"Could not find define_agent() call for agent '{agent_name}' in {source_file}")
 
 
+def delete_agent_in_source(source_file: str, agent_name: str) -> None:
+    """Remove a define_agent() call (and its variable assignment) from a Python source file."""
+    path = Path(source_file)
+    if not path.exists():
+        raise FileNotFoundError(f"Source file not found: {source_file}")
+
+    source = path.read_text()
+    tree = ast.parse(source)
+    lines = source.splitlines(keepends=True)
+
+    for node in ast.walk(tree):
+        call: ast.Call | None = None
+        stmt: ast.stmt | None = None
+
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
+            call = node.value
+            stmt = node
+        elif isinstance(node, ast.Assign) and isinstance(node.value, ast.Call):
+            call = node.value
+            stmt = node
+
+        if call is None or stmt is None:
+            continue
+        if not _is_define_agent_call(call):
+            continue
+
+        name_kw = _find_keyword(call, "name")
+        if name_kw is None or not isinstance(name_kw.value, ast.Constant):
+            continue
+        if name_kw.value.value != agent_name:
+            continue
+
+        # Delete the lines that contain this statement
+        start = stmt.lineno - 1
+        end = stmt.end_lineno  # end_lineno is 1-based inclusive
+        del lines[start:end]
+
+        # Remove trailing blank lines left behind (keep at most one)
+        while start < len(lines) and lines[start].strip() == "":
+            if start + 1 < len(lines) and lines[start + 1].strip() == "":
+                del lines[start]
+            else:
+                break
+
+        path.write_text("".join(lines))
+        logger.info("Deleted agent '%s' from %s", agent_name, source_file)
+        return
+
+    raise ValueError(f"Could not find define_agent() call for agent '{agent_name}' in {source_file}")
+
+
 def update_tool_in_source(
     source_file: str,
     tool_name: str,
