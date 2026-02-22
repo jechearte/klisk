@@ -175,7 +175,7 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
         PermissionResultDeny,
         StreamEvent,
     )
-    from klisk.assistant.prompt import SYSTEM_PROMPT
+    from klisk.assistant.prompt import STUDIO_CONTEXT, SYSTEM_PROMPT
 
     cli_path = shutil.which("claude")
     session_id: str | None = None
@@ -343,7 +343,7 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
 
             options = ClaudeAgentOptions(
                 model="opus",
-                system_prompt=SYSTEM_PROMPT,
+                system_prompt=SYSTEM_PROMPT + STUDIO_CONTEXT,
                 include_partial_messages=True,
                 allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Skill"],
                 setting_sources=["user"],

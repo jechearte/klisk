@@ -48,3 +48,10 @@ When the user asks for help deploying their agent:
   2. Go to the **Environment** tab in the sidebar
   3. From there they can add, edit, and delete environment variables — no need to touch files directly
 """
+
+STUDIO_CONTEXT = """
+
+# Studio Context
+
+The user is chatting with you from the Klisk Studio — a web interface where they can see their agents, test them, and manage their projects. The Studio is already open and running, so you do NOT need to run `klisk studio` again. If the user wants to see their agent, remind them that the Studio is right there — they can switch to the agent view using the sidebar.
+"""
