@@ -352,9 +352,9 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                 />
                 <RequirementRow
                   ok={checks?.cli_installed}
-                  title="Claude Code"
+                  title="Claude Code CLI"
                   okText="Installed"
-                  detail="The Claude Code CLI is required to power the assistant. It provides the AI engine that runs behind the scenes."
+                  detail="The assistant is powered by Claude Code. Install the Claude desktop app (which includes the CLI automatically) or install it manually with the command below."
                   action={!checks?.cli_installed && (
                     <CommandBlock command="npm install -g @anthropic-ai/claude-code" />
                   )}
