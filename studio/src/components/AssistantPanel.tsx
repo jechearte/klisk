@@ -801,8 +801,8 @@ function RequirementRow({
 
 function CommandBlock({ command }: { command: string }) {
   return (
-    <div className="relative group flex-1 min-w-0">
-      <code className="block text-xs bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-lg px-3 py-2 pr-8 font-mono truncate">
+    <div className="relative group">
+      <code className="block text-xs bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-lg px-3 py-2 pr-8 font-mono whitespace-nowrap">
         {command}
       </code>
       <button
