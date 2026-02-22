@@ -90,8 +90,16 @@ def _clean_project_modules(project_dir: Path) -> None:
     """
     from klisk.core.paths import PROJECTS_DIR
 
-    project_str = str(project_dir)
-    projects_str = str(PROJECTS_DIR.resolve()) if PROJECTS_DIR.exists() else None
+    project_str = str(project_dir.resolve())
+
+    # Collect all project directories to check against
+    project_dirs: list[str] = [project_str]
+    if PROJECTS_DIR.exists():
+        for entry in PROJECTS_DIR.iterdir():
+            if entry.is_dir():
+                entry_str = str(entry.resolve())
+                if entry_str != project_str:
+                    project_dirs.append(entry_str)
 
     for key in list(sys.modules.keys()):
         if key == "__main__":
@@ -102,21 +110,20 @@ def _clean_project_modules(project_dir: Path) -> None:
             continue
         resolved = str(Path(mod_file).resolve())
 
-        # Remove modules from ANY klisk project (not just the current one)
-        # to avoid cross-project package collisions (e.g. src, src.tools).
-        target_dir = None
-        if resolved.startswith(project_str):
-            target_dir = project_str
-        elif projects_str and resolved.startswith(projects_str):
-            target_dir = projects_str
+        # Check if this module belongs to any klisk project
+        matched_dir = None
+        for pdir in project_dirs:
+            if resolved.startswith(pdir):
+                matched_dir = pdir
+                break
 
-        if target_dir is None:
+        if matched_dir is None:
             continue
 
-        # Check if the file is inside a venv / hidden directory
-        rel = resolved[len(target_dir):].lstrip("/").lstrip("\\")
-        first_part = rel.split("/")[0].split("\\")[0]
-        if first_part in _SKIP_DIRS or first_part.startswith("."):
+        # Check if the file is inside a venv / hidden directory within the project
+        rel = resolved[len(matched_dir):].lstrip("/").lstrip("\\")
+        parts = rel.split("/") if "/" in rel else rel.split("\\")
+        if any(part in _SKIP_DIRS or part.startswith(".") for part in parts):
             continue
         del sys.modules[key]
 
