@@ -250,119 +250,127 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
 
   if (isEmpty) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center px-4">
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 overflow-y-auto">
         {status !== "ready" && status !== null ? (
-          <div className="w-full max-w-md">
-            {/* Header */}
-            <div className="text-center mb-5">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-3">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-blue-500">
-                  <path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <p className="text-sm text-gray-700 dark:text-gray-200 font-semibold mb-1">
-                Klisk Assistant
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                An AI-powered coding assistant that helps you build your agent — it can create projects, write tools, fix errors, and more.{" "}
+          <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+            {/* About card */}
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
+              <div className="px-6 py-4 flex items-start justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                    Klisk Assistant
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                    An AI-powered coding assistant that helps you build your agent — it can create projects, write tools, fix errors, and more.
+                  </p>
+                </div>
                 <a
                   href="https://klisk.productomania.io/docs/studio/assistant.html"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline"
+                  className="text-blue-500 hover:text-blue-400 flex-shrink-0 mt-0.5"
+                  title="Documentation"
                 >
-                  Learn more
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                  </svg>
                 </a>
-              </p>
+              </div>
             </div>
 
-            {/* Requirements */}
-            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">
-              Requirements
-            </p>
-            <div className="space-y-1.5">
-              <RequirementItem
-                ok={checks?.cli_installed}
-                title="Claude Code"
-                summary="CLI installed"
-                detail="The Claude Code CLI is required to power the assistant. It provides the AI engine that runs behind the scenes."
-                action={!checks?.cli_installed && (
-                  <CommandBlock command="npm install -g @anthropic-ai/claude-code" />
-                )}
-              />
-              <RequirementItem
-                ok={checks?.sdk_installed}
-                title="Assistant SDK"
-                summary="Python package installed"
-                detail="The assistant SDK bridges Klisk Studio with Claude Code. It's an optional dependency that enables the assistant tab."
-                action={!checks?.sdk_installed && (
-                  <>
-                    {installing ? (
-                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 py-0.5">
-                        <svg className="animate-spin w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                        Installing...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            setInstalling(true);
-                            setInstallError(null);
-                            fetch("/api/assistant/install", { method: "POST" })
-                              .then((r) => r.json())
-                              .then((data) => {
-                                if (data.ok) {
-                                  refreshStatus();
-                                } else {
-                                  setInstallError(data.error || "Installation failed");
-                                }
-                              })
-                              .catch((e) => setInstallError(String(e)))
-                              .finally(() => setInstalling(false));
-                          }}
-                          className="px-3 py-1 rounded-md text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                        >
-                          Install
-                        </button>
-                        <span className="text-xs text-gray-400 dark:text-gray-500">or run: pip install 'klisk[assistant]'</span>
-                      </div>
-                    )}
-                    {installError && (
-                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">{installError}</p>
-                    )}
-                  </>
-                )}
-              />
-              <RequirementItem
-                ok={checks?.authenticated}
-                title="Claude authentication"
-                summary="Logged in"
-                detail="You need an active Claude Code session. Log in with your Anthropic account or set the ANTHROPIC_API_KEY environment variable."
-                action={!checks?.authenticated && checks?.cli_installed && (
-                  <CommandBlock command="claude auth login" />
-                )}
-                disabledReason={!checks?.cli_installed ? "Install Claude Code first" : undefined}
-              />
-            </div>
-
-            {/* Refresh */}
-            <div className="mt-4 text-center">
-              <button
-                onClick={refreshStatus}
-                className="inline-flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-3.5 h-3.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182M21.015 4.356v4.992" />
-                </svg>
-                Refresh status
-              </button>
+            {/* Requirements card */}
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                    Requirements
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Complete these steps to start using the assistant.
+                  </p>
+                </div>
+                <button
+                  onClick={refreshStatus}
+                  className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
+                  title="Refresh status"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182M21.015 4.356v4.992" />
+                  </svg>
+                </button>
+              </div>
+              <div className="divide-y divide-gray-200 dark:divide-gray-800">
+                <RequirementRow
+                  ok={checks?.cli_installed}
+                  title="Claude Code"
+                  okText="Installed"
+                  detail="The Claude Code CLI is required to power the assistant. It provides the AI engine that runs behind the scenes."
+                  action={!checks?.cli_installed && (
+                    <CommandBlock command="npm install -g @anthropic-ai/claude-code" />
+                  )}
+                />
+                <RequirementRow
+                  ok={checks?.sdk_installed}
+                  title="Assistant SDK"
+                  okText="Installed"
+                  detail="The assistant SDK bridges Klisk Studio with Claude Code. It's an optional dependency that enables the assistant tab."
+                  action={!checks?.sdk_installed && (
+                    <>
+                      {installing ? (
+                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 py-0.5">
+                          <svg className="animate-spin w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Installing...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setInstalling(true);
+                              setInstallError(null);
+                              fetch("/api/assistant/install", { method: "POST" })
+                                .then((r) => r.json())
+                                .then((data) => {
+                                  if (data.ok) {
+                                    refreshStatus();
+                                  } else {
+                                    setInstallError(data.error || "Installation failed");
+                                  }
+                                })
+                                .catch((e) => setInstallError(String(e)))
+                                .finally(() => setInstalling(false));
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                          >
+                            Install
+                          </button>
+                          <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">pip install 'klisk[assistant]'</span>
+                        </div>
+                      )}
+                      {installError && (
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">{installError}</p>
+                      )}
+                    </>
+                  )}
+                />
+                <RequirementRow
+                  ok={checks?.authenticated}
+                  title="Claude authentication"
+                  okText="Logged in"
+                  detail="You need an active Claude Code session. Log in with your Anthropic account or set the ANTHROPIC_API_KEY environment variable."
+                  action={!checks?.authenticated && checks?.cli_installed ? (
+                    <CommandBlock command="claude auth login" />
+                  ) : !checks?.cli_installed ? undefined : undefined}
+                  disabledText={!checks?.cli_installed ? "Install Claude Code first" : undefined}
+                />
+              </div>
             </div>
           </div>
         ) : status === "ready" ? (
-          <>
+          <div className="flex-1 flex flex-col items-center justify-center px-4">
             <div className="text-center text-gray-400 dark:text-gray-500 mb-6">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-3">
                 <svg
@@ -430,8 +438,9 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                 )}
               </form>
             </div>
-          </>
+          </div>
         ) : null}
+        </div>
       </div>
     );
   }
@@ -726,30 +735,29 @@ function QuestionCard({
   );
 }
 
-function RequirementItem({
+function RequirementRow({
   ok,
   title,
-  summary,
+  okText,
   detail,
   action,
-  disabledReason,
+  disabledText,
 }: {
   ok?: boolean;
   title: string;
-  summary: string;
+  okText: string;
   detail: string;
   action?: React.ReactNode;
-  disabledReason?: string;
+  disabledText?: string;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const showExpand = !ok || detail;
+  const [expanded, setExpanded] = useState(!ok);
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700/60 bg-white dark:bg-gray-900/40 overflow-hidden">
+    <div>
       <button
         type="button"
-        onClick={() => showExpand && setExpanded((v) => !v)}
-        className={`w-full flex items-center gap-3 px-3 py-2.5 text-left ${showExpand ? "cursor-pointer" : "cursor-default"}`}
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center gap-3 px-6 py-3.5 text-left cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
       >
         {ok ? (
           <div className="w-5 h-5 flex-shrink-0 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
@@ -761,27 +769,25 @@ function RequirementItem({
           <div className="w-5 h-5 flex-shrink-0 rounded-full border-2 border-gray-300 dark:border-gray-600" />
         )}
         <div className="flex-1 min-w-0">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{title}</span>
+          <span className="text-sm text-gray-700 dark:text-gray-300">{title}</span>
           {ok && (
-            <span className="ml-2 text-xs text-green-600 dark:text-green-400">{summary}</span>
+            <span className="ml-2 text-xs text-green-600 dark:text-green-400">{okText}</span>
           )}
-          {!ok && disabledReason && (
-            <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{disabledReason}</span>
+          {!ok && disabledText && (
+            <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{disabledText}</span>
           )}
         </div>
-        {showExpand && (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className={`w-4 h-4 flex-shrink-0 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`}
-          >
-            <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-          </svg>
-        )}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          className={`w-4 h-4 flex-shrink-0 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`}
+        >
+          <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+        </svg>
       </button>
       {expanded && (
-        <div className="px-3 pb-3 pt-0 ml-8">
+        <div className="px-6 pb-3.5 ml-8">
           <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-2">{detail}</p>
           {action}
         </div>
