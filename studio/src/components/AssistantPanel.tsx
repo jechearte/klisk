@@ -777,11 +777,11 @@ function QuestionCard({
 
   if (answered !== undefined) {
     return (
-      <div className="flex items-baseline gap-2">
-        <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+      <div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
           {question.question}
-        </span>
-        <span className="text-xs font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1">
+        </p>
+        <span className="text-xs font-medium text-gray-800 dark:text-gray-200 inline-flex items-center gap-1">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3 text-green-500 dark:text-green-400 shrink-0">
             <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
           </svg>
@@ -833,7 +833,7 @@ function QuestionCard({
             <button
               disabled={!enabled || !otherText.trim()}
               onClick={() => onAnswer(otherText.trim())}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-300 disabled:opacity-50 disabled:cursor-default transition-colors"
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-default transition-colors"
             >
               Send
             </button>
