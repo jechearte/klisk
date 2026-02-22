@@ -247,14 +247,11 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
             except Exception:
                 return PermissionResultDeny(message="WebSocket disconnected")
 
-            # Wait for answer from frontend
+            # Wait for answer from frontend (no timeout — cleanup is
+            # handled by WebSocket disconnect / task cancellation).
             waiting_for_interaction.set()
             try:
-                response = await asyncio.wait_for(
-                    interaction_queue.get(), timeout=300,
-                )
-            except asyncio.TimeoutError:
-                return PermissionResultDeny(message="User did not respond in time")
+                response = await interaction_queue.get()
             finally:
                 waiting_for_interaction.clear()
 
@@ -291,11 +288,7 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
 
         waiting_for_interaction.set()
         try:
-            response = await asyncio.wait_for(
-                interaction_queue.get(), timeout=300,
-            )
-        except asyncio.TimeoutError:
-            return PermissionResultDeny(message="User did not respond in time")
+            response = await interaction_queue.get()
         finally:
             waiting_for_interaction.clear()
 
