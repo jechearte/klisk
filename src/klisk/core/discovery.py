@@ -28,9 +28,14 @@ def _activate_venv_packages(project_dir: Path) -> None:
         if not candidates:
             candidates = glob_mod.glob(str(venv_dir / "Lib" / "site-packages"))
         for sp in candidates:
-            if sp not in sys.path:
-                sys.path.insert(0, sp)
-                logger.debug("Activated venv site-packages: %s", sp)
+            # Always move to front — on hot reload the path may already
+            # exist but sit behind another project's venv.
+            try:
+                sys.path.remove(sp)
+            except ValueError:
+                pass
+            sys.path.insert(0, sp)
+            logger.debug("Activated venv site-packages: %s", sp)
         break  # Only use the first venv found
 
 
@@ -48,6 +53,16 @@ def discover_project(project_dir: str | Path) -> ProjectSnapshot:
 
     registry = AgentRegistry.get_instance()
     registry.clear()
+
+    # Ensure this project's directory is first in sys.path so that its
+    # packages (src/, tools/, etc.) are resolved before other projects'.
+    # On hot reload the dir is already present but may not be at position 0.
+    project_str = str(project_dir)
+    try:
+        sys.path.remove(project_str)
+    except ValueError:
+        pass
+    sys.path.insert(0, project_str)
 
     _activate_venv_packages(project_dir)
 
@@ -147,10 +162,11 @@ def _import_project_modules(project_dir: Path, exclude: Path) -> None:
 
 
 def _import_module_from_path(file_path: Path, project_dir: Path) -> None:
-    """Dynamically import a Python file, adding the project dir to sys.path."""
-    project_str = str(project_dir)
-    if project_str not in sys.path:
-        sys.path.insert(0, project_str)
+    """Dynamically import a Python file.
+
+    The caller (discover_project) is responsible for placing project_dir
+    at the front of sys.path before invoking this function.
+    """
 
     # Create a unique module name based on relative path to avoid conflicts
     rel = file_path.resolve().relative_to(project_dir.resolve())
