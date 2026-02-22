@@ -410,7 +410,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
               </div>
               <p className="text-base font-medium text-gray-700 dark:text-gray-200">What do you need help with?</p>
               <p className="text-sm mt-1 text-gray-500 dark:text-gray-400">
-                It can create projects, write tools, fix errors, and more
+                The Klisk Assistant can help you create agents, tools, or fix errors
               </p>
             </div>
             <div className="w-full max-w-[700px] px-3 pb-3">
