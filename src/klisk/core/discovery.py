@@ -77,12 +77,22 @@ def discover_project(project_dir: str | Path) -> ProjectSnapshot:
 def _clean_project_modules(project_dir: Path) -> None:
     """Remove previously loaded project modules from sys.modules for hot reload.
 
-    Only removes user source modules whose files live directly in the project
-    tree.  Modules inside virtual-env directories (``.venv``, ``venv``, etc.)
+    Removes:
+    1. User source modules whose files live in the project tree.
+    2. Common package names (``src``, ``tools``, etc.) that may have been cached
+       from a *different* project with the same directory layout — this prevents
+       ``from src.tools.xxx import yyy`` from resolving to the wrong project in
+       workspace mode.
+
+    Modules inside virtual-env directories (``.venv``, ``venv``, etc.)
     are preserved so that ``klisk`` and its dependencies keep working even when
     installed in the project's own virtual environment.
     """
+    from klisk.core.paths import PROJECTS_DIR
+
     project_str = str(project_dir)
+    projects_str = str(PROJECTS_DIR.resolve()) if PROJECTS_DIR.exists() else None
+
     for key in list(sys.modules.keys()):
         if key == "__main__":
             continue
@@ -91,10 +101,20 @@ def _clean_project_modules(project_dir: Path) -> None:
         if not mod_file:
             continue
         resolved = str(Path(mod_file).resolve())
-        if not resolved.startswith(project_str):
+
+        # Remove modules from ANY klisk project (not just the current one)
+        # to avoid cross-project package collisions (e.g. src, src.tools).
+        target_dir = None
+        if resolved.startswith(project_str):
+            target_dir = project_str
+        elif projects_str and resolved.startswith(projects_str):
+            target_dir = projects_str
+
+        if target_dir is None:
             continue
-        # Check if the file is inside a venv / hidden directory within the project
-        rel = resolved[len(project_str):].lstrip("/").lstrip("\\")
+
+        # Check if the file is inside a venv / hidden directory
+        rel = resolved[len(target_dir):].lstrip("/").lstrip("\\")
         first_part = rel.split("/")[0].split("\\")[0]
         if first_part in _SKIP_DIRS or first_part.startswith("."):
             continue
