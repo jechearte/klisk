@@ -306,9 +306,9 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
               <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 <RequirementRow
                   ok={checks?.sdk_installed}
-                  title="Assistant SDK"
+                  title="Klisk Assistant SDK"
                   okText="Installed"
-                  detail="The assistant SDK bridges Klisk Studio with Claude Code. It's an optional dependency that enables the assistant tab."
+                  detail="To use the assistant you need to install this extra dependency. Run the command in your terminal or click the button."
                   action={!checks?.sdk_installed && (
                     <>
                       {installing ? (
@@ -363,7 +363,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                   ok={checks?.authenticated}
                   title="Claude authentication"
                   okText="Logged in"
-                  detail="You need an active Claude Code session. Log in with your Anthropic account or set the ANTHROPIC_API_KEY environment variable."
+                  detail="You need to log in to your Claude account. The Klisk Assistant will consume usage from your Claude subscription."
                   action={!checks?.authenticated && checks?.cli_installed ? (
                     <CommandBlock command="claude auth login" />
                   ) : !checks?.cli_installed ? undefined : undefined}
