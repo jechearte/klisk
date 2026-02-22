@@ -251,7 +251,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
   if (isEmpty) {
     return (
       <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto flex flex-col">
         {status !== "ready" && status !== null ? (
           <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
             {/* About card */}
