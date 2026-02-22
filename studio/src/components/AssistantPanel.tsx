@@ -382,7 +382,8 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                   ok={checks?.authenticated}
                   title="Claude authentication"
                   okText="Logged in"
-                  detail="You need to log in to your Claude account. The Klisk Assistant will consume usage from your Claude subscription. Open your terminal and run this command:"
+                  detail="You need to log in to your Claude account. The Klisk Assistant will consume usage from your Claude subscription."
+                  extraDetail="Open your terminal and run this command:"
                   action={!checks?.authenticated && checks?.cli_installed ? (
                     <CommandBlock command="claude auth login" />
                   ) : !checks?.cli_installed ? undefined : undefined}
@@ -762,6 +763,7 @@ function RequirementRow({
   title,
   okText,
   detail,
+  extraDetail,
   action,
   disabledText,
 }: {
@@ -769,6 +771,7 @@ function RequirementRow({
   title: string;
   okText: string;
   detail: string;
+  extraDetail?: string;
   action?: React.ReactNode;
   disabledText?: string;
 }) {
@@ -811,6 +814,9 @@ function RequirementRow({
       {expanded && (
         <div className="px-6 pb-3.5 ml-8">
           <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-2">{detail}</p>
+          {extraDetail && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-2">{extraDetail}</p>
+          )}
           {action}
         </div>
       )}
