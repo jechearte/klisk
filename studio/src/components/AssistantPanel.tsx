@@ -354,7 +354,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                   ok={checks?.cli_installed}
                   title="Claude Code CLI"
                   okText="Installed"
-                  detail="The assistant is powered by Claude Code. Install the Claude desktop app (which includes the CLI automatically) or install it manually with the command below."
+                  detail="The assistant is powered by the Claude Agent SDK, which requires the Claude Code CLI. Install the Claude desktop app (includes the CLI automatically) or install it manually with the command below."
                   action={!checks?.cli_installed && (
                     <CommandBlock command="npm install -g @anthropic-ai/claude-code" />
                   )}
