@@ -188,6 +188,8 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
     shutdown = asyncio.Event()
     # Flag to signal cancellation of the current query
     cancel_query = asyncio.Event()
+    # Flag set while waiting for user interaction (permission/question)
+    waiting_for_interaction = asyncio.Event()
 
     async def _reader_loop() -> None:
         """Read from WebSocket and dispatch to appropriate queues."""
@@ -218,6 +220,7 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
         except WebSocketDisconnect:
             shutdown.set()
         except Exception:
+            logger.exception("Unexpected error in assistant reader loop")
             shutdown.set()
 
     async def _can_use_tool(tool_name: str, input_data: dict, context: object) -> object:
@@ -245,12 +248,15 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
                 return PermissionResultDeny(message="WebSocket disconnected")
 
             # Wait for answer from frontend
+            waiting_for_interaction.set()
             try:
                 response = await asyncio.wait_for(
                     interaction_queue.get(), timeout=300,
                 )
             except asyncio.TimeoutError:
                 return PermissionResultDeny(message="User did not respond in time")
+            finally:
+                waiting_for_interaction.clear()
 
             answers = response.get("answers", {})
             return PermissionResultAllow(
@@ -283,12 +289,15 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
         except Exception:
             return PermissionResultDeny(message="WebSocket disconnected")
 
+        waiting_for_interaction.set()
         try:
             response = await asyncio.wait_for(
                 interaction_queue.get(), timeout=300,
             )
         except asyncio.TimeoutError:
             return PermissionResultDeny(message="User did not respond in time")
+        finally:
+            waiting_for_interaction.clear()
 
         if response.get("allowed"):
             return PermissionResultAllow(updated_input=input_data)
@@ -358,14 +367,39 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
             current_tool = ""
             in_tool = False
 
+            # Inactivity timeout: if no SDK message for this long, consider it hung.
+            # Skipped while waiting for user interaction (permission/question).
+            _QUERY_INACTIVITY_TIMEOUT = 180  # 3 minutes
+
             async def _run_single_query() -> None:
                 nonlocal session_id, tool_input_buffer, current_tool, in_tool
 
                 async def _prompt():
                     yield {"type": "user", "message": {"role": "user", "content": user_text}}
 
-                async for message in query(prompt=_prompt(), options=options):
-                    if shutdown.is_set() or cancel_query.is_set():
+                ait = query(prompt=_prompt(), options=options).__aiter__()
+                while not shutdown.is_set() and not cancel_query.is_set():
+                    try:
+                        message = await asyncio.wait_for(
+                            ait.__anext__(), timeout=_QUERY_INACTIVITY_TIMEOUT,
+                        )
+                    except StopAsyncIteration:
+                        break
+                    except asyncio.TimeoutError:
+                        if waiting_for_interaction.is_set():
+                            # Still waiting for user input, don't timeout
+                            continue
+                        logger.warning(
+                            "SDK query timed out (no message for %ds)",
+                            _QUERY_INACTIVITY_TIMEOUT,
+                        )
+                        try:
+                            await websocket.send_json({
+                                "type": "error",
+                                "data": "The assistant stopped responding. Please try again.",
+                            })
+                        except Exception:
+                            pass
                         break
 
                     # Capture session ID from init message
@@ -437,8 +471,8 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
                 for p in pending:
                     p.cancel()
                     try:
-                        await p
-                    except (asyncio.CancelledError, Exception):
+                        await asyncio.wait_for(asyncio.shield(p), timeout=5)
+                    except (asyncio.CancelledError, asyncio.TimeoutError, Exception):
                         pass
 
                 # Re-raise exceptions from the query task if it completed normally
@@ -467,13 +501,20 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
     reader_task = asyncio.create_task(_reader_loop())
     processor_task = asyncio.create_task(_process_messages())
 
+    async def _cancel_and_wait(task: asyncio.Task) -> None:  # type: ignore[type-arg]
+        task.cancel()
+        try:
+            await asyncio.wait_for(asyncio.shield(task), timeout=5)
+        except (asyncio.CancelledError, asyncio.TimeoutError, Exception):
+            pass
+
     try:
         done, pending = await asyncio.wait(
             [reader_task, processor_task],
             return_when=asyncio.FIRST_COMPLETED,
         )
         for task in pending:
-            task.cancel()
+            await _cancel_and_wait(task)
     except Exception:
-        reader_task.cancel()
-        processor_task.cancel()
+        await _cancel_and_wait(reader_task)
+        await _cancel_and_wait(processor_task)
