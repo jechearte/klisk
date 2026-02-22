@@ -377,97 +377,114 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
                 async def _prompt():
                     yield {"type": "user", "message": {"role": "user", "content": user_text}}
 
-                ait = query(prompt=_prompt(), options=options).__aiter__()
-                # Use asyncio.wait instead of wait_for so the task is NOT
-                # cancelled on timeout (which would kill _can_use_tool while
-                # it awaits the user's answer).
-                next_msg: asyncio.Task[object] = asyncio.ensure_future(ait.__anext__())
-                while not shutdown.is_set() and not cancel_query.is_set():
-                    done, _ = await asyncio.wait(
-                        {next_msg}, timeout=_QUERY_INACTIVITY_TIMEOUT,
-                    )
-                    if not done:
-                        # Timeout — skip if still waiting for user interaction
-                        if waiting_for_interaction.is_set():
-                            continue
-                        logger.warning(
-                            "SDK query timed out (no message for %ds)",
-                            _QUERY_INACTIVITY_TIMEOUT,
-                        )
-                        next_msg.cancel()
-                        try:
-                            await websocket.send_json({
-                                "type": "error",
-                                "data": "The assistant stopped responding. Please try again.",
-                            })
-                        except Exception:
-                            pass
-                        break
+                # Run SDK iteration in its own task so its cancel scopes
+                # stay intact.  Messages are forwarded via a queue; the
+                # inactivity timeout only cancels queue.get(), never the SDK.
+                _sentinel = object()
+                sdk_queue: asyncio.Queue[object] = asyncio.Queue()
 
+                async def _iterate_sdk() -> None:
                     try:
-                        message = next_msg.result()
-                    except StopAsyncIteration:
-                        break
+                        async for msg in query(prompt=_prompt(), options=options):
+                            await sdk_queue.put(msg)
+                    except Exception as exc:
+                        await sdk_queue.put(exc)
+                    finally:
+                        await sdk_queue.put(_sentinel)
 
-                    # Capture session ID from init message
-                    if (
-                        hasattr(message, "subtype")
-                        and message.subtype == "init"
-                        and hasattr(message, "data")
-                    ):
-                        session_id = message.data.get("session_id", session_id)
+                sdk_task = asyncio.create_task(_iterate_sdk())
 
-                    elif isinstance(message, StreamEvent):
-                        event = message.event
-                        event_type = event.get("type")
+                try:
+                    while not shutdown.is_set() and not cancel_query.is_set():
+                        try:
+                            item = await asyncio.wait_for(
+                                sdk_queue.get(), timeout=_QUERY_INACTIVITY_TIMEOUT,
+                            )
+                        except asyncio.TimeoutError:
+                            if waiting_for_interaction.is_set():
+                                continue
+                            logger.warning(
+                                "SDK query timed out (no message for %ds)",
+                                _QUERY_INACTIVITY_TIMEOUT,
+                            )
+                            try:
+                                await websocket.send_json({
+                                    "type": "error",
+                                    "data": "The assistant stopped responding. Please try again.",
+                                })
+                            except Exception:
+                                pass
+                            break
 
-                        if event_type == "content_block_start":
-                            block = event.get("content_block", {})
-                            if block.get("type") == "tool_use":
-                                current_tool = block.get("name", "")
-                                tool_input_buffer = ""
-                                in_tool = True
-                            elif block.get("type") == "text":
-                                in_tool = False
+                        if item is _sentinel:
+                            break
+                        if isinstance(item, Exception):
+                            raise item
 
-                        elif event_type == "content_block_delta":
-                            delta = event.get("delta", {})
-                            if delta.get("type") == "text_delta" and not in_tool:
-                                text = delta.get("text", "")
-                                if text:
+                        message = item
+
+                        # Capture session ID from init message
+                        if (
+                            hasattr(message, "subtype")
+                            and message.subtype == "init"
+                            and hasattr(message, "data")
+                        ):
+                            session_id = message.data.get("session_id", session_id)
+
+                        elif isinstance(message, StreamEvent):
+                            event = message.event
+                            event_type = event.get("type")
+
+                            if event_type == "content_block_start":
+                                block = event.get("content_block", {})
+                                if block.get("type") == "tool_use":
+                                    current_tool = block.get("name", "")
+                                    tool_input_buffer = ""
+                                    in_tool = True
+                                elif block.get("type") == "text":
+                                    in_tool = False
+
+                            elif event_type == "content_block_delta":
+                                delta = event.get("delta", {})
+                                if delta.get("type") == "text_delta" and not in_tool:
+                                    text = delta.get("text", "")
+                                    if text:
+                                        try:
+                                            await websocket.send_json({
+                                                "type": "token",
+                                                "data": text,
+                                            })
+                                        except Exception:
+                                            shutdown.set()
+                                            break
+                                elif delta.get("type") == "input_json_delta" and in_tool:
+                                    tool_input_buffer += delta.get("partial_json", "")
+
+                            elif event_type == "content_block_stop":
+                                if in_tool:
+                                    detail = _format_tool_detail(current_tool, tool_input_buffer)
                                     try:
                                         await websocket.send_json({
-                                            "type": "token",
-                                            "data": text,
+                                            "type": "tool_use",
+                                            "data": {
+                                                "tool": current_tool,
+                                                "detail": detail,
+                                                "args": tool_input_buffer,
+                                            },
                                         })
                                     except Exception:
                                         shutdown.set()
                                         break
-                            elif delta.get("type") == "input_json_delta" and in_tool:
-                                tool_input_buffer += delta.get("partial_json", "")
+                                    in_tool = False
 
-                        elif event_type == "content_block_stop":
-                            if in_tool:
-                                detail = _format_tool_detail(current_tool, tool_input_buffer)
-                                try:
-                                    await websocket.send_json({
-                                        "type": "tool_use",
-                                        "data": {
-                                            "tool": current_tool,
-                                            "detail": detail,
-                                            "args": tool_input_buffer,
-                                        },
-                                    })
-                                except Exception:
-                                    shutdown.set()
-                                    break
-                                in_tool = False
-
-                    elif isinstance(message, ResultMessage):
+                        elif isinstance(message, ResultMessage):
+                            pass
+                finally:
+                    sdk_task.cancel()
+                    try:
+                        await sdk_task
+                    except (asyncio.CancelledError, Exception):
                         pass
-
-                    # Queue up the next SDK message
-                    next_msg = asyncio.ensure_future(ait.__anext__())
 
             try:
                 cancel_query.clear()
