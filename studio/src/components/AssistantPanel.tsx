@@ -633,7 +633,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
           );
         })}
 
-        {streaming && (
+        {streaming && !messages.some((m) => m.role === "question" && m.status === "pending") && (
           <div className="flex justify-start">
             <div className="flex items-center gap-1 px-3 py-2">
               <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
