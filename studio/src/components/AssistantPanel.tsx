@@ -393,7 +393,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
           </div>
         ) : status === "ready" ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
-            <div className="text-center text-gray-400 dark:text-gray-500 mb-6">
+            <div className="text-center mb-6">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 mb-3">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -408,8 +408,8 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                   />
                 </svg>
               </div>
-              <p className="text-sm">Ask the assistant to help build your agent</p>
-              <p className="text-xs mt-1 text-gray-400 dark:text-gray-500">
+              <p className="text-base font-medium text-gray-700 dark:text-gray-200">What do you need help with?</p>
+              <p className="text-sm mt-1 text-gray-500 dark:text-gray-400">
                 It can create projects, write tools, fix errors, and more
               </p>
             </div>
