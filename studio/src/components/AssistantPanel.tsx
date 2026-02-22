@@ -262,7 +262,10 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                     Klisk Assistant
                   </h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                    An AI-powered coding assistant that helps you build your agent — it can create projects, write tools, fix errors, and more.
+                    The Klisk Assistant helps you build your agents. It requires a Claude subscription — usage will count against your account limits.
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+                    If you don't have a Claude subscription, you can use any general-purpose coding agent to build agents with Klisk.
                   </p>
                 </div>
                 <a
