@@ -14,6 +14,7 @@ import os
 import shutil
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 
 from fastapi import WebSocket, WebSocketDisconnect
@@ -239,23 +240,34 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
         # AskUserQuestion: send to frontend, await response
         if tool_name == "AskUserQuestion":
             questions = input_data.get("questions", [])
+            qid = uuid.uuid4().hex[:8]
+            logger.info("[AskUser:%s] Sending %d questions to frontend", qid, len(questions))
             try:
                 await websocket.send_json({
                     "type": "question",
-                    "data": {"questions": questions},
+                    "data": {"questions": questions, "question_id": qid},
                 })
             except Exception:
+                logger.warning("[AskUser:%s] WebSocket send failed", qid)
                 return PermissionResultDeny(message="WebSocket disconnected")
 
-            # Wait for answer from frontend (no timeout — cleanup is
-            # handled by WebSocket disconnect / task cancellation).
+            # Wait for the matching answer (discard stale responses).
             waiting_for_interaction.set()
             try:
-                response = await interaction_queue.get()
+                while True:
+                    response = await interaction_queue.get()
+                    resp_qid = response.get("question_id")
+                    if resp_qid == qid:
+                        break
+                    logger.warning(
+                        "[AskUser:%s] Discarded stale response (question_id=%s)",
+                        qid, resp_qid,
+                    )
             finally:
                 waiting_for_interaction.clear()
 
             answers = response.get("answers", {})
+            logger.info("[AskUser:%s] Got answers: %s", qid, answers)
             return PermissionResultAllow(
                 updated_input={**input_data, "answers": answers},
             )
