@@ -35,6 +35,7 @@ class ProjectSnapshot:
     agents: dict[str, AgentEntry] = field(default_factory=dict)
     tools: dict[str, ToolEntry] = field(default_factory=dict)
     config: dict[str, Any] = field(default_factory=dict)
+    failed_projects: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {

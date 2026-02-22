@@ -163,6 +163,9 @@ _workspace_mode: bool = False
 _snapshot: ProjectSnapshot | None = None
 _config: ProjectConfig | None = None
 _reload_clients: list[WebSocket] = []
+_retry_task: asyncio.Task | None = None
+_retry_count: int = 0
+_MAX_RETRIES = 3
 
 
 def create_app(project_dir: Path | None) -> FastAPI:
@@ -667,7 +670,17 @@ async def _handle_reload(websocket: WebSocket) -> None:
 
 
 async def _on_file_change() -> None:
-    global _snapshot
+    global _retry_task, _retry_count
+    # A real file change resets the retry counter
+    _retry_count = 0
+    if _retry_task is not None and not _retry_task.done():
+        _retry_task.cancel()
+        _retry_task = None
+    await _do_discovery()
+
+
+async def _do_discovery() -> None:
+    global _snapshot, _retry_task, _retry_count
     try:
         if _workspace_mode:
             _snapshot = discover_all_projects()
@@ -687,6 +700,27 @@ async def _on_file_change() -> None:
             disconnected.append(ws)
     for ws in disconnected:
         _reload_clients.remove(ws)
+
+    # Schedule a retry if some projects failed to load
+    if (
+        _snapshot
+        and _snapshot.failed_projects
+        and _retry_count < _MAX_RETRIES
+    ):
+        logger.info(
+            "Scheduling retry %d/%d for failed projects: %s",
+            _retry_count + 1,
+            _MAX_RETRIES,
+            _snapshot.failed_projects,
+        )
+        _retry_task = asyncio.create_task(_schedule_retry())
+
+
+async def _schedule_retry() -> None:
+    global _retry_count
+    await asyncio.sleep(5)
+    _retry_count += 1
+    await _do_discovery()
 
 
 def _get_project_dir_for_source(source_file: str) -> Path | None:

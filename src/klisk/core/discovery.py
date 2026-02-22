@@ -222,6 +222,7 @@ def discover_all_projects() -> ProjectSnapshot:
                 snap = discover_project(entry)
         except Exception as exc:
             logger.warning("Failed to load project '%s': %s", project_name, exc)
+            merged.failed_projects.append(project_name)
             continue
 
         # Tag entries with project name
