@@ -378,21 +378,23 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
                     yield {"type": "user", "message": {"role": "user", "content": user_text}}
 
                 ait = query(prompt=_prompt(), options=options).__aiter__()
+                # Use asyncio.wait instead of wait_for so the task is NOT
+                # cancelled on timeout (which would kill _can_use_tool while
+                # it awaits the user's answer).
+                next_msg: asyncio.Task[object] = asyncio.ensure_future(ait.__anext__())
                 while not shutdown.is_set() and not cancel_query.is_set():
-                    try:
-                        message = await asyncio.wait_for(
-                            ait.__anext__(), timeout=_QUERY_INACTIVITY_TIMEOUT,
-                        )
-                    except StopAsyncIteration:
-                        break
-                    except asyncio.TimeoutError:
+                    done, _ = await asyncio.wait(
+                        {next_msg}, timeout=_QUERY_INACTIVITY_TIMEOUT,
+                    )
+                    if not done:
+                        # Timeout — skip if still waiting for user interaction
                         if waiting_for_interaction.is_set():
-                            # Still waiting for user input, don't timeout
                             continue
                         logger.warning(
                             "SDK query timed out (no message for %ds)",
                             _QUERY_INACTIVITY_TIMEOUT,
                         )
+                        next_msg.cancel()
                         try:
                             await websocket.send_json({
                                 "type": "error",
@@ -400,6 +402,11 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
                             })
                         except Exception:
                             pass
+                        break
+
+                    try:
+                        message = next_msg.result()
+                    except StopAsyncIteration:
                         break
 
                     # Capture session ID from init message
@@ -458,6 +465,9 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
 
                     elif isinstance(message, ResultMessage):
                         pass
+
+                    # Queue up the next SDK message
+                    next_msg = asyncio.ensure_future(ait.__anext__())
 
             try:
                 cancel_query.clear()

@@ -187,6 +187,8 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
 
   const handleQuestion = useCallback(
     (questionKey: string, answer: string) => {
+      let answersToSend: Record<string, string> | null = null;
+
       setMessages((prev) => {
         const idx = prev.findLastIndex(
           (m) => m.role === "question" && m.status === "pending"
@@ -201,12 +203,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
         );
 
         if (allAnswered) {
-          // All questions answered — send to backend
-          if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(
-              JSON.stringify({ type: "question_response", answers: newAnswers })
-            );
-          }
+          answersToSend = newAnswers;
           return [
             ...prev.slice(0, idx),
             { ...item, answers: newAnswers, status: "answered" as const },
@@ -221,6 +218,17 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
           ...prev.slice(idx + 1),
         ];
       });
+
+      // Send outside state updater to avoid side effects
+      if (
+        answersToSend &&
+        wsRef.current &&
+        wsRef.current.readyState === WebSocket.OPEN
+      ) {
+        wsRef.current.send(
+          JSON.stringify({ type: "question_response", answers: answersToSend })
+        );
+      }
     },
     []
   );
