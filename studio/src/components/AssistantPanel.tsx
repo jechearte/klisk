@@ -122,6 +122,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
               role: "question" as const,
               questions: data.data.questions,
               status: "pending" as const,
+              answers: {},
             },
           ]);
           break;
@@ -185,11 +186,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
   );
 
   const handleQuestion = useCallback(
-    (questions: AssistantQuestion[], answers: Record<string, string>) => {
-      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-      wsRef.current.send(
-        JSON.stringify({ type: "question_response", answers })
-      );
+    (questionKey: string, answer: string) => {
       setMessages((prev) => {
         const idx = prev.findLastIndex(
           (m) => m.role === "question" && m.status === "pending"
@@ -197,9 +194,30 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
         if (idx === -1) return prev;
         const item = prev[idx];
         if (item.role !== "question") return prev;
+
+        const newAnswers = { ...item.answers, [questionKey]: answer };
+        const allAnswered = item.questions.every(
+          (q) => q.question in newAnswers
+        );
+
+        if (allAnswered) {
+          // All questions answered — send to backend
+          if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(
+              JSON.stringify({ type: "question_response", answers: newAnswers })
+            );
+          }
+          return [
+            ...prev.slice(0, idx),
+            { ...item, answers: newAnswers, status: "answered" as const },
+            ...prev.slice(idx + 1),
+          ];
+        }
+
+        // Partial — just store the answer
         return [
           ...prev.slice(0, idx),
-          { ...item, status: "answered" as const },
+          { ...item, answers: newAnswers },
           ...prev.slice(idx + 1),
         ];
       });
@@ -552,11 +570,10 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                       <QuestionCard
                         key={qi}
                         question={q}
-                        enabled={isPending}
+                        enabled={isPending && !(q.question in msg.answers)}
+                        answered={q.question in msg.answers ? msg.answers[q.question] : undefined}
                         onAnswer={(answer) => {
-                          handleQuestion(msg.questions, {
-                            [q.question]: answer,
-                          });
+                          handleQuestion(q.question, answer);
                         }}
                       />
                     ))}
@@ -732,14 +749,31 @@ function ToolUseChip({ tool, detail }: { tool: string; detail: string }) {
 function QuestionCard({
   question,
   enabled,
+  answered,
   onAnswer,
 }: {
   question: AssistantQuestion;
   enabled: boolean;
+  answered?: string;
   onAnswer: (answer: string) => void;
 }) {
   const [showOtherInput, setShowOtherInput] = useState(false);
   const [otherText, setOtherText] = useState("");
+
+  if (answered !== undefined) {
+    return (
+      <div>
+        <p className="font-medium text-blue-800 dark:text-blue-300 mb-1.5">
+          {question.question}
+        </p>
+        <div className="px-3 py-2 rounded-md border border-blue-300/50 dark:border-blue-600/50 bg-blue-100/50 dark:bg-blue-800/30">
+          <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+            {answered}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

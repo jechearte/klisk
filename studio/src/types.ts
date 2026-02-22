@@ -123,4 +123,4 @@ export type AssistantMessage =
   | { role: "system"; content: string }
   | { role: "tool_use"; tool: string; detail: string }
   | { role: "permission_request"; tool: string; command: string; status: "pending" | "allowed" | "denied" }
-  | { role: "question"; questions: AssistantQuestion[]; status: "pending" | "answered" };
+  | { role: "question"; questions: AssistantQuestion[]; status: "pending" | "answered"; answers: Record<string, string> };
