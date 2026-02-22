@@ -826,7 +826,7 @@ function RequirementRow({
 
 function CommandBlock({ command }: { command: string }) {
   return (
-    <div className="relative group">
+    <div className="relative group inline-block">
       <code className="block text-xs bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-lg px-3 py-2 pr-8 font-mono whitespace-nowrap">
         {command}
       </code>
