@@ -562,11 +562,18 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
 
           if (msg.role === "question") {
             const isPending = msg.status === "pending";
+            // Show answered questions + the next unanswered one
+            const nextPendingIdx = msg.questions.findIndex(
+              (q) => !(q.question in msg.answers)
+            );
+            const visibleCount = isPending
+              ? (nextPendingIdx === -1 ? msg.questions.length : nextPendingIdx + 1)
+              : msg.questions.length;
             return (
               <div key={i} className="flex justify-start">
                 <div className="max-w-[90%] rounded-lg text-sm border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 overflow-hidden">
                   <div className="px-3 py-2 space-y-3">
-                    {msg.questions.map((q, qi) => (
+                    {msg.questions.slice(0, visibleCount).map((q, qi) => (
                       <QuestionCard
                         key={qi}
                         question={q}
