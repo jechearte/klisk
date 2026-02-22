@@ -354,9 +354,28 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                   ok={checks?.cli_installed}
                   title="Claude Code CLI"
                   okText="Installed"
-                  detail="The assistant is powered by the Claude Agent SDK, which requires the Claude Code CLI. Install the Claude desktop app (includes the CLI automatically) or install it manually with the command below."
+                  detail="The assistant is powered by the Claude Agent SDK, which requires the Claude Code CLI."
                   action={!checks?.cli_installed && (
-                    <CommandBlock command="npm install -g @anthropic-ai/claude-code" />
+                    <div className="space-y-2.5">
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">Download the Claude desktop app (includes the CLI):</p>
+                        <a
+                          href="https://claude.com/download"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                        >
+                          Download Claude
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-3 h-3">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                          </svg>
+                        </a>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">Or install the CLI manually:</p>
+                        <CommandBlock command="npm install -g @anthropic-ai/claude-code" />
+                      </div>
+                    </div>
                   )}
                 />
                 <RequirementRow
