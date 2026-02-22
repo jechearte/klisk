@@ -305,15 +305,6 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
               </div>
               <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 <RequirementRow
-                  ok={checks?.cli_installed}
-                  title="Claude Code"
-                  okText="Installed"
-                  detail="The Claude Code CLI is required to power the assistant. It provides the AI engine that runs behind the scenes."
-                  action={!checks?.cli_installed && (
-                    <CommandBlock command="npm install -g @anthropic-ai/claude-code" />
-                  )}
-                />
-                <RequirementRow
                   ok={checks?.sdk_installed}
                   title="Assistant SDK"
                   okText="Installed"
@@ -357,6 +348,15 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                         <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">{installError}</p>
                       )}
                     </>
+                  )}
+                />
+                <RequirementRow
+                  ok={checks?.cli_installed}
+                  title="Claude Code"
+                  okText="Installed"
+                  detail="The Claude Code CLI is required to power the assistant. It provides the AI engine that runs behind the scenes."
+                  action={!checks?.cli_installed && (
+                    <CommandBlock command="npm install -g @anthropic-ai/claude-code" />
                   )}
                 />
                 <RequirementRow
