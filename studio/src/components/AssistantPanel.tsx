@@ -91,6 +91,8 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
           break;
 
         case "tool_use":
+          // Skip badge for AskUserQuestion — it's shown as a question card
+          if (data.data.tool === "AskUserQuestion") break;
           setMessages((prev) => [
             ...prev,
             {

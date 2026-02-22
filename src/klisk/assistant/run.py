@@ -322,7 +322,7 @@ async def _run_loop(cwd: Path, model: str) -> None:
             model=model,
             system_prompt=SYSTEM_PROMPT,
             include_partial_messages=True,
-            allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Skill"],
+            allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Skill", "AskUserQuestion"],
             setting_sources=["user"],
             permission_mode="acceptEdits",
             hooks={

@@ -345,7 +345,7 @@ async def handle_assistant_websocket(websocket: WebSocket, project_dir: Path) ->
                 model="opus",
                 system_prompt=SYSTEM_PROMPT + STUDIO_CONTEXT,
                 include_partial_messages=True,
-                allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Skill"],
+                allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Skill", "AskUserQuestion"],
                 setting_sources=["user"],
                 permission_mode="acceptEdits",
                 hooks={
