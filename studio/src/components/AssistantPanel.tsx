@@ -382,7 +382,7 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                   ok={checks?.authenticated}
                   title="Claude authentication"
                   okText="Logged in"
-                  detail="You need to log in to your Claude account. The Klisk Assistant will consume usage from your Claude subscription."
+                  detail="You need to log in to your Claude account. The Klisk Assistant will consume usage from your Claude subscription. Open your terminal and run this command:"
                   action={!checks?.authenticated && checks?.cli_installed ? (
                     <CommandBlock command="claude auth login" />
                   ) : !checks?.cli_installed ? undefined : undefined}
