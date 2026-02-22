@@ -268,7 +268,7 @@ async def handle_websocket_chat(
             try:
                 from agents import ModelSettings, MultiProvider, RunConfig, Runner
 
-                from klisk.core.env import get_project_env
+                from klisk.core.env import get_project_env, project_env_context
 
                 attachments = msg.get("attachments")
                 content = _build_content_parts(user_message, attachments, litellm=use_litellm)
@@ -292,8 +292,8 @@ async def handle_websocket_chat(
                         response_include=["web_search_call.action.sources"],
                     )
 
-                # Per-project API key isolation (concurrency-safe: each request
-                # creates its own MultiProvider without touching os.environ)
+                # Per-project API key isolation: inject all project env vars
+                # into os.environ during agent execution so tools can read them
                 project_env = get_project_env(agent_entry.project)
                 openai_key = project_env.get("OPENAI_API_KEY")
                 if openai_key:
@@ -303,65 +303,89 @@ async def handle_websocket_chat(
 
                 run_config = RunConfig(**run_config_kwargs)
 
-                result = Runner.run_streamed(
-                    sdk_agent,
-                    run_input,
-                    previous_response_id=previous_response_id if not use_litellm else None,
-                    run_config=run_config,
-                )
+                # Apply all project env vars to os.environ during agent
+                # execution so that tools can read custom variables
+                # (e.g. AIRTABLE_API_KEY).  Restored automatically on exit.
+                with project_env_context(agent_entry.project):
+                    result = Runner.run_streamed(
+                        sdk_agent,
+                        run_input,
+                        previous_response_id=previous_response_id if not use_litellm else None,
+                        run_config=run_config,
+                    )
 
-                # Track hosted tools: id → whether tool_call was emitted
-                seen_hosted_tools: dict[str, bool] = {}
+                    # Track hosted tools: id → whether tool_call was emitted
+                    seen_hosted_tools: dict[str, bool] = {}
 
-                async for event in result.stream_events():
-                    event_type = type(event).__name__
+                    async for event in result.stream_events():
+                        event_type = type(event).__name__
 
-                    if event_type == "RawResponsesStreamEvent":
-                        raw = event.data
-                        raw_type = type(raw).__name__
-                        if raw_type == "ResponseTextDeltaEvent":
-                            if raw.delta:
-                                await websocket.send_json({
-                                    "type": "token",
-                                    "data": raw.delta,
-                                })
-                        elif raw_type in (
-                            "ResponseReasoningSummaryTextDeltaEvent",
-                            "ResponseReasoningDeltaEvent",
-                        ):
-                            delta = getattr(raw, "delta", getattr(raw, "text", ""))
-                            if delta:
-                                await websocket.send_json({
-                                    "type": "thinking",
-                                    "data": delta,
-                                })
-                    elif event_type == "RunItemStreamEvent":
-                        item = event.item
-                        item_type = type(item).__name__
-                        if item_type == "ToolCallItem":
-                            raw_item = getattr(item, "raw_item", None)
-                            tool_name, args_str, item_id, hosted_status = _extract_tool_info(raw_item)
+                        if event_type == "RawResponsesStreamEvent":
+                            raw = event.data
+                            raw_type = type(raw).__name__
+                            if raw_type == "ResponseTextDeltaEvent":
+                                if raw.delta:
+                                    await websocket.send_json({
+                                        "type": "token",
+                                        "data": raw.delta,
+                                    })
+                            elif raw_type in (
+                                "ResponseReasoningSummaryTextDeltaEvent",
+                                "ResponseReasoningDeltaEvent",
+                            ):
+                                delta = getattr(raw, "delta", getattr(raw, "text", ""))
+                                if delta:
+                                    await websocket.send_json({
+                                        "type": "thinking",
+                                        "data": delta,
+                                    })
+                        elif event_type == "RunItemStreamEvent":
+                            item = event.item
+                            item_type = type(item).__name__
+                            if item_type == "ToolCallItem":
+                                raw_item = getattr(item, "raw_item", None)
+                                tool_name, args_str, item_id, hosted_status = _extract_tool_info(raw_item)
 
-                            if hosted_status is not None:
-                                # Hosted tool — deduplicate by ID, delay until args available
-                                emitted = seen_hosted_tools.get(item_id) if item_id else None
-                                is_done = hosted_status in ("completed", "failed")
-                                raw_type = getattr(raw_item, "type", "")
+                                if hosted_status is not None:
+                                    # Hosted tool — deduplicate by ID, delay until args available
+                                    emitted = seen_hosted_tools.get(item_id) if item_id else None
+                                    is_done = hosted_status in ("completed", "failed")
+                                    raw_type = getattr(raw_item, "type", "")
 
-                                if emitted is True:
-                                    # Already sent tool_call — send result on completion
-                                    if is_done:
-                                        output = _extract_hosted_output(raw_item, raw_type)
+                                    if emitted is True:
+                                        # Already sent tool_call — send result on completion
+                                        if is_done:
+                                            output = _extract_hosted_output(raw_item, raw_type)
+                                            await websocket.send_json({
+                                                "type": "tool_result",
+                                                "data": {"output": output},
+                                            })
+                                        continue
+
+                                    # Only emit tool_call when we have meaningful args
+                                    if args_str:
+                                        if item_id:
+                                            seen_hosted_tools[item_id] = True
                                         await websocket.send_json({
-                                            "type": "tool_result",
-                                            "data": {"output": output},
+                                            "type": "tool_call",
+                                            "data": {
+                                                "tool": tool_name,
+                                                "arguments": args_str,
+                                                "status": "running",
+                                            },
                                         })
-                                    continue
-
-                                # Only emit tool_call when we have meaningful args
-                                if args_str:
-                                    if item_id:
-                                        seen_hosted_tools[item_id] = True
+                                        if is_done:
+                                            output = _extract_hosted_output(raw_item, raw_type)
+                                            await websocket.send_json({
+                                                "type": "tool_result",
+                                                "data": {"output": output},
+                                            })
+                                    else:
+                                        # No args — skip entirely
+                                        if item_id:
+                                            seen_hosted_tools[item_id] = False
+                                else:
+                                    # Regular function tool — existing behavior
                                     await websocket.send_json({
                                         "type": "tool_call",
                                         "data": {
@@ -370,33 +394,13 @@ async def handle_websocket_chat(
                                             "status": "running",
                                         },
                                     })
-                                    if is_done:
-                                        output = _extract_hosted_output(raw_item, raw_type)
-                                        await websocket.send_json({
-                                            "type": "tool_result",
-                                            "data": {"output": output},
-                                        })
-                                else:
-                                    # No args — skip entirely
-                                    if item_id:
-                                        seen_hosted_tools[item_id] = False
-                            else:
-                                # Regular function tool — existing behavior
+                            elif item_type == "ToolCallOutputItem":
                                 await websocket.send_json({
-                                    "type": "tool_call",
+                                    "type": "tool_result",
                                     "data": {
-                                        "tool": tool_name,
-                                        "arguments": args_str,
-                                        "status": "running",
+                                        "output": str(getattr(item, "output", "")),
                                     },
                                 })
-                        elif item_type == "ToolCallOutputItem":
-                            await websocket.send_json({
-                                "type": "tool_result",
-                                "data": {
-                                    "output": str(getattr(item, "output", "")),
-                                },
-                            })
 
                 # Always keep conversation_history so it can bridge provider switches
                 conversation_history = result.to_input_list()
@@ -475,7 +479,7 @@ async def handle_streaming_chat(
     try:
         from agents import ModelSettings, MultiProvider, RunConfig, Runner
 
-        from klisk.core.env import get_project_env
+        from klisk.core.env import get_project_env, project_env_context
 
         content = _build_content_parts(message, attachments, litellm=use_litellm)
 
@@ -507,59 +511,82 @@ async def handle_streaming_chat(
 
         run_config = RunConfig(**run_config_kwargs)
 
-        result = Runner.run_streamed(
-            sdk_agent,
-            run_input,
-            previous_response_id=previous_response_id if not use_litellm else None,
-            run_config=run_config,
-        )
+        # Apply all project env vars to os.environ during agent
+        # execution so that tools can read custom variables.
+        with project_env_context(agent_entry.project):
+            result = Runner.run_streamed(
+                sdk_agent,
+                run_input,
+                previous_response_id=previous_response_id if not use_litellm else None,
+                run_config=run_config,
+            )
 
-        # Track hosted tools: id → whether tool_call was emitted
-        seen_hosted_tools: dict[str, bool] = {}
+            # Track hosted tools: id → whether tool_call was emitted
+            seen_hosted_tools: dict[str, bool] = {}
 
-        async for event in result.stream_events():
-            event_type = type(event).__name__
+            async for event in result.stream_events():
+                event_type = type(event).__name__
 
-            if event_type == "RawResponsesStreamEvent":
-                raw = event.data
-                raw_type = type(raw).__name__
-                if raw_type == "ResponseTextDeltaEvent":
-                    if raw.delta:
-                        yield {"type": "token", "data": raw.delta}
-                elif raw_type in (
-                    "ResponseReasoningSummaryTextDeltaEvent",
-                    "ResponseReasoningDeltaEvent",
-                ):
-                    delta = getattr(raw, "delta", getattr(raw, "text", ""))
-                    if delta:
-                        yield {"type": "thinking", "data": delta}
-            elif event_type == "RunItemStreamEvent":
-                item = event.item
-                item_type = type(item).__name__
-                if item_type == "ToolCallItem":
-                    raw_item = getattr(item, "raw_item", None)
-                    tool_name, args_str, item_id, hosted_status = _extract_tool_info(raw_item)
+                if event_type == "RawResponsesStreamEvent":
+                    raw = event.data
+                    raw_type = type(raw).__name__
+                    if raw_type == "ResponseTextDeltaEvent":
+                        if raw.delta:
+                            yield {"type": "token", "data": raw.delta}
+                    elif raw_type in (
+                        "ResponseReasoningSummaryTextDeltaEvent",
+                        "ResponseReasoningDeltaEvent",
+                    ):
+                        delta = getattr(raw, "delta", getattr(raw, "text", ""))
+                        if delta:
+                            yield {"type": "thinking", "data": delta}
+                elif event_type == "RunItemStreamEvent":
+                    item = event.item
+                    item_type = type(item).__name__
+                    if item_type == "ToolCallItem":
+                        raw_item = getattr(item, "raw_item", None)
+                        tool_name, args_str, item_id, hosted_status = _extract_tool_info(raw_item)
 
-                    if hosted_status is not None:
-                        # Hosted tool — deduplicate by ID, delay until args available
-                        emitted = seen_hosted_tools.get(item_id) if item_id else None
-                        is_done = hosted_status in ("completed", "failed")
-                        raw_type = getattr(raw_item, "type", "")
+                        if hosted_status is not None:
+                            # Hosted tool — deduplicate by ID, delay until args available
+                            emitted = seen_hosted_tools.get(item_id) if item_id else None
+                            is_done = hosted_status in ("completed", "failed")
+                            raw_type = getattr(raw_item, "type", "")
 
-                        if emitted is True:
-                            # Already sent tool_call — send result on completion
-                            if is_done:
-                                output = _extract_hosted_output(raw_item, raw_type)
+                            if emitted is True:
+                                # Already sent tool_call — send result on completion
+                                if is_done:
+                                    output = _extract_hosted_output(raw_item, raw_type)
+                                    yield {
+                                        "type": "tool_result",
+                                        "data": {"output": output},
+                                    }
+                                continue
+
+                            # Only emit tool_call when we have meaningful args
+                            if args_str:
+                                if item_id:
+                                    seen_hosted_tools[item_id] = True
                                 yield {
-                                    "type": "tool_result",
-                                    "data": {"output": output},
+                                    "type": "tool_call",
+                                    "data": {
+                                        "tool": tool_name,
+                                        "arguments": args_str,
+                                        "status": "running",
+                                    },
                                 }
-                            continue
-
-                        # Only emit tool_call when we have meaningful args
-                        if args_str:
-                            if item_id:
-                                seen_hosted_tools[item_id] = True
+                                if is_done:
+                                    output = _extract_hosted_output(raw_item, raw_type)
+                                    yield {
+                                        "type": "tool_result",
+                                        "data": {"output": output},
+                                    }
+                            else:
+                                # No args — skip entirely
+                                if item_id:
+                                    seen_hosted_tools[item_id] = False
+                        else:
+                            # Regular function tool — existing behavior
                             yield {
                                 "type": "tool_call",
                                 "data": {
@@ -568,31 +595,11 @@ async def handle_streaming_chat(
                                     "status": "running",
                                 },
                             }
-                            if is_done:
-                                output = _extract_hosted_output(raw_item, raw_type)
-                                yield {
-                                    "type": "tool_result",
-                                    "data": {"output": output},
-                                }
-                        else:
-                            # No args — skip entirely
-                            if item_id:
-                                seen_hosted_tools[item_id] = False
-                    else:
-                        # Regular function tool — existing behavior
+                    elif item_type == "ToolCallOutputItem":
                         yield {
-                            "type": "tool_call",
-                            "data": {
-                                "tool": tool_name,
-                                "arguments": args_str,
-                                "status": "running",
-                            },
+                            "type": "tool_result",
+                            "data": {"output": str(getattr(item, "output", ""))},
                         }
-                elif item_type == "ToolCallOutputItem":
-                    yield {
-                        "type": "tool_result",
-                        "data": {"output": str(getattr(item, "output", ""))},
-                    }
 
         # Always keep conversation_history so it can bridge provider switches
         state["conversation_history"] = result.to_input_list()
