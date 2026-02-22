@@ -554,7 +554,7 @@ export default function App() {
           setToast(`Error: ${data.error}`);
           setTimeout(() => setToast(null), 3000);
         } else {
-          setToast("Agent deleted");
+          setToast("Project deleted");
           setTimeout(() => setToast(null), 2000);
           setCurrentView({ page: "listing" });
         }
@@ -879,7 +879,7 @@ export default function App() {
               <span className="font-medium text-gray-900 dark:text-white">
                 {currentView.agentName}
               </span>
-              ? This will remove the <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">define_agent()</code> call from the source file. This action cannot be undone.
+              ? This will permanently delete the entire project directory, including all source files, tools, and configuration. This action cannot be undone.
             </p>
             <div className="flex justify-end gap-2">
               <button

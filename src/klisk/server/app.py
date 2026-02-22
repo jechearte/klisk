@@ -26,7 +26,6 @@ from klisk.server.assistant_chat import check_assistant_available, handle_assist
 from klisk.server.chat import handle_websocket_chat
 from klisk.server.file_editor import (
     update_agent_in_source,
-    delete_agent_in_source,
     update_tool_in_source,
     rename_tool_references,
     get_function_source,
@@ -342,16 +341,26 @@ def _build_api_router():
             return {"error": "Agent not found"}
 
         entry = _snapshot.agents[name]
-        if not entry.source_file:
-            return {"error": "Source file unknown"}
 
-        base_name = name.split("/")[-1] if "/" in name else name
-        logger.info("Deleting agent '%s' from %s", base_name, entry.source_file)
+        # Resolve the project directory to delete
+        project_dir: Path | None = None
+        if _workspace_mode and entry.project:
+            project_dir = PROJECTS_DIR / entry.project
+        elif _workspace_mode and entry.source_file:
+            project_dir = _get_project_dir_for_source(entry.source_file)
+        elif _project_path:
+            project_dir = _project_path
+
+        if project_dir is None or not project_dir.is_dir():
+            return {"error": "Cannot resolve project directory"}
+
+        logger.info("Deleting project directory: %s", project_dir)
 
         try:
-            delete_agent_in_source(entry.source_file, base_name)
+            import shutil
+            shutil.rmtree(project_dir)
         except Exception as e:
-            logger.exception("Failed to delete agent '%s'", name)
+            logger.exception("Failed to delete project '%s'", project_dir)
             return {"error": str(e)}
 
         return {"ok": True}
