@@ -736,23 +736,65 @@ function QuestionCard({
   enabled: boolean;
   onAnswer: (answer: string) => void;
 }) {
+  const [showOtherInput, setShowOtherInput] = useState(false);
+  const [otherText, setOtherText] = useState("");
+
   return (
     <div>
       <p className="font-medium text-blue-800 dark:text-blue-300 mb-1.5">
         {question.question}
       </p>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-col gap-1.5">
         {question.options.map((opt, oi) => (
           <button
             key={oi}
             disabled={!enabled}
             onClick={() => onAnswer(opt.label)}
-            className="px-2.5 py-1 rounded-md text-xs font-medium border border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800/50 disabled:opacity-50 disabled:cursor-default transition-colors"
-            title={opt.description}
+            className="text-left px-3 py-2 rounded-md border border-blue-300 dark:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-800/50 disabled:opacity-50 disabled:cursor-default transition-colors"
           >
-            {opt.label}
+            <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+              {opt.label}
+            </span>
+            {opt.description && (
+              <span className="block text-[11px] text-blue-600/70 dark:text-blue-400/70 mt-0.5">
+                {opt.description}
+              </span>
+            )}
           </button>
         ))}
+        {showOtherInput ? (
+          <div className="flex gap-1.5">
+            <input
+              type="text"
+              autoFocus
+              value={otherText}
+              onChange={(e) => setOtherText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && otherText.trim()) {
+                  onAnswer(otherText.trim());
+                }
+              }}
+              disabled={!enabled}
+              placeholder="Type your answer..."
+              className="flex-1 px-2.5 py-1.5 rounded-md text-xs border border-blue-300 dark:border-blue-600 bg-white dark:bg-gray-800 text-blue-800 dark:text-blue-200 placeholder:text-blue-400/60 dark:placeholder:text-blue-500/60 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50"
+            />
+            <button
+              disabled={!enabled || !otherText.trim()}
+              onClick={() => onAnswer(otherText.trim())}
+              className="px-2.5 py-1.5 rounded-md text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-default transition-colors"
+            >
+              Send
+            </button>
+          </div>
+        ) : (
+          <button
+            disabled={!enabled}
+            onClick={() => setShowOtherInput(true)}
+            className="text-left px-3 py-2 rounded-md border border-dashed border-blue-300 dark:border-blue-600 text-xs font-medium text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-800/30 disabled:opacity-50 disabled:cursor-default transition-colors"
+          >
+            Other...
+          </button>
+        )}
       </div>
     </div>
   );
