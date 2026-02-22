@@ -311,16 +311,17 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                   detail="To use the assistant you need to install this extra dependency. Run the command in your terminal or click the button."
                   action={!checks?.sdk_installed && (
                     <>
-                      {installing ? (
-                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 py-0.5">
-                          <svg className="animate-spin w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                          </svg>
-                          Installing...
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <CommandBlock command="pip install 'klisk[assistant]'" />
+                        {installing ? (
+                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 px-3 py-1.5">
+                            <svg className="animate-spin w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            Installing...
+                          </div>
+                        ) : (
                           <button
                             onClick={() => {
                               setInstalling(true);
@@ -337,13 +338,12 @@ const AssistantPanel = forwardRef<AssistantPanelHandle, AssistantPanelProps>(
                                 .catch((e) => setInstallError(String(e)))
                                 .finally(() => setInstalling(false));
                             }}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors flex-shrink-0"
                           >
                             Install
                           </button>
-                          <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">pip install 'klisk[assistant]'</span>
-                        </div>
-                      )}
+                        )}
+                      </div>
                       {installError && (
                         <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">{installError}</p>
                       )}
@@ -801,8 +801,8 @@ function RequirementRow({
 
 function CommandBlock({ command }: { command: string }) {
   return (
-    <div className="relative group">
-      <code className="block text-xs bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-md px-2.5 py-1.5 pr-8 font-mono">
+    <div className="relative group flex-1 min-w-0">
+      <code className="block text-xs bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-lg px-3 py-2 pr-8 font-mono truncate">
         {command}
       </code>
       <button
