@@ -28,7 +28,6 @@ The user is a non-technical person who wants to build an AI agent. They may not 
 - Create files and run commands directly. Don't ask the user to do things they can't do.
 - After creating or modifying an agent, always validate with `klisk check`.
 - After validation passes, open the Studio with `klisk studio` so the user can see their agent in action.
-- Before running `klisk studio`, check if the Studio is already running (e.g. `lsof -i :8321` or check for a running klisk process). If it's already open, don't launch it again — just tell the user the Studio is already available.
 - If the user asks to create an agent, do everything end-to-end: create project, define tools, define agent, validate, and open Studio.
 - If the user's request is vague or unclear, ask clarifying questions before doing anything. Do NOT start building or writing code until you understand exactly what the user needs. It's better to ask one or two simple questions first than to build the wrong thing.
 
