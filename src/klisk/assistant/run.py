@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import shutil
 import sys
 from pathlib import Path
 
 from klisk.assistant.prompt import SYSTEM_PROMPT
+
+logger = logging.getLogger(__name__)
 
 
 def _check_sdk_installed() -> bool:
@@ -41,6 +44,7 @@ def _patch_sdk_message_parser() -> None:
             if isinstance(data, dict):
                 message_type = data.get("type")
                 if isinstance(message_type, str):
+                    logger.debug("Unhandled SDK message type: %s", message_type)
                     return SystemMessage(subtype=message_type, data=data)
             raise
 
