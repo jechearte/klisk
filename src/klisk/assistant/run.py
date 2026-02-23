@@ -40,7 +40,7 @@ def _patch_sdk_message_parser() -> None:
         except MessageParseError:
             if isinstance(data, dict):
                 message_type = data.get("type")
-                if isinstance(message_type, str) and message_type.endswith("_event"):
+                if isinstance(message_type, str):
                     return SystemMessage(subtype=message_type, data=data)
             raise
 
