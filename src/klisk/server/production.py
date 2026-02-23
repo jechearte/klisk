@@ -41,12 +41,27 @@ def create_production_app(project_dir: Path) -> FastAPI:
     """Create a production FastAPI app (no file watcher, no Studio)."""
     project_dir = project_dir.resolve()
     config = ProjectConfig.load(project_dir)
+    project_name = project_dir.name
+
+    # Populate the per-project env cache so the chat handler can resolve
+    # API keys via get_project_env() — same mechanism used in workspace mode.
+    from klisk.core.env import load_project_env
+
+    load_project_env(project_dir)
 
     try:
         snapshot = discover_project(project_dir)
     except Exception as e:
         snapshot = ProjectSnapshot()
         snapshot.config = {"error": str(e)}
+
+    # Tag agents/tools with the project name so chat handler can look up
+    # the correct per-project env vars (in workspace mode this is done by
+    # discover_all_projects, but discover_project leaves .project as None).
+    for ae in snapshot.agents.values():
+        ae.project = project_name
+    for te in snapshot.tools.values():
+        te.project = project_name
 
     api_keys = _get_valid_keys()
 
