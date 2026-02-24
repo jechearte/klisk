@@ -999,6 +999,7 @@
     .then(function(info) {
       var deploy = info.deploy || {};
       var chatConfig = deploy.chat || {};
+      var wc = deploy.widget || {};
       // Title
       var title = chatConfig.title || info.name;
       if (title) {
@@ -1019,7 +1020,6 @@
         attachBtn.style.display = 'none';
       }
       // Apply widget style customizations
-      var wc = deploy.widget || {};
       if (wc.user_message_color) {
         document.documentElement.style.setProperty('--bubble-user', wc.user_message_color);
       }
