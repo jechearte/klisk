@@ -219,6 +219,15 @@ export default function App() {
       ws = new WebSocket(`ws://${window.location.host}/ws/reload`);
       reloadWsRef.current = ws;
 
+      ws.onopen = () => {
+        // Re-fetch snapshot on (re)connect to catch any changes
+        // that occurred while the WebSocket was disconnected.
+        fetch("/api/project")
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => { if (data) setSnapshot(data); })
+          .catch(() => {});
+      };
+
       ws.onmessage = (e) => {
         const data = JSON.parse(e.data);
         if (data.type === "reload") {
