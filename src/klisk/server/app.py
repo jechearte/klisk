@@ -669,14 +669,18 @@ async def _handle_reload(websocket: WebSocket) -> None:
         _reload_clients.remove(websocket)
 
 
-async def _on_file_change() -> None:
+async def _on_file_change(py_changed: bool) -> None:
     global _retry_task, _retry_count
     # A real file change resets the retry counter
     _retry_count = 0
     if _retry_task is not None and not _retry_task.done():
         _retry_task.cancel()
         _retry_task = None
-    await _do_discovery()
+
+    if py_changed:
+        await _do_discovery()
+    else:
+        await _do_config_reload()
 
 
 async def _do_discovery() -> None:
@@ -714,6 +718,41 @@ async def _do_discovery() -> None:
             _snapshot.failed_projects,
         )
         _retry_task = asyncio.create_task(_schedule_retry())
+
+
+async def _do_config_reload() -> None:
+    """Light reload: re-read yaml configs without re-importing Python modules."""
+    global _snapshot, _config
+    logger.info("Config-only reload (no .py changes)")
+
+    if _snapshot is None:
+        _snapshot = ProjectSnapshot()
+
+    if _workspace_mode:
+        # Workspace-level config is static (just the marker dict).
+        # Nothing to re-read; just notify the frontend so it can refetch
+        # deploy-config or other per-project endpoints.
+        pass
+    else:
+        # Single-project mode: re-read the config and update the snapshot
+        _config = ProjectConfig.load(_project_path)
+        _snapshot.config = {
+            "name": _config.name,
+            "entry": _config.entry,
+            "studio": _config.studio.model_dump(),
+            "api": _config.api.model_dump(),
+            "deploy": _config.deploy.model_dump(),
+        }
+
+    data = json.dumps({"type": "reload", "snapshot": _snapshot.to_dict()})
+    disconnected = []
+    for ws in _reload_clients:
+        try:
+            await ws.send_text(data)
+        except Exception:
+            disconnected.append(ws)
+    for ws in disconnected:
+        _reload_clients.remove(ws)
 
 
 async def _schedule_retry() -> None:
