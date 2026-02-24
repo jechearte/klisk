@@ -255,7 +255,7 @@ function ChatPreview({
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Type a message..."
+              placeholder={config.widget.placeholder || "Type a message..."}
               className="flex-1 bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 outline-none py-1"
             />
             <button

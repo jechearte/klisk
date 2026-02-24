@@ -1009,6 +1009,11 @@
       if (chatConfig.welcome_message) {
         emptyState.textContent = chatConfig.welcome_message;
       }
+      // Input placeholder
+      if (wc.placeholder) {
+        var inputEl = document.getElementById('input');
+        if (inputEl) inputEl.setAttribute('placeholder', wc.placeholder);
+      }
       // Hide attach button if attachments disabled
       if (chatConfig.attachments === false) {
         attachBtn.style.display = 'none';
