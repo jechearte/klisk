@@ -201,8 +201,16 @@ def start_server(project_path: Path, project: str) -> dict:
         start_new_session=True,
     )
 
-    if not _wait_for_port(port, proc.pid, timeout=15.0):
+    if not _wait_for_port(port, proc.pid, timeout=30.0):
         log_fh.close()
+        # Kill the orphan process so it doesn't linger in the background
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+        except (OSError, ProcessLookupError):
+            try:
+                os.kill(proc.pid, signal.SIGTERM)
+            except (OSError, ProcessLookupError):
+                pass
         tail = ""
         try:
             lines = log_path.read_text(encoding="utf-8").strip().splitlines()
