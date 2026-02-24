@@ -86,6 +86,7 @@ export interface GlobalConfig {
 
 export interface LocalServerStatus {
   running: boolean;
+  starting?: boolean;
   port: number | null;
   pid: number | null;
   url: string | null;

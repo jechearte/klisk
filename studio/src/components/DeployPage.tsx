@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { LocalServerStatus } from "../types";
 
 interface DeployPageProps {
@@ -24,9 +24,9 @@ export default function DeployPage({ project, agentName, sourceFile, onToast, on
 
   const qs = project ? `?project=${encodeURIComponent(project)}` : "";
 
-  // Fetch local server status
-  const fetchLocalStatus = useCallback(async () => {
-    setLocalLoading(true);
+  // Fetch local server status (silent = no loading flash)
+  const fetchLocalStatus = useCallback(async (silent = false) => {
+    if (!silent) setLocalLoading(true);
     try {
       const res = await fetch(`/api/local-server/status${qs}`);
       if (!res.ok) return;
@@ -35,13 +35,31 @@ export default function DeployPage({ project, agentName, sourceFile, onToast, on
     } catch {
       // Server may not support this endpoint yet
     } finally {
-      setLocalLoading(false);
+      if (!silent) setLocalLoading(false);
     }
   }, [qs]);
 
   useEffect(() => {
     fetchLocalStatus();
   }, [fetchLocalStatus]);
+
+  // Poll while the server is starting
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (localStatus.starting) {
+      pollingRef.current = setInterval(() => fetchLocalStatus(true), 2000);
+    } else if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [localStatus.starting, fetchLocalStatus]);
 
   const handleStartServer = async () => {
     setLocalActing(true);
@@ -51,8 +69,15 @@ export default function DeployPage({ project, agentName, sourceFile, onToast, on
       });
       const data = await res.json();
       if (data.ok) {
-        onToast("Server started");
-        await fetchLocalStatus();
+        onToast("Server starting...");
+        // Apply the returned status immediately so the UI shows "starting"
+        setLocalStatus({
+          running: false,
+          starting: true,
+          port: data.port,
+          pid: data.pid,
+          url: data.url,
+        });
       } else {
         onToast(`Error: ${data.error}`);
       }
@@ -138,6 +163,14 @@ export default function DeployPage({ project, agentName, sourceFile, onToast, on
             <div className="px-6 py-5">
               {localLoading ? (
                 <div className="py-4" />
+              ) : localStatus.starting ? (
+                /* Starting state */
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse" />
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    Starting on port {localStatus.port}...
+                  </span>
+                </div>
               ) : localStatus.running ? (
                 /* Running state */
                 <div className="space-y-4">

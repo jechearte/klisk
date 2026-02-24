@@ -91,17 +91,6 @@ def _find_free_port(start: int = 8080) -> int:
         return s.getsockname()[1]
 
 
-def _wait_for_port(port: int, pid: int, timeout: float = 10.0) -> bool:
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        if not _is_process_alive(pid):
-            return False
-        if _is_port_in_use(port):
-            return True
-        time.sleep(0.2)
-    return False
-
-
 def _read_pid_info(project: str) -> LocalServerInfo | None:
     pid_path = _pid_file_path(project)
     if not pid_path.exists():
@@ -150,8 +139,19 @@ def get_status(project: str, port: int = 8080, config_name: str = "") -> dict:
     """
     info = _read_pid_info(project)
     if info is not None:
+        # PID alive — check if the port is responding yet
+        if _is_port_in_use(info.port):
+            return {
+                "running": True,
+                "starting": False,
+                "port": info.port,
+                "pid": info.pid,
+                "url": f"http://localhost:{info.port}",
+            }
+        # PID alive but port not responding — still booting
         return {
-            "running": True,
+            "running": False,
+            "starting": True,
             "port": info.port,
             "pid": info.pid,
             "url": f"http://localhost:{info.port}",
@@ -163,20 +163,32 @@ def get_status(project: str, port: int = 8080, config_name: str = "") -> dict:
         if running_name and config_name and running_name == config_name:
             return {
                 "running": True,
+                "starting": False,
                 "port": port,
                 "pid": None,
                 "url": f"http://localhost:{port}",
             }
 
-    return {"running": False, "port": None, "pid": None, "url": None}
+    return {"running": False, "starting": False, "port": None, "pid": None, "url": None}
 
 
 def start_server(project_path: Path, project: str) -> dict:
-    """Start the production server as a background process on a free port."""
-    # Already running via PID file?
+    """Start the production server as a background process on a free port.
+
+    Non-blocking: spawns the process, writes the PID file immediately, and
+    returns.  The frontend polls ``get_status()`` until the server is ready.
+    """
+    # Already running or starting via PID file?
     info = _read_pid_info(project)
     if info is not None:
-        return {"ok": True, "port": info.port, "pid": info.pid, "url": f"http://localhost:{info.port}"}
+        port_up = _is_port_in_use(info.port)
+        return {
+            "ok": True,
+            "starting": not port_up,
+            "port": info.port,
+            "pid": info.pid,
+            "url": f"http://localhost:{info.port}",
+        }
 
     port = _find_free_port()
 
@@ -201,24 +213,6 @@ def start_server(project_path: Path, project: str) -> dict:
         start_new_session=True,
     )
 
-    if not _wait_for_port(port, proc.pid, timeout=30.0):
-        log_fh.close()
-        # Kill the orphan process so it doesn't linger in the background
-        try:
-            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-        except (OSError, ProcessLookupError):
-            try:
-                os.kill(proc.pid, signal.SIGTERM)
-            except (OSError, ProcessLookupError):
-                pass
-        tail = ""
-        try:
-            lines = log_path.read_text(encoding="utf-8").strip().splitlines()
-            tail = "\n".join(lines[-5:])
-        except Exception:
-            pass
-        return {"ok": False, "error": f"Server failed to start.\n{tail}"}
-
     log_fh.close()
 
     info = LocalServerInfo(
@@ -231,7 +225,13 @@ def start_server(project_path: Path, project: str) -> dict:
     )
     _write_pid_info(project, info)
 
-    return {"ok": True, "port": port, "pid": proc.pid, "url": f"http://localhost:{port}"}
+    return {
+        "ok": True,
+        "starting": True,
+        "port": port,
+        "pid": proc.pid,
+        "url": f"http://localhost:{port}",
+    }
 
 
 def _kill_and_wait(pid: int, port: int) -> bool:
