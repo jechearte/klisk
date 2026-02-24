@@ -788,7 +788,7 @@ export default function App() {
 
             {/* Right column — Chat */}
             <div style={{ width: `${100 - splitPercent}%` }} className="flex flex-col min-h-0 min-w-0">
-              <Chat messages={messages} onSend={sendMessage} />
+              <Chat messages={messages} onSend={sendMessage} placeholder={(config.deploy as any)?.widget?.placeholder} />
             </div>
           </div>
         ) : activeTab === "env" ? (
