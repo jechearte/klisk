@@ -45,13 +45,41 @@ export default function DeployPage({ project, agentName, sourceFile, onToast, on
 
   // Poll while the server is starting
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wasStartingRef = useRef(false);
+  const startTimeRef = useRef<number | null>(null);
+  const STARTUP_TIMEOUT_MS = 60_000;
 
   useEffect(() => {
     if (localStatus.starting) {
-      pollingRef.current = setInterval(() => fetchLocalStatus(true), 2000);
-    } else if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
+      if (!wasStartingRef.current) startTimeRef.current = Date.now();
+      wasStartingRef.current = true;
+
+      pollingRef.current = setInterval(() => {
+        if (startTimeRef.current && Date.now() - startTimeRef.current > STARTUP_TIMEOUT_MS) {
+          onToast("Server is taking too long to start. Check the logs.");
+          clearInterval(pollingRef.current!);
+          pollingRef.current = null;
+          setLocalStatus((s) => ({ ...s, starting: false }));
+          wasStartingRef.current = false;
+          startTimeRef.current = null;
+          return;
+        }
+        fetchLocalStatus(true);
+      }, 2000);
+    } else {
+      // Detect crash: was starting but now neither starting nor running
+      if (wasStartingRef.current && !localStatus.running) {
+        onToast("Server failed to start. Check the logs.");
+      } else if (wasStartingRef.current && localStatus.running) {
+        onToast("Server started");
+      }
+      wasStartingRef.current = false;
+      startTimeRef.current = null;
+
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
     }
     return () => {
       if (pollingRef.current) {
@@ -59,7 +87,7 @@ export default function DeployPage({ project, agentName, sourceFile, onToast, on
         pollingRef.current = null;
       }
     };
-  }, [localStatus.starting, fetchLocalStatus]);
+  }, [localStatus.starting, localStatus.running, fetchLocalStatus, onToast]);
 
   const handleStartServer = async () => {
     setLocalActing(true);
@@ -69,7 +97,7 @@ export default function DeployPage({ project, agentName, sourceFile, onToast, on
       });
       const data = await res.json();
       if (data.ok) {
-        onToast("Server starting...");
+        // Toast will be shown when polling detects the final state
         // Apply the returned status immediately so the UI shows "starting"
         setLocalStatus({
           running: false,
