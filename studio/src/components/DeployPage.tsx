@@ -137,9 +137,7 @@ export default function DeployPage({ project, agentName, sourceFile, onToast, on
             {/* Body */}
             <div className="px-6 py-5">
               {localLoading ? (
-                <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
-                  Loading...
-                </div>
+                <div className="py-4" />
               ) : localStatus.running ? (
                 /* Running state */
                 <div className="space-y-4">
